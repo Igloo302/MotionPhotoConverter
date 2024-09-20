@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>top-level-items</key>
+	<array>
+		<dict>
+			<key>destination</key>
+			<dict>
+				<key>location-parameters</key>
+				<dict>
+					<key>EndingColumnNumber</key>
+					<string>88</string>
+					<key>EndingLineNumber</key>
+					<string>188</string>
+					<key>StartingColumnNumber</key>
+					<string>88</string>
+					<key>StartingLineNumber</key>
+					<string>188</string>
+				</dict>
+				<key>rebasable-url</key>
+				<dict>
+					<key>base</key>
+					<string>workspace</string>
+					<key>payload</key>
+					<dict>
+						<key>relative-path</key>
+						<string>MotionPhotoConverter/MotionPhotoConverterApp.swift</string>
+					</dict>
+				</dict>
+			</dict>
+			<key>text-context</key>
+			<dict>
+				<key>focused</key>
+				<string></string>
+				<key>leading</key>
+				<string>                // 清理临时 MP4 文件
+                try? FileManager.default.removeItem(at: mp4URL)
+            }</string>
+				<key>trailing</key>
+				<string>
+        } catch {
+            print("创建 Live Photo 文件时出错: \(error)")
+</string>
+			</dict>
+			<key>title</key>
+			<string>Warning: 'kUTTypeJPEG' was deprecated in macOS 12.0: Use UTTypeJPEG or UTType.jpeg (swift) instead.</string>
+			<key>type</key>
+			<string>bookmark</string>
+		</dict>
+	</array>
+</dict>
+</plist>
