@@ -7,8 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0329E0CD2C9ED90C0099759B /* Localizable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0329E0CC2C9ED90C0099759B /* Localizable.swift */; };
+		036968842C9F23CE001E1B13 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 036968832C9F23CE001E1B13 /* HomeViewModel.swift */; };
+		036968862C9FA036001E1B13 /* LabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 036968852C9FA036001E1B13 /* LabView.swift */; };
+		03BDAC1F2C9EDE5000F363ED /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BDAC1E2C9EDE5000F363ED /* HomeView.swift */; };
 		61A0CA2F2C9589550080EF64 /* MotionPhotoConverterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A0CA2E2C9589550080EF64 /* MotionPhotoConverterApp.swift */; };
-		61A0CA312C9589550080EF64 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A0CA302C9589550080EF64 /* ContentView.swift */; };
 		61A0CA332C9589590080EF64 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 61A0CA322C9589590080EF64 /* Assets.xcassets */; };
 		61A0CA372C9589590080EF64 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 61A0CA362C9589590080EF64 /* Preview Assets.xcassets */; };
 		61A0CA412C95895A0080EF64 /* MotionPhotoConverterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A0CA402C95895A0080EF64 /* MotionPhotoConverterTests.swift */; };
@@ -34,9 +37,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0329E0CC2C9ED90C0099759B /* Localizable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localizable.swift; sourceTree = "<group>"; };
+		036968832C9F23CE001E1B13 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
+		036968852C9FA036001E1B13 /* LabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabView.swift; sourceTree = "<group>"; };
+		03BDAC1E2C9EDE5000F363ED /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		61A0CA2B2C9589540080EF64 /* MotionPhotoConverter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MotionPhotoConverter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		61A0CA2E2C9589550080EF64 /* MotionPhotoConverterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPhotoConverterApp.swift; sourceTree = "<group>"; };
-		61A0CA302C9589550080EF64 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		61A0CA322C9589590080EF64 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		61A0CA342C9589590080EF64 /* MotionPhotoConverter.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MotionPhotoConverter.entitlements; sourceTree = "<group>"; };
 		61A0CA362C9589590080EF64 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -98,7 +104,10 @@
 			children = (
 				61A0CA592C958E6A0080EF64 /* Info.plist */,
 				61A0CA2E2C9589550080EF64 /* MotionPhotoConverterApp.swift */,
-				61A0CA302C9589550080EF64 /* ContentView.swift */,
+				03BDAC1E2C9EDE5000F363ED /* HomeView.swift */,
+				036968832C9F23CE001E1B13 /* HomeViewModel.swift */,
+				0329E0CC2C9ED90C0099759B /* Localizable.swift */,
+				036968852C9FA036001E1B13 /* LabView.swift */,
 				61A0CA322C9589590080EF64 /* Assets.xcassets */,
 				61A0CA342C9589590080EF64 /* MotionPhotoConverter.entitlements */,
 				61A0CA352C9589590080EF64 /* Preview Content */,
@@ -261,8 +270,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				61A0CA312C9589550080EF64 /* ContentView.swift in Sources */,
+				03BDAC1F2C9EDE5000F363ED /* HomeView.swift in Sources */,
+				0329E0CD2C9ED90C0099759B /* Localizable.swift in Sources */,
 				61A0CA2F2C9589550080EF64 /* MotionPhotoConverterApp.swift in Sources */,
+				036968842C9F23CE001E1B13 /* HomeViewModel.swift in Sources */,
+				036968862C9FA036001E1B13 /* LabView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -445,7 +457,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.igloo.MotionPhotoConverter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -487,7 +499,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.igloo.MotionPhotoConverter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
