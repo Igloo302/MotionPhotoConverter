@@ -1,0 +1,147 @@
+ExifTool Version Number         : 13.30
+File Name                       : XiaomiNew.jpg
+Directory                       : .
+File Size                       : 4.4 MB
+File Modification Date/Time     : 2025:07:03 15:03:05+08:00
+File Access Date/Time           : 2025:07:03 15:25:58+08:00
+File Inode Change Date/Time     : 2025:07:03 15:25:57+08:00
+File Permissions                : -rw-rw-r--
+File Type                       : JPEG
+File Type Extension             : jpg
+MIME Type                       : image/jpeg
+Exif Byte Order                 : Big-endian (Motorola, MM)
+Make                            : Xiaomi
+Orientation                     : Unknown (0)
+Modify Date                     : 2025:07:02 19:39:28
+GPS Latitude Ref                : North
+GPS Speed                       : 0
+GPS Altitude Ref                : Above Sea Level
+GPS Processing Method           : network
+GPS Speed Ref                   : km/h
+GPS Longitude Ref               : East
+GPS Time Stamp                  : 11:39:30
+GPS Date Stamp                  : 2025:07:02
+Y Resolution                    : 72
+X Resolution                    : 72
+Camera Model Name               : Xiaomi 15
+Y Cb Cr Positioning             : Centered
+Exif Version                    : 0230
+Aperture Value                  : 2.0
+Scene Type                      : Directly photographed
+Mirror                          : false
+Sensor Type                     : rear
+Hdr                             : auto
+Op Mode                         : 36866
+Small Picture                   : false
+AI Scene                        : 0
+Filter Id                       : 66048
+Zoom Multiple                   : 2.5999999046325684
+Exposure Compensation           : 0
+Exposure Program                : Program AE
+Color Space                     : Uncalibrated
+Max Aperture Value              : 2.0
+Exif Image Height               : 4096
+ISO Speed                       : 4000
+Brightness Value                : -4.58
+Date/Time Original              : 2025:07:02 19:39:28
+Flashpix Version                : 0100
+Sub Sec Time Original           : 320
+White Balance                   : Auto
+Interoperability Index          : R98 - DCF basic file (sRGB)
+Interoperability Version        : 0100
+Exposure Mode                   : Auto
+Exposure Time                   : 1/13
+Offset Time                     : +08:00
+Flash                           : Off, Did not fire
+Sub Sec Time                    : 320
+F Number                        : 2.0
+Exif Image Width                : 3072
+ISO                             : 4000
+Components Configuration        : Y, Cb, Cr, -
+Focal Length In 35mm Format     : 60 mm
+Sub Sec Time Digitized          : 320
+Create Date                     : 2025:07:02 19:39:28
+Shutter Speed Value             : 1/12
+Metering Mode                   : Center-weighted average
+Focal Length                    : 9.0 mm
+Sensitivity Type                : ISO Speed
+Offset Time Original            : +08:00
+Scene Capture Type              : Standard
+Light Source                    : D65
+Sensing Method                  : Not defined
+Resolution Unit                 : inches
+Xiaomi Model                    : Xiaomi 15
+Compression                     : JPEG (old-style)
+Thumbnail Offset                : 1856
+Thumbnail Length                : 7782
+Profile CMM Type                : 
+Profile Version                 : 4.0.0
+Profile Class                   : Display Device Profile
+Color Space Data                : RGB
+Profile Connection Space        : XYZ
+Profile Date Time               : 2022:08:08 08:08:08
+Profile File Signature          : acsp
+Primary Platform                : Unknown ()
+CMM Flags                       : Not Embedded, Independent
+Device Manufacturer             : Unknown (XM  )
+Device Model                    : 
+Device Attributes               : Reflective, Glossy, Positive, Color
+Rendering Intent                : Perceptual
+Connection Space Illuminant     : 0.9642 1 0.82491
+Profile Creator                 : Apple Computer Inc.
+Profile ID                      : 0
+Profile Description             : sRGB EOTF with DCI-P3 Color Gamut
+Profile Copyright               : Copyright Xiaomi Communications Co., Ltd. 2022
+Media White Point               : 0.96419 1 0.82489
+Red Matrix Column               : 0.51512 0.2412 -0.00105
+Green Matrix Column             : 0.29198 0.69225 0.04189
+Blue Matrix Column              : 0.1571 0.06657 0.78407
+Red Tone Reproduction Curve     : (Binary data 32 bytes, use -b option to extract)
+Chromatic Adaptation            : 1.04788 0.02292 -0.0502 0.02959 0.99048 -0.01706 -0.00923 0.01508 0.75168
+Blue Tone Reproduction Curve    : (Binary data 32 bytes, use -b option to extract)
+Green Tone Reproduction Curve   : (Binary data 32 bytes, use -b option to extract)
+XMP Toolkit                     : Adobe XMP Core 5.1.0-jc003
+Version                         : 1.0
+Micro Video Version             : 1
+Micro Video                     : 1
+Micro Video Offset              : 1943922
+Micro Video Presentation Timestamp Us: 1391574
+Directory Item Semantic         : Primary, GainMap
+Directory Item Mime             : image/jpeg, image/jpeg
+Directory Item Length           : 299175
+MPF Version                     : 0100
+Number Of Images                : 2
+MP Image Flags                  : (none)
+MP Image Format                 : JPEG
+MP Image Type                   : Undefined
+MP Image Length                 : 299175
+MP Image Start                  : 2123416
+Dependent Image 1 Entry Number  : 0
+Dependent Image 2 Entry Number  : 0
+Image Width                     : 3072
+Image Height                    : 4096
+Encoding Process                : Baseline DCT, Huffman coding
+Bits Per Sample                 : 8
+Color Components                : 3
+Y Cb Cr Sub Sampling            : YCbCr4:2:0 (2 2)
+Gain Map Image                  : (Binary data 299175 bytes, use -b option to extract)
+Aperture                        : 2.0
+Image Size                      : 3072x4096
+Megapixels                      : 12.6
+Scale Factor To 35 mm Equivalent: 6.7
+Shutter Speed                   : 1/13
+Create Date                     : 2025:07:02 19:39:28.320
+Date/Time Original              : 2025:07:02 19:39:28.320+08:00
+Modify Date                     : 2025:07:02 19:39:28.320+08:00
+Thumbnail Image                 : (Binary data 7782 bytes, use -b option to extract)
+GPS Altitude                    : 0 m Above Sea Level
+GPS Date/Time                   : 2025:07:02 11:39:30Z
+GPS Latitude                    : 31 deg 16' 45.78" N
+GPS Longitude                   : 121 deg 11' 28.05" E
+MP Image 2                      : (Binary data 299175 bytes, use -b option to extract)
+Circle Of Confusion             : 0.005 mm
+Field Of View                   : 33.4 deg
+Focal Length                    : 9.0 mm (35 mm equivalent: 60.0 mm)
+GPS Position                    : 31 deg 16' 45.78" N, 121 deg 11' 28.05" E
+Hyperfocal Distance             : 8.99 m
+Light Value                     : 0.3

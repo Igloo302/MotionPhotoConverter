@@ -1,0 +1,46 @@
+# MotionPhotoConverter 更新日志
+
+本文档记录 MotionPhotoConverter 应用的所有重要变更。
+
+## [未发布]
+
+### 计划中的功能
+
+- 批量处理多个 Motion Photo
+- 高级 GIF 导出设置（分辨率、帧率、质量等）
+- 支持更多设备的 Motion Photo 格式
+- 视频裁剪和编辑功能
+- 云存储集成
+- 深色模式支持
+- 应用内教程
+
+## [1.0.0] - 2023-06-15
+
+### 初始版本
+
+#### 添加
+
+- 从 Motion Photo 中提取视频
+- 将 Motion Photo 转换为 Live Photo
+- 将 Motion Photo 转换为 GIF
+- 直接导出 Motion Photo 中的视频
+- 实验室功能：从单独的图像和视频创建自定义 Live Photo
+- 多语言支持：英语、中文、法语、德语、西班牙语、日语、韩语
+
+#### 技术特性
+
+- 使用 SwiftUI 构建的现代用户界面
+- MVVM 架构设计
+- 异步处理大型媒体文件
+- 内存优化的文件处理
+- 全面的错误处理和用户反馈
+
+## 版本号规范
+
+MotionPhotoConverter 遵循 [语义化版本控制](https://semver.org/lang/zh-CN/) 规范：
+
+- 主版本号（Major）：当进行不兼容的 API 变更时增加
+- 次版本号（Minor）：当以向下兼容的方式添加功能时增加
+- 修订号（Patch）：当进行向下兼容的问题修正时增加
+
+此外，预发布版本和构建元数据可能会作为主版本号.次版本号.修订号的延伸添加。

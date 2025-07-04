@@ -120,6 +120,10 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
                 .foregroundColor(.secondary)
             
+            // 添加支持的品牌信息
+            SupportedBrandsView()
+                .padding(.horizontal, 20)
+            
             Spacer()
             
             Button(action: viewModel.selectPhoto) {

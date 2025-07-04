@@ -14,6 +14,7 @@ import CoreLocation
 import PhotosUI
 import ImageIO
 import MobileCoreServices
+import Foundation
 
 @main
 struct MotionPhotoConverterApp: App {
@@ -66,7 +67,8 @@ struct MotionPhotoView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var isProcessing = false
-    @State private var stillImageTime: Int8 = 0
+    @State private var stillImageTime: Int = 0
+    @State private var microVideoOffset: Int?
     @Environment(\.colorScheme) var colorScheme
     @State private var isExportingGIF = false
     @State private var isExportMenuPresented = false
@@ -219,90 +221,107 @@ struct MotionPhotoView: View {
         print("文件大小: \(data.count) bytes")
         
         // 尝试提取和解析 XMP 数据
-        if let xmpData = extractXMPData(from: data),
-           let xmpInfo = parseXMP(data: xmpData) {
-            print("XMP 元数据: \(xmpInfo)")
+        guard let xmpData = extractXMPData(from: data),
+              let xmpInfo = parseXMP(data: xmpData) else {
+            await MainActor.run {
+                print("无法提取或解析 XMP 数据")
+                showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+            }
+            return
+        }
+        
+        print("XMPInfo: \(xmpInfo)")
+        
+        // 使用新的处理器架构
+        guard let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo) else {
+            await MainActor.run {
+                print("不支持的动态照片格式")
+                showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+            }
+            return
+        }
+        
+        print("检测到 \(processor.brand.displayName) 动态照片")
+        
+        let result = processor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
+        
+        guard result.success, let motionPhotoData = result.data else {
+            await MainActor.run {
+                print("处理动态照片失败: \(result.errorMessage ?? "未知错误")")
+                showAlert(message: result.errorMessage ?? Localizable.string(.selectedPhotoIsNotMotionPhoto))
+            }
+            return
+        }
+        
+        // 更新状态变量
+        self.originalImageData = motionPhotoData.imageData
+        self.videoData = motionPhotoData.videoData
+        self.microVideoOffset = motionPhotoData.videoOffset
+        
+        print("提取的视频数据大小: \(motionPhotoData.videoData.count) bytes")
+        print("提取的图片数据大小: \(motionPhotoData.imageData.count) bytes")
+        
+        // 设置图片
+        self.selectedImage = UIImage(data: motionPhotoData.imageData)
+        
+        // 处理视频
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("temp_video.mp4")
+        do {
+            try motionPhotoData.videoData.write(to: tempURL)
+            let asset = AVAsset(url: tempURL)
             
-            if let offset = xmpInfo["GCamera:MicroVideoOffset"] ?? xmpInfo["GContainer:ItemLength"],
-               let offsetValue = Int(offset),
-               let timestampString = xmpInfo["GCamera:MicroVideoPresentationTimestampUs"] ?? xmpInfo["GCamera:MotionPhotoPresentationTimestampUs"],
-               let timestamp = Double(timestampString) {
+            // 获取视频时长和帧率
+            let duration = try await asset.load(.duration)
+            let videoDuration = CMTimeGetSeconds(duration)
+            
+            let tracks = try await asset.loadTracks(withMediaType: .video)
+            let frameRate = try await tracks.first?.load(.nominalFrameRate) ?? 30.0
+            
+            // 使用处理器计算 stillImageTime
+            self.stillImageTime = processor.calculateStillImageTime(
+                videoDuration: videoDuration,
+                presentationTimestamp: motionPhotoData.presentationTimestamp,
+                frameRate: Double(frameRate)
+            )
+            
+            print("视频时长: \(videoDuration) 秒")
+            print("视频帧率: \(frameRate) fps")
+            if let timestamp = motionPhotoData.presentationTimestamp {
+                print("照片时间戳: \(timestamp) 微秒")
+            }
+            print("计算得 stillImageTime: \(self.stillImageTime)")
+            
+            await MainActor.run {
+                self.videoPlayer = AVPlayer(url: tempURL)
+                self.videoPlayer?.actionAtItemEnd = .none
                 
-                print("视频偏移量: \(offsetValue)")
-                print("视频时间戳: \(timestamp) 微秒")
-                
-                // 提取视频数据
-                self.videoData = data.suffix(offsetValue)
-                print("提取的视频数据大小: \(self.videoData?.count ?? 0) bytes")
-                
-                // 处理图像
-                self.selectedImage = UIImage(contentsOfFile: url.path)
-                self.originalImageData = data
-                
-                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("temp_video.mp4")
-                do {
-                    try videoData?.write(to: tempURL)
-                    let asset = AVAsset(url: tempURL)
-                    
-                    // 获取视频时长
-                    let duration = try await asset.load(.duration)
-                    let videoDuration = CMTimeGetSeconds(duration)
-                    
-                    // 获取视频帧率（使用新的 API）
-                    let tracks = try await asset.loadTracks(withMediaType: .video)
-                    let frameRate = try await tracks.first?.load(.nominalFrameRate) ?? 30.0
-                    
-                    // 使用 MicroVideoPresentationTimestampUs 作为照片时间（转换为秒）
-                    let photoTime = timestamp / 1_000_000.0
-                    
-                    // 计算 stillImageTime
-                    self.stillImageTime = Int8(calculateStillImageTime(videoDuration: videoDuration, photoTime: photoTime, frameRate: Double(frameRate)))
-                    
-                    print("视频时长: \(videoDuration) 秒")
-                    print("视频帧率: \(frameRate) fps")
-                    print("照片时间: \(photoTime) 秒")
-                    print("计算得 stillImageTime: \(self.stillImageTime)")
-                    
-                    await MainActor.run {
-                        self.videoPlayer = AVPlayer(url: tempURL)
-                        self.videoPlayer?.actionAtItemEnd = .none
-                        
-                        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: self.videoPlayer?.currentItem, queue: .main) { notification in
-                            self.videoPlayer?.seek(to: .zero)
-                            self.videoPlayer?.play()
-                        }
-                        
-                        // 设置视频播放器观察者
-                        videoPlayerObserver.player = self.videoPlayer
-                    }
-                } catch {
-                    print("处理视频文件时出错: \(error)")
-                    print("错误详情: \(error.localizedDescription)")
-                    if let nsError = error as NSError? {
-                        print("错误域: \(nsError.domain)")
-                        print("错误码: \(nsError.code)")
-                        print("错误用户信息: \(nsError.userInfo)")
-                    }
-                    await MainActor.run {
-                        showAlert(message: Localizable.string(.errorProcessingVideoFile))
-                    }
+                NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: self.videoPlayer?.currentItem, queue: .main) { notification in
+                    self.videoPlayer?.seek(to: .zero)
+                    self.videoPlayer?.play()
                 }
                 
-                // 获取创建日期
-                if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
-                   let creationDate = attributes[.creationDate] as? Date {
-                    await MainActor.run {
-                        self.creationDate = creationDate
-                    }
-                }
-                
-                return
+                // 设置视频播放器观察者
+                videoPlayerObserver.player = self.videoPlayer
+            }
+        } catch {
+            print("处理视频文件时出错: \(error)")
+            print("错误详情: \(error.localizedDescription)")
+            if let nsError = error as NSError? {
+                print("错误域: \(nsError.domain)")
+                print("错误码: \(nsError.code)")
+                print("错误用户信息: \(nsError.userInfo)")
+            }
+            await MainActor.run {
+                showAlert(message: Localizable.string(.errorProcessingVideoFile))
             }
         }
         
-        await MainActor.run {
-            print("无法提取视频数据或不是 Motion Photo")
-            showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+        // 获取创建日期
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+           let creationDate = attributes[.creationDate] as? Date {
+            await MainActor.run {
+                self.creationDate = creationDate
+            }
         }
     }
     
@@ -397,8 +416,9 @@ struct MotionPhotoView: View {
             let creationDate = attributes[.creationDate] as? Date
             let modificationDate = attributes[.modificationDate] as? Date
             
-            // 从原始数据中剔除视频数据
-            let pureImageData = imageData.prefix(imageData.count - videoData.count)
+            // 使用已经处理好的纯图像数据
+            // 新的架构中，originalImageData 已经是纯图像数据，不包含视频部分
+            let pureImageData = imageData
             
             // 将纯图像数据写入 JPEG 文件
             try pureImageData.write(to: jpegURL)
@@ -600,25 +620,7 @@ struct MotionPhotoView: View {
         let outputURL: URL
     }
 
-    func calculateStillImageTime(videoDuration: Double, photoTime: Double, frameRate: Double) -> Int {
-        // 计算视频总帧数
-        let totalFrames = Int(videoDuration * frameRate)
-        
-        // 计算照片所在的帧数
-        let photoFrame = Int(photoTime * frameRate)
-        
-        // 确保 photoFrame 不超过总帧数
-        let clampedPhotoFrame = min(max(photoFrame, 0), totalFrames - 1)
-        
-        // 计算比例
-        let ratio = Double(clampedPhotoFrame) / Double(totalFrames - 1)
-        
-        // 将比例转换为 0-255 范围的整数
-        let stillImageTime = Int(round(ratio * 255))
-        
-        // 确保结果在 0-255 范围内
-        return min(max(stillImageTime, 0), 255)
-    }
+
 
     func exportAsGIF() {
         isExportingGIF = true
@@ -823,10 +825,11 @@ struct PhotoPicker: UIViewControllerRepresentable {
             
             if let xmpData = extractXMPData(from: data),
                let xmpInfo = parseXMP(data: xmpData) {
-                if xmpInfo["GCamera:MicroVideoOffset"] != nil || xmpInfo["GContainer:ItemLength"] != nil {
+                print("XMP Info: \(xmpInfo)")
+                if xmpInfo["GCamera:MicroVideoOffset"] != nil || xmpInfo["GContainer:ItemLength"] != nil || xmpInfo["GCamera:MotionPhoto"] == "1" {
                     return true
                 } else {
-                    print("XMP 数据中不包含 Motion Photo 所需的键")
+                    print("XMP 数据中不包含 Motion Photo 所需的键或 GCamera:MotionPhoto 不为 1")
                     return false
                 }
             } else {
@@ -872,15 +875,44 @@ class PlayerUIView: UIView {
 }
 
 func extractXMPData(from data: Data) -> Data? {
-    guard let xmpStartRange = data.range(of: Data("<x:xmpmeta".utf8), options: .backwards),
-          let xmpEndRange = data.range(of: Data("</x:xmpmeta>".utf8), options: .backwards) else {
-        return nil
+    if let xmpStartRange = data.range(of: Data("<x:xmpmeta".utf8)),
+       let xmpEndRange = data.range(of: Data("</x:xmpmeta>".utf8), in: xmpStartRange.lowerBound..<data.count) {
+        print("Found <x:xmpmeta> tags.")
+        // 确保包含完整的 <x:xmpmeta> 标签
+        let fullXMPStart = xmpStartRange.lowerBound
+        let fullXMPEnd = xmpEndRange.upperBound
+        print("XMP Start: \(fullXMPStart), XMP End: \(fullXMPEnd)")
+        return data[fullXMPStart..<fullXMPEnd]
     }
-    return data[xmpStartRange.lowerBound...xmpEndRange.upperBound]
+
+    // Fallback: 尝试查找 <?xpacket ... ?> 标签 (如果主要查找失败)
+    if let xpacketStartRange = data.range(of: Data("<?xpacket begin=".utf8)),
+       let xpacketEndRange = data.range(of: Data("<?xpacket end=".utf8), in: xpacketStartRange.lowerBound..<data.count) {
+        print("Found <?xpacket> tags as fallback.")
+        let fullXpacketStart = xpacketStartRange.lowerBound
+        let fullXpacketEnd = xpacketEndRange.upperBound
+        print("Xpacket Start: \(fullXpacketStart), Xpacket End: \(fullXpacketEnd)")
+        return data[fullXpacketStart..<fullXpacketEnd]
+    }
+    return nil
 }
 
 func parseXMP(data: Data) -> [String: String]? {
-    let parser = XMLParser(data: data)
+    // 尝试清理数据，移除BOM或无效前缀
+    var cleanedData = data
+    if let utf8String = String(data: data, encoding: .utf8) {
+        // 尝试找到第一个有效的XML标签，并截取之后的内容
+        if let range = utf8String.range(of: "<x:") ?? utf8String.range(of: "<?xpacket") {
+            let startIndex = range.lowerBound
+            cleanedData = Data(utf8String[startIndex...].utf8)
+        } else if let range = utf8String.range(of: "<", options: .caseInsensitive) {
+            // Fallback: if no specific XMP/xpacket tag, find any opening tag
+            let startIndex = range.lowerBound
+            cleanedData = Data(utf8String[startIndex...].utf8)
+        }
+    }
+
+    let parser = XMLParser(data: cleanedData)
     let delegate = XMPParserDelegate()
     parser.delegate = delegate
     
@@ -888,6 +920,7 @@ func parseXMP(data: Data) -> [String: String]? {
         return delegate.parsedData
     } else {
         print("XML 解析错误: \(parser.parserError?.localizedDescription ?? Localizable.string(.unknownError))")
+        print("Parsed XML data was: \(String(data: cleanedData, encoding: .utf8) ?? "Invalid UTF-8")") // Add debug print for cleaned data
         return nil
     }
 }
@@ -899,7 +932,7 @@ class XMPParserDelegate: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
         currentElement = elementName
         for (key, value) in attributeDict {
-            if key.contains("MicroVideoOffset") || key.contains("ItemLength") || key.contains("PresentationTimestampUs") {
+            if key.contains("MicroVideoOffset") || key.contains("ItemLength") || key.contains("PresentationTimestampUs") || key.contains("MotionPhoto") {
                 parsedData[key] = value
             }
         }

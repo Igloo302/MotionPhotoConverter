@@ -10,13 +10,15 @@
 				<key>location-parameters</key>
 				<dict>
 					<key>EndingColumnNumber</key>
-					<string>88</string>
+					<string>9</string>
 					<key>EndingLineNumber</key>
 					<string>188</string>
 					<key>StartingColumnNumber</key>
-					<string>88</string>
+					<string>9</string>
 					<key>StartingLineNumber</key>
 					<string>188</string>
+					<key>Timestamp</key>
+					<string>773304138.978616</string>
 				</dict>
 				<key>rebasable-url</key>
 				<dict>
@@ -34,13 +36,13 @@
 				<key>focused</key>
 				<string></string>
 				<key>leading</key>
-				<string>                // 清理临时 MP4 文件
-                try? FileManager.default.removeItem(at: mp4URL)
-            }</string>
+				<string>        }
+        .alert(isPresented: $showAlert) {
+         </string>
 				<key>trailing</key>
-				<string>
-        } catch {
-            print("创建 Live Photo 文件时出错: \(error)")
+				<string>   Alert(title: Text(Localizable.string(.tip)), message: Text(alertMessage), dismissButton: .default(Text(Localizable.string(.ok))))
+        }
+        .onAppear {
 </string>
 			</dict>
 			<key>title</key>
