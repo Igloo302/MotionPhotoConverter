@@ -122,7 +122,7 @@ enum LocalizableKey {
     var english: String {
         switch self {
         case .switchLanguage: return "Switch to Chinese"
-        case .appTitle: return "Motion Photo Converter"
+        case .appTitle: return "Motion2Live"
         case .convert: return "Convert"
         case .selectFile: return "Select File"
         case .processing: return "Processing..."
@@ -145,7 +145,7 @@ enum LocalizableKey {
         case .savingGIFFailed: return "Failed to save GIF"
         case .livePhotoSaved: return "Live Photo has been successfully saved to the album"
         case .savingLivePhotoFailed: return "Failed to save Live Photo"
-        case .homeTitle: return "Motion Photo Converter"
+        case .homeTitle: return "Motion2Live"
         case .homeDescription: return "Transform your Motion Photos into Live Photos or GIFs with ease. Capture the magic of movement and share your memories in dynamic formats."
         case .pleaseSelectMotionPhoto: return "Please select a Motion Photo"
         case .selectedPhotoIsNotMotionPhoto: return "The selected photo is not a Motion Photo"
@@ -207,7 +207,7 @@ enum LocalizableKey {
     var chinese: String {
         switch self {
         case .switchLanguage: return "切换到英文"
-        case .appTitle: return "动态照片转换器"
+        case .appTitle: return "Motion2Live"
         case .convert: return "转换"
         case .selectFile: return "选择文件"
         case .processing: return "处中..."
@@ -230,7 +230,7 @@ enum LocalizableKey {
         case .savingGIFFailed: return "保存 GIF 失败"
         case .livePhotoSaved: return "实况照片已成功保存到相册"
         case .savingLivePhotoFailed: return "保存况照片失败"
-        case .homeTitle: return "动态照片转换器"
+        case .homeTitle: return "Motion2Live"
         case .homeDescription: return "轻松将您的动态照片转换为实况照片或 GIF。捕捉动态的魅力,以动态格式分享您的回忆。"
         case .pleaseSelectMotionPhoto: return "请选择一张动态照片"
         case .selectedPhotoIsNotMotionPhoto: return "所选照片不是动态照片"

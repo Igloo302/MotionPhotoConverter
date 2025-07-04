@@ -1,6 +1,6 @@
-# MotionPhotoConverter 常见问题解答 (FAQ)
+# Motion2Live 常见问题解答 (FAQ)
 
-本文档收集了用户在使用 MotionPhotoConverter 应用时常见的问题和解答，帮助您快速解决可能遇到的问题。
+本文档收集了用户在使用 Motion2Live 应用时常见的问题和解答，帮助您快速解决可能遇到的问题。
 
 ## 目录
 
@@ -31,9 +31,9 @@ Live Photo 是 Apple 在 iOS 9 中引入的一种媒体格式，类似于 Motion
 3. **交互方式**：在支持的设备上，Motion Photo 通常通过特定的图标或手势触发播放，而 Live Photo 通过长按触发。
 4. **文件大小**：由于编码方式不同，两种格式的文件大小可能有所差异。
 
-### MotionPhotoConverter 应用的主要功能是什么？
+### Motion2Live 应用的主要功能是什么？
 
-MotionPhotoConverter 的主要功能是：
+Motion2Live 的主要功能是：
 
 1. 从 Motion Photo 中提取视频部分
 2. 将 Motion Photo 转换为 Apple 设备上的 Live Photo
@@ -45,7 +45,7 @@ MotionPhotoConverter 的主要功能是：
 
 ### 如何选择 Motion Photo？
 
-1. 打开 MotionPhotoConverter 应用
+1. 打开 Motion2Live 应用
 2. 点击主屏幕上的「选择动态照片」按钮
 3. 在照片选择器中，浏览并选择您想要转换的 Motion Photo
 4. 点击「选择」确认您的选择
@@ -60,7 +60,7 @@ MotionPhotoConverter 的主要功能是：
 2. **播放动画**：在相册中查看时，可能会短暂播放动画预览
 3. **文件大小**：Motion Photo 通常比普通照片大得多
 
-在 MotionPhotoConverter 应用中，当您选择照片后，应用会自动检测是否为 Motion Photo。如果不是，会显示提示消息。
+在 Motion2Live 应用中，当您选择照片后，应用会自动检测是否为 Motion Photo。如果不是，会显示提示消息。
 
 ### 如何将 Motion Photo 转换为 Live Photo？
 
@@ -92,7 +92,7 @@ MotionPhotoConverter 的主要功能是：
 
 ### 应用支持哪些类型的 Motion Photo？
 
-目前，MotionPhotoConverter 支持以下设备拍摄的 Motion Photo：
+目前，Motion2Live 支持以下设备拍摄的 Motion Photo：
 
 - Google Pixel 系列设备
 - Samsung Galaxy 系列设备
@@ -126,7 +126,7 @@ MotionPhotoConverter 的主要功能是：
 
 导出失败可能有多种原因：
 
-1. **权限问题**：应用可能没有足够的权限访问您的照片库。请在设备的「设置」>「隐私」>「照片」中确认 MotionPhotoConverter 有完全访问权限。
+1. **权限问题**：应用可能没有足够的权限访问您的照片库。请在设备的「设置」>「隐私」>「照片」中确认 Motion2Live 有完全访问权限。
 2. **存储空间不足**：检查您的设备是否有足够的存储空间。
 3. **格式不兼容**：原始 Motion Photo 可能使用了不支持的格式或编码。
 4. **文件损坏**：原始文件可能已损坏。
@@ -185,7 +185,7 @@ Live Photo 是 Apple 的专有格式，设计用于在 Apple 设备之间共享�
 解决方法：
 
 - 尝试使用原始未编辑的 Motion Photo
-- 直接从拍摄设备的相册应用分享到 MotionPhotoConverter
+- 直接从拍摄设备的相册应用分享到 Motion2Live
 - 尝试不同的 Motion Photo 进行测试
 
 ### 应用在处理某些文件时崩溃
@@ -219,7 +219,7 @@ Live Photo 是 Apple 的专有格式，设计用于在 Apple 设备之间共享�
 1. 打开设备的「设置」应用
 2. 滚动到「隐私」
 3. 点击「照片」
-4. 找到 MotionPhotoConverter 并确保权限设置为「所有照片」或「选中的照片」
+4. 找到 Motion2Live 并确保权限设置为「所有照片」或「选中的照片」
 
 如果权限已正确设置但问题仍然存在，尝试：
 
@@ -261,13 +261,13 @@ Live Photo 是 Apple 的专有格式，设计用于在 Apple 设备之间共享�
 
 ### 应用是否会收费？
 
-目前，MotionPhotoConverter 是完全免费的开源应用。我们没有计划在未来添加付费功能，但可能会考虑接受捐赠来支持开发。
+目前，Motion2Live 是完全免费的开源应用。我们没有计划在未来添加付费功能，但可能会考虑接受捐赠来支持开发。
 
 ## 联系我们
 
 如果您有其他问题或需要帮助，请通过以下方式联系我们：
 
-- GitHub: [https://github.com/Igloo302/MotionPhotoConverter](https://github.com/Igloo302/MotionPhotoConverter)
+- GitHub: [https://github.com/Igloo302/Motion2Live](https://github.com/Igloo302/Motion2Live)
 - 电子邮件: [开发者邮箱]
 
 我们会尽快回复您的询问。

@@ -11,12 +11,16 @@ import UIKit
 // MARK: - Motion Photo Brand Enum
 enum MotionPhotoBrand: String, CaseIterable {
     case xiaomi = "Xiaomi"
-    case pixel = "Pixel"
-    case samsung = "Samsung"
+    case android = "Android"
     case unknown = "Unknown"
     
     var displayName: String {
-        return self.rawValue
+        switch self {
+        case .android:
+            return "Android (Pixel/Samsung)"
+        default:
+            return self.rawValue
+        }
     }
 }
 
@@ -131,37 +135,27 @@ class XiaomiMotionPhotoProcessor: BaseMotionPhotoProcessor {
     }
 }
 
-// MARK: - Pixel Motion Photo Processor
-class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor {
+// MARK: - Android Motion Photo Processor (Pixel/Samsung)
+class AndroidMotionPhotoProcessor: BaseMotionPhotoProcessor {
     
     init() {
-        super.init(brand: .pixel)
+        super.init(brand: .android)
     }
     
     override func canProcess(xmpInfo: [String: String]) -> Bool {
-        // Pixel 使用 GContainer:ItemLength 或 Directory Item Length 格式
-        // 但优先级高于Samsung，所以先检查Pixel特有的标识
+        // Android 动态照片支持多种格式：
+        // 1. GContainer:ItemLength 格式 (主要是Pixel)
+        // 2. Directory Item Length + Directory Item Padding 格式 (Pixel/Samsung)
+        // 3. GCamera:MotionPhoto 格式 (部分Samsung)
+        
         let hasGContainer = xmpInfo["GContainer:ItemLength"] != nil
-        let hasDirectoryItem = xmpInfo["Directory Item Length"] != nil && xmpInfo["Directory Item Padding"] != nil
+        let hasDirectoryItem = xmpInfo["Directory Item Length"] != nil
         let hasGCamera = xmpInfo["GCamera:MotionPhoto"] != nil
         
-        // 如果有GContainer，肯定是Pixel
-        if hasGContainer {
-            return true
-        }
-        
-        // 如果有Directory Item和GCamera，也可能是Pixel（需要进一步区分）
-        if hasDirectoryItem && hasGCamera {
-            // 这里可以添加更多的区分逻辑，暂时返回true让Pixel优先处理
-            return true
-        }
-        
-        return false
+        return hasGContainer || hasDirectoryItem || hasGCamera
     }
     
     override func processMotionPhoto(data: Data, xmpInfo: [String: String]) -> MotionPhotoProcessingResult {
-        // Pixel 动态照片处理逻辑 - 支持两种格式
-        
         // 优先尝试 GContainer:ItemLength 格式
         if let itemLengthString = xmpInfo["GContainer:ItemLength"] {
             return processGContainerFormat(data: data, xmpInfo: xmpInfo, itemLengthString: itemLengthString)
@@ -172,10 +166,15 @@ class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor {
             return processDirectoryItemFormat(data: data, xmpInfo: xmpInfo, lengthString: directoryItemLengthString)
         }
         
+        // 尝试 GCamera 格式
+        if xmpInfo["GCamera:MotionPhoto"] != nil {
+            return processGCameraFormat(data: data, xmpInfo: xmpInfo)
+        }
+        
         return MotionPhotoProcessingResult(
             success: false,
             data: nil,
-            errorMessage: "缺少 Pixel 动态照片的长度信息"
+            errorMessage: "缺少 Android 动态照片的长度信息"
         )
     }
     
@@ -189,7 +188,7 @@ class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor {
             return MotionPhotoProcessingResult(
                 success: false,
                 data: nil,
-                errorMessage: "无法解析 Pixel 动态照片的 GContainer 长度信息"
+                errorMessage: "无法解析 Android 动态照片的 GContainer 长度信息"
             )
         }
         
@@ -208,7 +207,7 @@ class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor {
             imageData: imageData,
             videoData: videoData,
             stillImageTime: 0,
-            brand: .pixel,
+            brand: .android,
             videoOffset: videoStartOffset,
             presentationTimestamp: presentationTimestamp
         )
@@ -230,7 +229,7 @@ class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor {
             return MotionPhotoProcessingResult(
                 success: false,
                 data: nil,
-                errorMessage: "无法解析 Pixel 动态照片的 Directory Item 长度信息"
+                errorMessage: "无法解析 Android 动态照片的 Directory Item 长度信息"
             )
         }
         
@@ -238,79 +237,19 @@ class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor {
         let timestampString = xmpInfo["Motion Photo Presentation Timestamp Us"] ?? xmpInfo["GCamera:MotionPhotoPresentationTimestampUs"]
         let presentationTimestamp = timestampString.flatMap { Double($0) }
         
-        // 计算视频数据的起始位置（简单模式：视频在文件末尾）
-        let videoStartOffset = data.count - videoLength
-        
-        // 提取图片和视频数据
-        let imageData = data.prefix(videoStartOffset)
-        let videoData = data.suffix(videoLength)
-        
-        let motionPhotoData = MotionPhotoData(
-            imageData: imageData,
-            videoData: videoData,
-            stillImageTime: 0,
-            brand: .pixel,
-            videoOffset: videoStartOffset,
-            presentationTimestamp: presentationTimestamp
-        )
-        
-        return MotionPhotoProcessingResult(
-            success: true,
-            data: motionPhotoData,
-            errorMessage: nil
-        )
-    }
-}
-
-// MARK: - Samsung Motion Photo Processor
-class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor {
-    
-    init() {
-        super.init(brand: .samsung)
-    }
-    
-    override func canProcess(xmpInfo: [String: String]) -> Bool {
-        // Samsung 处理器只处理Pixel处理器无法处理的情况
-        // 确保Pixel优先级更高
-        let hasDirectoryFormat = xmpInfo["Directory Item Length"] != nil && xmpInfo["Directory Item Padding"] != nil
-        let hasGCameraFormat = xmpInfo["GCamera:MotionPhoto"] != nil && xmpInfo["GCamera:MotionPhotoVersion"] != nil
-        let hasGContainer = xmpInfo["GContainer:ItemLength"] != nil
-        
-        // 如果有GContainer，让Pixel处理器处理
-        if hasGContainer {
-            return false
+        // 检查是否有填充信息（部分Samsung设备）
+        if let paddingString = xmpInfo["Directory Item Padding"] {
+            return processWithPadding(data: data, lengthComponents: lengthComponents, paddingString: paddingString, presentationTimestamp: presentationTimestamp)
+        } else {
+            // 简单模式：视频在文件末尾（大部分Pixel设备）
+            return processWithoutPadding(data: data, videoLength: videoLength, presentationTimestamp: presentationTimestamp)
         }
-        
-        // 只有在没有GContainer的情况下才处理Directory Item或GCamera格式
-        return hasDirectoryFormat || hasGCameraFormat
     }
     
-    override func processMotionPhoto(data: Data, xmpInfo: [String: String]) -> MotionPhotoProcessingResult {
-        // 检查是否为Directory Item格式
-        if let directoryItemLengthString = xmpInfo["Directory Item Length"],
-           let directoryItemPaddingString = xmpInfo["Directory Item Padding"] {
-            return processDirectoryItemFormat(data: data, xmpInfo: xmpInfo, lengthString: directoryItemLengthString, paddingString: directoryItemPaddingString)
-        }
-        
-        // 检查是否为GCamera格式
-        if xmpInfo["GCamera:MotionPhoto"] != nil {
-            return processGCameraFormat(data: data, xmpInfo: xmpInfo)
-        }
-        
-        return MotionPhotoProcessingResult(
-            success: false,
-            data: nil,
-            errorMessage: "无法识别三星动态照片格式"
-        )
-    }
-    
-    private func processDirectoryItemFormat(data: Data, xmpInfo: [String: String], lengthString: String, paddingString: String) -> MotionPhotoProcessingResult {
-        // 解析长度信息 "0, 5421673" -> [0, 5421673]
-        let lengthComponents = lengthString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    private func processWithPadding(data: Data, lengthComponents: [String], paddingString: String, presentationTimestamp: Double?) -> MotionPhotoProcessingResult {
         let paddingComponents = paddingString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         
-        guard lengthComponents.count >= 2,
-              paddingComponents.count >= 2,
+        guard paddingComponents.count >= 2,
               let imageLength = Int(lengthComponents[0]),
               let videoLength = Int(lengthComponents[1]),
               let imagePadding = Int(paddingComponents[0]),
@@ -318,15 +257,11 @@ class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor {
             return MotionPhotoProcessingResult(
                 success: false,
                 data: nil,
-                errorMessage: "无法解析三星动态照片的长度和填充信息"
+                errorMessage: "无法解析 Android 动态照片的填充信息"
             )
         }
         
-        // 提取时间戳
-        let timestampString = xmpInfo["Motion Photo Presentation Timestamp Us"] ?? xmpInfo["GCamera:MotionPhotoPresentationTimestampUs"]
-        let presentationTimestamp = timestampString.flatMap { Double($0) }
-        
-        // 计算实际的图片和视频数据位置
+        // 计算实际的图片和视频数据位置（考虑填充）
         let imageEndOffset = data.count - videoLength - videoPadding
         let videoStartOffset = imageEndOffset + imagePadding
         
@@ -338,7 +273,31 @@ class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor {
             imageData: imageData,
             videoData: videoData,
             stillImageTime: 0,
-            brand: .samsung,
+            brand: .android,
+            videoOffset: videoStartOffset,
+            presentationTimestamp: presentationTimestamp
+        )
+        
+        return MotionPhotoProcessingResult(
+            success: true,
+            data: motionPhotoData,
+            errorMessage: nil
+        )
+    }
+    
+    private func processWithoutPadding(data: Data, videoLength: Int, presentationTimestamp: Double?) -> MotionPhotoProcessingResult {
+        // 简单模式：视频在文件末尾
+        let videoStartOffset = data.count - videoLength
+        
+        // 提取图片和视频数据
+        let imageData = data.prefix(videoStartOffset)
+        let videoData = data.suffix(videoLength)
+        
+        let motionPhotoData = MotionPhotoData(
+            imageData: imageData,
+            videoData: videoData,
+            stillImageTime: 0,
+            brand: .android,
             videoOffset: videoStartOffset,
             presentationTimestamp: presentationTimestamp
         )
@@ -351,7 +310,7 @@ class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor {
     }
     
     private func processGCameraFormat(data: Data, xmpInfo: [String: String]) -> MotionPhotoProcessingResult {
-        // GCamera格式的三星照片需要通过XMP信息来找到视频数据
+        // GCamera格式需要通过XMP信息来找到视频数据
         // 查找Directory Item Length信息
         if let lengthInfo = xmpInfo["Directory Item Length"] {
             let lengths = lengthInfo.components(separatedBy: ", ")
@@ -372,7 +331,7 @@ class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor {
                         imageData: imageData,
                         videoData: videoData,
                         stillImageTime: 0,
-                        brand: .samsung,
+                        brand: .android,
                         videoOffset: videoStartOffset,
                         presentationTimestamp: presentationTimestamp
                     )
@@ -389,21 +348,16 @@ class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor {
         return MotionPhotoProcessingResult(
             success: false,
             data: nil,
-            errorMessage: "无法在GCamera格式的三星照片中找到视频数据长度信息"
+            errorMessage: "无法在GCamera格式的 Android 动态照片中找到视频数据长度信息"
         )
     }
-    
-
-    
-
 }
 
 // MARK: - Motion Photo Processor Factory
 class MotionPhotoProcessorFactory {
     private static let processors: [MotionPhotoProcessorProtocol] = [
         XiaomiMotionPhotoProcessor(),
-        PixelMotionPhotoProcessor(),
-        SamsungMotionPhotoProcessor()
+        AndroidMotionPhotoProcessor()
     ]
     
     static func getProcessor(for xmpInfo: [String: String]) -> MotionPhotoProcessorProtocol? {

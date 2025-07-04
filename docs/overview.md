@@ -1,8 +1,8 @@
-# MotionPhotoConverter 项目概述
+# Motion2Live 项目概述
 
 ## 项目简介
 
-MotionPhotoConverter 是一个 iOS 应用程序，旨在帮助用户处理和转换 Motion Photo（动态照片）。Motion Photo 是一种包含静态图像和短视频的照片格式，常见于 Google 相册和某些 Android 设备。通过 MotionPhotoConverter，用户可以轻松地从 Motion Photo 中提取视频、导出为 Live Photo（实况照片）或 GIF，并将其保存到相册中。
+Motion2Live 是一个 iOS 应用程序，旨在帮助用户处理和转换 Motion Photo（动态照片）。Motion Photo 是一种包含静态图像和短视频的照片格式，常见于 Google 相册和某些 Android 设备。通过 Motion2Live，用户可以轻松地从 Motion Photo 中提取视频、导出为 Live Photo（实况照片）或 GIF，并将其保存到相册中。
 
 ## 项目背景
 
@@ -10,7 +10,7 @@ MotionPhotoConverter 是一个 iOS 应用程序，旨在帮助用户处理和转
 
 然而，不同平台之间的动态照片格式并不兼容，导致用户在跨平台分享和使用这些照片时遇到困难。例如，从 Android 设备拍摄的 Motion Photo 在 iOS 设备上只能显示为静态图像，无法播放其中的视频部分。
 
-MotionPhotoConverter 应运而生，旨在解决这一跨平台兼容性问题，让用户能够轻松地将 Motion Photo 转换为 iOS 设备支持的 Live Photo 或通用的 GIF 格式，从而实现更好的照片分享和欣赏体验。
+Motion2Live 应运而生，旨在解决这一跨平台兼容性问题，让用户能够轻松地将 Motion Photo 转换为 iOS 设备支持的 Live Photo 或通用的 GIF 格式，从而实现更好的照片分享和欣赏体验。
 
 ## 项目目标
 
@@ -34,7 +34,7 @@ MotionPhotoConverter 应运而生，旨在解决这一跨平台兼容性问题�
 
 ## 技术栈
 
-MotionPhotoConverter 使用以下技术和框架开发：
+Motion2Live 使用以下技术和框架开发：
 
 - **SwiftUI**：用于构建现代化、响应式的用户界面
 - **AVKit**：处理视频播放和编辑
@@ -45,7 +45,7 @@ MotionPhotoConverter 使用以下技术和框架开发：
 
 ## 未来展望
 
-MotionPhotoConverter 计划在未来版本中添加更多功能和改进，包括：
+Motion2Live 计划在未来版本中添加更多功能和改进，包括：
 
 1. **支持更多动态照片格式**：扩展对其他厂商动态照片格式的支持。
 2. **批量处理功能**：允许用户一次性转换多个 Motion Photo。
@@ -53,4 +53,4 @@ MotionPhotoConverter 计划在未来版本中添加更多功能和改进，包�
 4. **云存储集成**：与主流云存储服务集成，方便用户直接从云端导入和导出文件。
 5. **社交媒体分享**：直接分享转换后的文件到社交媒体平台。
 
-通过不断创新和改进，MotionPhotoConverter 致力于为用户提供最佳的动态照片处理体验，让珍贵的瞬间更加生动和有意义。
+通过不断创新和改进，Motion2Live 致力于为用户提供最佳的动态照片处理体验，让珍贵的瞬间更加生动和有意义。

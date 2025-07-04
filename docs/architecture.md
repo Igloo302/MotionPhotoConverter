@@ -1,10 +1,10 @@
-# MotionPhotoConverter 技术架构
+# Motion2Live 技术架构
 
-本文档详细介绍 MotionPhotoConverter 应用的技术架构、代码结构和实现细节。
+本文档详细介绍 Motion2Live 应用的技术架构、代码结构和实现细节。
 
 ## 技术栈
 
-MotionPhotoConverter 使用以下技术和框架开发：
+Motion2Live 使用以下技术和框架开发：
 
 - **SwiftUI**：用于构建现代化、响应式的用户界面
 - **AVKit**：处理视频播放和编辑
@@ -17,7 +17,7 @@ MotionPhotoConverter 使用以下技术和框架开发：
 
 ## 架构设计
 
-MotionPhotoConverter 采用 MVVM (Model-View-ViewModel) 架构模式，将用户界面、业务逻辑和数据模型分离，提高代码的可维护性和可测试性。
+Motion2Live 采用 MVVM (Model-View-ViewModel) 架构模式，将用户界面、业务逻辑和数据模型分离，提高代码的可维护性和可测试性。
 
 ### 架构组件
 
@@ -41,11 +41,11 @@ MotionPhotoConverter 采用 MVVM (Model-View-ViewModel) 架构模式，将用户
 
 #### 应用入口
 
-- **MotionPhotoConverterApp.swift**：应用的入口点，设置应用的主窗口和初始视图。
+- **Motion2LiveApp.swift**：应用的入口点，设置应用的主窗口和初始视图。
 
 ```swift
 @main
-struct MotionPhotoConverterApp: App {
+struct Motion2LiveApp: App {
     var body: some Scene {
         WindowGroup {
             HomeView()
@@ -451,4 +451,4 @@ PlayerView(player: player)
 
 ## 总结
 
-MotionPhotoConverter 采用现代化的架构设计和技术栈，提供高效、可靠的 Motion Photo 处理功能。通过 MVVM 架构模式、异步处理和响应式设计，应用实现了良好的用户体验和代码可维护性。未来的开发将继续优化架构，提高性能和可扩展性。
+Motion2Live 采用现代化的架构设计和技术栈，提供高效、可靠的 Motion Photo 处理功能。通过 MVVM 架构模式、异步处理和响应式设计，应用实现了良好的用户体验和代码可维护性。未来的开发将继续优化架构，提高性能和可扩展性。

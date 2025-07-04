@@ -1,6 +1,6 @@
-# MotionPhotoConverter 用户指南
+# Motion2Live 用户指南
 
-欢迎使用 MotionPhotoConverter！本指南将帮助您了解如何使用应用的各项功能，以及解答常见问题。
+欢迎使用 Motion2Live！本指南将帮助您了解如何使用应用的各项功能，以及解答常见问题。
 
 ## 目录
 
@@ -21,10 +21,10 @@
 
 ### 安装应用
 
-1. 在 App Store 中搜索 "MotionPhotoConverter"
+1. 在 App Store 中搜索 "Motion2Live"
 2. 点击 "获取" 或下载图标
 3. 等待应用下载和安装完成
-4. 点击应用图标启动 MotionPhotoConverter
+4. 点击应用图标启动 Motion2Live
 
 ### 权限设置
 
@@ -35,7 +35,7 @@
 如果您不小心拒绝了权限请求，可以通过以下步骤重新授予权限：
 
 1. 打开设备的 "设置" 应用
-2. 滚动并点击 "MotionPhotoConverter"
+2. 滚动并点击 "Motion2Live"
 3. 点击 "照片"
 4. 选择 "所有照片" 或 "选择的照片"
 
@@ -43,7 +43,7 @@
 
 ### 选择 Motion Photo
 
-1. 启动 MotionPhotoConverter 应用
+1. 启动 Motion2Live 应用
 2. 在主界面点击 "选择动态照片" 按钮
 3. 从照片库中选择一张 Motion Photo
    - 如果选择的照片不是 Motion Photo，应用会显示提示信息
@@ -109,11 +109,11 @@ Live Photo 是 Apple 设备上的一种照片格式，类似于 Motion Photo。�
 
 ### 如何识别 Motion Photo？
 
-在大多数支持 Motion Photo 的设备上，Motion Photo 在相册中会有特殊的标识，如动态图标或标签。在 MotionPhotoConverter 应用中，当您尝试选择非 Motion Photo 时，应用会提示您选择有效的 Motion Photo。
+在大多数支持 Motion Photo 的设备上，Motion Photo 在相册中会有特殊的标识，如动态图标或标签。在 Motion2Live 应用中，当您尝试选择非 Motion Photo 时，应用会提示您选择有效的 Motion Photo。
 
 ### 转换后的文件质量如何？
 
-MotionPhotoConverter 致力于保持原始质量。转换后的文件质量取决于原始 Motion Photo 的质量，但应用会尽量保持原始分辨率和帧率。
+Motion2Live 致力于保持原始质量。转换后的文件质量取决于原始 Motion Photo 的质量，但应用会尽量保持原始分辨率和帧率。
 
 ### 应用支持哪些 Motion Photo 格式？
 
@@ -181,8 +181,8 @@ MotionPhotoConverter 致力于保持原始质量。转换后的文件质量取�
 
 如果您遇到本指南未涵盖的问题，或需要进一步的帮助，请通过以下方式联系我们：
 
-- **电子邮件**：support@motionphotoconverter.com
-- **GitHub 问题**：[https://github.com/Igloo302/MotionPhotoConverter/issues](https://github.com/Igloo302/MotionPhotoConverter/issues)
+- **电子邮件**：support@motion2live.com
+- **GitHub 问题**：[https://github.com/Igloo302/Motion2Live/issues](https://github.com/Igloo302/Motion2Live/issues)
 
 在联系支持时，请提供以下信息：
 
@@ -192,4 +192,4 @@ MotionPhotoConverter 致力于保持原始质量。转换后的文件质量取�
 4. 问题的详细描述
 5. 如果可能，提供问题截图或屏幕录制
 
-我们会尽快回复您的问题。感谢您使用 MotionPhotoConverter！
+我们会尽快回复您的问题。感谢您使用 Motion2Live！

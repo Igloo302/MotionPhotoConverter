@@ -1,6 +1,6 @@
-# MotionPhotoConverter 安全与隐私
+# Motion2Live 安全与隐私
 
-本文档概述了 MotionPhotoConverter 应用的安全措施和隐私保护政策，旨在确保用户数据的安全和隐私。
+本文档概述了 Motion2Live 应用的安全措施和隐私保护政策，旨在确保用户数据的安全和隐私。
 
 ## 目录
 
@@ -17,7 +17,7 @@
 
 ## 数据处理原则
 
-MotionPhotoConverter 遵循以下数据处理原则：
+Motion2Live 遵循以下数据处理原则：
 
 1. **最小数据收集**：仅收集应用功能所必需的数据
 2. **本地处理**：所有数据处理在用户设备上完成，不传输到外部服务器
@@ -27,7 +27,7 @@ MotionPhotoConverter 遵循以下数据处理原则：
 
 ## 权限使用
 
-MotionPhotoConverter 需要以下权限才能正常工作：
+Motion2Live 需要以下权限才能正常工作：
 
 ### 照片库访问权限
 
@@ -80,7 +80,7 @@ MotionPhotoConverter 需要以下权限才能正常工作：
 
 ## 网络通信
 
-MotionPhotoConverter 是一个完全离线的应用，不需要互联网连接即可运行。应用不会：
+Motion2Live 是一个完全离线的应用，不需要互联网连接即可运行。应用不会：
 
 - 发送或接收任何网络数据
 - 连接到远程服务器
@@ -91,7 +91,7 @@ MotionPhotoConverter 是一个完全离线的应用，不需要互联网连接�
 
 ## 第三方服务
 
-MotionPhotoConverter 不使用任何第三方服务、库或 SDK 来处理用户数据。应用仅使用 Apple 提供的系统框架，包括：
+Motion2Live 不使用任何第三方服务、库或 SDK 来处理用户数据。应用仅使用 Apple 提供的系统框架，包括：
 
 - SwiftUI：用于用户界面
 - AVFoundation：用于媒体处理
@@ -104,7 +104,7 @@ MotionPhotoConverter 不使用任何第三方服务、库或 SDK 来处理用户
 
 ### 数据保护
 
-MotionPhotoConverter 利用 iOS 的数据保护功能来保护临时文件：
+Motion2Live 利用 iOS 的数据保护功能来保护临时文件：
 
 - 所有文件使用设备加密密钥加密
 - 当设备锁定时，加密密钥不可用，确保数据安全
@@ -130,7 +130,7 @@ MotionPhotoConverter 利用 iOS 的数据保护功能来保护临时文件：
 
 ### 数据收集
 
-MotionPhotoConverter 不收集任何用户数据。具体而言，我们不收集：
+Motion2Live 不收集任何用户数据。具体而言，我们不收集：
 
 - 个人身份信息
 - 使用统计信息
@@ -149,7 +149,7 @@ MotionPhotoConverter 不收集任何用户数据。具体而言，我们不收�
 
 ### 儿童隐私
 
-MotionPhotoConverter 不针对 13 岁以下的儿童，也不会有意收集儿童的个人信息。
+Motion2Live 不针对 13 岁以下的儿童，也不会有意收集儿童的个人信息。
 
 ### 隐私政策更新
 
@@ -159,7 +159,7 @@ MotionPhotoConverter 不针对 13 岁以下的儿童，也不会有意收集儿�
 
 ### GDPR 合规
 
-由于 MotionPhotoConverter 不收集或处理任何个人数据，它本质上符合欧盟《通用数据保护条例》(GDPR) 的要求。用户拥有对其数据的完全控制权。
+由于 Motion2Live 不收集或处理任何个人数据，它本质上符合欧盟《通用数据保护条例》(GDPR) 的要求。用户拥有对其数据的完全控制权。
 
 ### CCPA 合规
 
@@ -167,13 +167,13 @@ MotionPhotoConverter 不针对 13 岁以下的儿童，也不会有意收集儿�
 
 ### App Store 隐私标签
 
-MotionPhotoConverter 的 App Store 隐私标签表明应用不收集任何数据。这反映了应用的实际行为，并帮助用户做出明智的决定。
+Motion2Live 的 App Store 隐私标签表明应用不收集任何数据。这反映了应用的实际行为，并帮助用户做出明智的决定。
 
 ## 安全最佳实践
 
 ### 开发者指南
 
-为确保 MotionPhotoConverter 的安全性，开发者应遵循以下最佳实践：
+为确保 Motion2Live 的安全性，开发者应遵循以下最佳实践：
 
 1. **代码审查**：所有代码更改都应经过安全审查
 2. **依赖管理**：定期更新依赖项以修复已知漏洞
@@ -192,7 +192,7 @@ MotionPhotoConverter 的 App Store 隐私标签表明应用不收集任何数据
 
 ## 报告安全问题
 
-如果您发现 MotionPhotoConverter 中的安全漏洞或隐私问题，请负责任地报告：
+如果您发现 Motion2Live 中的安全漏洞或隐私问题，请负责任地报告：
 
 1. **不要公开披露**：避免在公共论坛或社交媒体上披露漏洞
 2. **联系开发者**：发送详细报告至 [开发者邮箱]
@@ -203,6 +203,6 @@ MotionPhotoConverter 的 App Store 隐私标签表明应用不收集任何数据
 
 ## 结语
 
-MotionPhotoConverter 致力于保护用户隐私和数据安全。通过本地处理所有数据、最小化数据收集、实施强大的安全措施，我们确保用户可以安全地使用应用，而不必担心其隐私。
+Motion2Live 致力于保护用户隐私和数据安全。通过本地处理所有数据、最小化数据收集、实施强大的安全措施，我们确保用户可以安全地使用应用，而不必担心其隐私。
 
 如果您对我们的安全和隐私措施有任何问题或建议，请随时联系项目维护者。

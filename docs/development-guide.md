@@ -1,6 +1,6 @@
-# MotionPhotoConverter 开发指南
+# Motion2Live 开发指南
 
-本文档为开发者提供参与 MotionPhotoConverter 项目开发的指南，包括环境设置、代码规范、贡献流程等信息。
+本文档为开发者提供参与 Motion2Live 项目开发的指南，包括环境设置、代码规范、贡献流程等信息。
 
 ## 目录
 
@@ -27,14 +27,14 @@
 1. 克隆项目仓库：
 
 ```bash
-git clone https://github.com/Igloo302/MotionPhotoConverter.git
-cd MotionPhotoConverter
+git clone https://github.com/Igloo302/Motion2Live.git
+cd Motion2Live
 ```
 
 2. 打开项目：
 
 ```bash
-open MotionPhotoConverter.xcodeproj
+open Motion2Live.xcodeproj
 ```
 
 ### 依赖管理
@@ -44,25 +44,25 @@ open MotionPhotoConverter.xcodeproj
 ## 项目结构
 
 ```
-MotionPhotoConverter/
-├── MotionPhotoConverter/          # 主应用源代码
+Motion2Live/
+├── Motion2Live/          # 主应用源代码
 │   ├── Assets.xcassets/           # 图像资源
 │   ├── HomeView.swift             # 主页视图
 │   ├── HomeViewModel.swift        # 主页视图模型
 │   ├── Info.plist                 # 应用配置文件
 │   ├── LabView.swift              # 实验室功能视图
 │   ├── Localizable.swift          # 本地化支持
-│   ├── MotionPhotoConverterApp.swift  # 应用入口
+│   ├── Motion2LiveApp.swift  # 应用入口
 │   └── Preview Content/           # 预览资源
-├── MotionPhotoConverterTests/     # 单元测试
-├── MotionPhotoConverterUITests/   # UI 测试
-├── MotionPhotoConverter.xcodeproj # Xcode 项目文件
+├── Motion2LiveTests/     # 单元测试
+├── Motion2LiveUITests/   # UI 测试
+├── Motion2Live.xcodeproj # Xcode 项目文件
 └── README.md                      # 项目说明
 ```
 
 ### 主要组件说明
 
-- **MotionPhotoConverterApp.swift**：应用的入口点，设置应用的主窗口和初始视图。
+- **Motion2LiveApp.swift**：应用的入口点，设置应用的主窗口和初始视图。
 - **HomeView.swift**：应用的主页视图，显示欢迎信息和照片选择按钮。
 - **HomeViewModel.swift**：HomeView 的视图模型，处理主页相关的业务逻辑。
 - **LabView.swift**：实验室功能视图，提供实验性功能如自定义 Live Photo 创建。
@@ -194,7 +194,7 @@ git merge develop
 
 ### 单元测试
 
-单元测试位于 `MotionPhotoConverterTests` 目录下，使用 XCTest 框架。
+单元测试位于 `Motion2LiveTests` 目录下，使用 XCTest 框架。
 
 #### 编写单元测试
 
@@ -224,7 +224,7 @@ class FileProcessorTests: XCTestCase {
 
 ### UI 测试
 
-UI 测试位于 `MotionPhotoConverterUITests` 目录下，使用 XCUITest 框架。
+UI 测试位于 `Motion2LiveUITests` 目录下，使用 XCUITest 框架。
 
 #### 编写 UI 测试
 
@@ -268,7 +268,7 @@ import os.log
 print("处理文件: \(url.path)")
 
 // 使用 os_log
-let logger = OSLog(subsystem: "com.igloo.MotionPhotoConverter", category: "FileProcessing")
+let logger = OSLog(subsystem: "com.igloo.Motion2Live", category: "FileProcessing")
 os_log("处理文件: %@", log: logger, type: .debug, url.path)
 ```
 
@@ -382,4 +382,4 @@ git branch -d release/1.2.0
 
 ## 结语
 
-感谢您对 MotionPhotoConverter 项目的贡献！如果您有任何问题或建议，请随时联系项目维护者或在 GitHub 上创建 issue。我们期待您的参与和贡献！
+感谢您对 Motion2Live 项目的贡献！如果您有任何问题或建议，请随时联系项目维护者或在 GitHub 上创建 issue。我们期待您的参与和贡献！

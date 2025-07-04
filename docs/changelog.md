@@ -1,6 +1,6 @@
-# MotionPhotoConverter 更新日志
+# Motion2Live 更新日志
 
-本文档记录 MotionPhotoConverter 应用的所有重要变更。
+本文档记录 Motion2Live 应用的所有重要变更。
 
 ## [未发布]
 
@@ -37,7 +37,7 @@
 
 ## 版本号规范
 
-MotionPhotoConverter 遵循 [语义化版本控制](https://semver.org/lang/zh-CN/) 规范：
+Motion2Live 遵循 [语义化版本控制](https://semver.org/lang/zh-CN/) 规范：
 
 - 主版本号（Major）：当进行不兼容的 API 变更时增加
 - 次版本号（Minor）：当以向下兼容的方式添加功能时增加

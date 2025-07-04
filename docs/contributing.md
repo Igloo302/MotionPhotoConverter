@@ -1,6 +1,6 @@
-# MotionPhotoConverter 贡献指南
+# Motion2Live 贡献指南
 
-感谢您考虑为 MotionPhotoConverter 项目做出贡献！本文档提供了参与项目贡献的指南和流程。
+感谢您考虑为 Motion2Live 项目做出贡献！本文档提供了参与项目贡献的指南和流程。
 
 ## 目录
 
@@ -75,7 +75,7 @@ Bug 是指程序的实际行为与预期行为不符。报告 Bug 是对项目�
 
 ### 环境设置
 
-开发 MotionPhotoConverter 需要以下环境：
+开发 Motion2Live 需要以下环境：
 
 - macOS 12.0 或更高版本
 - Xcode 14.0 或更高版本
@@ -87,20 +87,20 @@ Bug 是指程序的实际行为与预期行为不符。报告 Bug 是对项目�
 1. 克隆您 fork 的仓库：
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/MotionPhotoConverter.git
-cd MotionPhotoConverter
+git clone https://github.com/YOUR_USERNAME/Motion2Live.git
+cd Motion2Live
 ```
 
 2. 添加上游仓库：
 
 ```bash
-git remote add upstream https://github.com/Igloo302/MotionPhotoConverter.git
+git remote add upstream https://github.com/Igloo302/Motion2Live.git
 ```
 
 3. 打开项目：
 
 ```bash
-open MotionPhotoConverter.xcodeproj
+open Motion2Live.xcodeproj
 ```
 
 ### 分支策略
@@ -188,7 +188,7 @@ Closes #123
 ```bash
 # 在 Xcode 中使用快捷键 Cmd+U
 # 或使用 xcodebuild 命令行工具
-xcodebuild test -project MotionPhotoConverter.xcodeproj -scheme MotionPhotoConverter -destination 'platform=iOS Simulator,name=iPhone 14'
+xcodebuild test -project Motion2Live.xcodeproj -scheme Motion2Live -destination 'platform=iOS Simulator,name=iPhone 14'
 ```
 
 ## 文档
@@ -224,6 +224,6 @@ xcodebuild test -project MotionPhotoConverter.xcodeproj -scheme MotionPhotoConve
 
 ## 致谢
 
-再次感谢您考虑为 MotionPhotoConverter 项目做出贡献！您的时间和专业知识对于改进这个项目非常宝贵。
+再次感谢您考虑为 Motion2Live 项目做出贡献！您的时间和专业知识对于改进这个项目非常宝贵。
 
 如果您有任何问题或需要帮助，请随时联系项目维护者或在 GitHub 上创建 Issue。

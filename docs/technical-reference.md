@@ -1,6 +1,6 @@
-# MotionPhotoConverter 技术参考
+# Motion2Live 技术参考
 
-本文档提供 MotionPhotoConverter 应用中使用的关键技术、API 和实现细节的参考信息。
+本文档提供 Motion2Live 应用中使用的关键技术、API 和实现细节的参考信息。
 
 ## 目录
 
@@ -16,7 +16,7 @@
 
 ### SwiftUI
 
-MotionPhotoConverter 使用 SwiftUI 构建用户界面，这是 Apple 的声明式 UI 框架。SwiftUI 提供了以下优势：
+Motion2Live 使用 SwiftUI 构建用户界面，这是 Apple 的声明式 UI 框架。SwiftUI 提供了以下优势：
 
 - 声明式语法，使 UI 代码更简洁、可读性更高
 - 自动适应不同设备和屏幕尺寸
@@ -32,7 +32,7 @@ MotionPhotoConverter 使用 SwiftUI 构建用户界面，这是 Apple 的声明�
 
 ### AVFoundation
 
-AVFoundation 是用于处理音频和视频的框架，在 MotionPhotoConverter 中主要用于：
+AVFoundation 是用于处理音频和视频的框架，在 Motion2Live 中主要用于：
 
 - 从 Motion Photo 中提取视频数据
 - 创建和处理视频文件
@@ -93,7 +93,7 @@ Motion Photo 文件通常具有以下结构：
 
 ### 解析方法
 
-MotionPhotoConverter 使用以下步骤解析 Motion Photo 文件：
+Motion2Live 使用以下步骤解析 Motion Photo 文件：
 
 1. 读取文件数据
 2. 查找特定的元数据标记，确定视频数据的位置
@@ -132,7 +132,7 @@ Live Photo 是 Apple 设备上的一种特殊媒体格式，它将静态图像�
 
 ### 创建 Live Photo
 
-MotionPhotoConverter 使用以下步骤创建 Live Photo：
+Motion2Live 使用以下步骤创建 Live Photo：
 
 1. 准备静态图像（从 Motion Photo 中提取或用户选择）
 2. 准备视频片段（从 Motion Photo 中提取或用户选择）
@@ -274,7 +274,7 @@ func createGIFFromVideo(videoURL: URL, frameCount: Int, loopCount: Int, completi
 
 ### 临时文件管理
 
-MotionPhotoConverter 在处理过程中创建多个临时文件，包括：
+Motion2Live 在处理过程中创建多个临时文件，包括：
 
 - 提取的视频文件
 - 处理后的图像文件
@@ -318,7 +318,7 @@ func isMotionPhoto(url: URL) -> Bool {
 
 ### 异步处理
 
-MotionPhotoConverter 使用异步处理来避免阻塞主线程，提高用户界面响应性：
+Motion2Live 使用异步处理来避免阻塞主线程，提高用户界面响应性：
 
 ```swift
 // 使用 GCD 进行异步处理
@@ -381,7 +381,7 @@ func processLargeFile(url: URL) {
 
 ### 错误类型
 
-MotionPhotoConverter 定义了以下错误类型：
+Motion2Live 定义了以下错误类型：
 
 ```swift
 enum MotionPhotoError: Error {
@@ -471,7 +471,7 @@ func showError(_ error: MotionPhotoError) {
 
 ## 结语
 
-本技术参考文档提供了 MotionPhotoConverter 应用中使用的关键技术和实现细节。开发者可以参考这些信息来理解应用的工作原理，或者在自己的项目中实现类似功能。
+本技术参考文档提供了 Motion2Live 应用中使用的关键技术和实现细节。开发者可以参考这些信息来理解应用的工作原理，或者在自己的项目中实现类似功能。
 
 如需更多信息，请参考 Apple 官方文档：
 
