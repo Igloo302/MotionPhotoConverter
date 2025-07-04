@@ -19,8 +19,8 @@
 
 #### 3. 品牌特定处理器
 - **XiaomiMotionPhotoProcessor** - 处理小米动态照片（已完全实现）
-- **PixelMotionPhotoProcessor** - 处理Pixel动态照片（待实现）
-- **SamsungMotionPhotoProcessor** - 处理三星动态照片（待实现）
+- **PixelMotionPhotoProcessor** - 处理Pixel动态照片（已完全实现）
+- **SamsungMotionPhotoProcessor** - 处理三星动态照片（已完全实现）
 
 #### 4. MotionPhotoProcessorFactory
 工厂类，负责根据XMP数据自动选择合适的处理器。
@@ -114,14 +114,14 @@ class MotionPhotoProcessorFactory {
 | 品牌 | 状态 | 说明 |
 |------|------|------|
 | 小米 | ✅ 完全支持 | 新旧版本动态照片均支持 |
-| Pixel | 🟠 架构就绪 | 处理器框架已创建，待实现具体逻辑 |
-| 三星 | 🟠 架构就绪 | 处理器框架已创建，待实现具体逻辑 |
+| Pixel | ✅ 完全支持 | 支持GContainer:ItemLength格式 |
+| 三星 | ✅ 完全支持 | 支持Directory Item和GCamera两种格式 |
 
 ## UI 改进
 
 - 添加了 `SupportedBrandsView` 组件，在主界面显示支持的品牌信息
 - 用户可以清楚地了解当前支持哪些品牌的动态照片
-- 区分完全支持和即将支持的格式
+- 所有支持的格式均已完全实现，提供完整的功能体验
 
 ## 代码质量提升
 
@@ -133,8 +133,8 @@ class MotionPhotoProcessorFactory {
 
 ## 下一步计划
 
-1. 实现 Pixel 动态照片处理逻辑
-2. 实现三星动态照片处理逻辑
-3. 添加单元测试
-4. 性能优化
-5. 错误处理改进
+1. 添加单元测试覆盖所有品牌处理器
+2. 性能优化和内存使用优化
+3. 错误处理和用户体验改进
+4. 支持更多设备厂商的动态照片格式
+5. 批量处理功能

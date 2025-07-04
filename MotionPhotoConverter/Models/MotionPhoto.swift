@@ -19,25 +19,29 @@ struct MotionPhoto {
         }
         
         // 检查是否为动态照片
-        guard (xmpInfo["GCamera:MotionPhoto"] == "1" || xmpInfo["GCamera:MicroVideo"] == "1") else {
+        guard (xmpInfo["GCamera:MotionPhoto"] == "1" || xmpInfo["GCamera:MicroVideo"] == "1" || xmpInfo["Motion Photo"] == "1") else {
             return nil
         }
         
-        // 获取视频偏移量
-        guard let offset = xmpInfo["GCamera:MicroVideoOffset"] ?? xmpInfo["GContainer:ItemLength"],
-              let offsetValue = Int(offset) else {
+        // 使用处理器工厂获取合适的处理器
+        guard let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo) else {
+            print("不支持的动态照片格式")
             return nil
         }
         
-        // 提取视频数据
-        self.videoData = data.suffix(offsetValue)
-        self.imageData = data.prefix(data.count - offsetValue)
+        // 处理动态照片数据
+        let result = processor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
+        guard result.success, let motionPhotoData = result.data else {
+            print("处理动态照片失败: \(result.errorMessage ?? "未知错误")")
+            return nil
+        }
         
-        // 获取时间戳
-        if let timestampString = xmpInfo["GCamera:MicroVideoPresentationTimestampUs"] ?? xmpInfo["GCamera:MotionPhotoPresentationTimestampUs"],
-           let timestamp = Double(timestampString) {
-            // 计算stillImageTime
-            let photoTime = timestamp / 1_000_000.0
+        self.imageData = motionPhotoData.imageData
+        self.videoData = motionPhotoData.videoData
+        
+        // 计算 stillImageTime
+        if let presentationTimestamp = motionPhotoData.presentationTimestamp {
+            let photoTime = presentationTimestamp / 1_000_000.0
             self.stillImageTime = Self.calculateStillImageTime(videoData: videoData, photoTime: photoTime)
         } else {
             self.stillImageTime = 0

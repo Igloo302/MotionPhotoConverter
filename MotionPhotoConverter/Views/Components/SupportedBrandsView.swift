@@ -38,12 +38,11 @@ struct SupportedBrandsView: View {
                 .padding(.vertical, 2)
             }
             
-            if supportedBrands.contains(where: { !isFullySupported($0) }) {
-                Text("🟠 表示即将支持的格式")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.top, 4)
-            }
+            // 所有支持的品牌均已完全实现
+            Text("✅ 所有格式均已完全支持")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
         }
         .padding()
         .background(Color(.systemGray6))
@@ -77,8 +76,8 @@ struct SupportedBrandsView: View {
     }
     
     private func isFullySupported(_ brand: MotionPhotoBrand) -> Bool {
-        // 目前只有小米完全支持
-        return brand == .xiaomi
+        // 小米、Pixel、三星均已完全支持
+        return brand == .xiaomi || brand == .pixel || brand == .samsung
     }
 }
 

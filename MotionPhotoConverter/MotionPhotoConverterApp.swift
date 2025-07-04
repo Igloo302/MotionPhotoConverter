@@ -826,10 +826,15 @@ struct PhotoPicker: UIViewControllerRepresentable {
             if let xmpData = extractXMPData(from: data),
                let xmpInfo = parseXMP(data: xmpData) {
                 print("XMP Info: \(xmpInfo)")
-                if xmpInfo["GCamera:MicroVideoOffset"] != nil || xmpInfo["GContainer:ItemLength"] != nil || xmpInfo["GCamera:MotionPhoto"] == "1" {
+                // 检查各种 Motion Photo 标识
+                if xmpInfo["GCamera:MicroVideoOffset"] != nil || 
+                   xmpInfo["GContainer:ItemLength"] != nil || 
+                   xmpInfo["GCamera:MotionPhoto"] == "1" ||
+                   xmpInfo["Motion Photo"] == "1" ||
+                   xmpInfo["Directory Item Length"] != nil {
                     return true
                 } else {
-                    print("XMP 数据中不包含 Motion Photo 所需的键或 GCamera:MotionPhoto 不为 1")
+                    print("XMP 数据中不包含 Motion Photo 所需的键")
                     return false
                 }
             } else {
@@ -928,12 +933,37 @@ func parseXMP(data: Data) -> [String: String]? {
 class XMPParserDelegate: NSObject, XMLParserDelegate {
     var parsedData = [String: String]()
     var currentElement = ""
+    var itemLengths: [String] = []
+    var itemPaddings: [String] = []
+    var itemMimes: [String] = []
+    var itemSemantics: [String] = []
     
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
         currentElement = elementName
+        
+        // 处理属性中的数据
         for (key, value) in attributeDict {
-            if key.contains("MicroVideoOffset") || key.contains("ItemLength") || key.contains("PresentationTimestampUs") || key.contains("MotionPhoto") {
+            // 检查所有可能的 Motion Photo 相关字段
+            if key.contains("MicroVideoOffset") || 
+               key.contains("ItemLength") || 
+               key.contains("PresentationTimestampUs") || 
+               key.contains("MotionPhoto") ||
+               key.contains("MicroVideo") ||
+               key.contains("ItemPadding") ||
+               key.contains("ItemMime") ||
+               key.contains("ItemSemantic") {
                 parsedData[key] = value
+            }
+            
+            // 特别处理Container Item的属性
+            if key == "Item:Length" {
+                itemLengths.append(value)
+            } else if key == "Item:Padding" {
+                itemPaddings.append(value)
+            } else if key == "Item:Mime" {
+                itemMimes.append(value)
+            } else if key == "Item:Semantic" {
+                itemSemantics.append(value)
             }
         }
     }
@@ -941,7 +971,45 @@ class XMPParserDelegate: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, foundCharacters string: String) {
         let trimmedString = string.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedString.isEmpty {
-            parsedData[currentElement] = trimmedString
+            // 检查当前元素是否是我们关心的字段
+            if currentElement.contains("MicroVideoOffset") ||
+               currentElement.contains("ItemLength") ||
+               currentElement.contains("PresentationTimestampUs") ||
+               currentElement.contains("MotionPhoto") ||
+               currentElement.contains("MicroVideo") ||
+               currentElement.contains("ItemPadding") ||
+               currentElement.contains("ItemMime") ||
+               currentElement.contains("ItemSemantic") ||
+               currentElement == "Motion Photo" ||
+               currentElement == "Motion Photo Version" ||
+               currentElement == "Motion Photo Presentation Timestamp Us" ||
+               currentElement == "Directory Item Length" ||
+               currentElement == "Directory Item Padding" ||
+               currentElement == "Directory Item Mime" ||
+               currentElement == "Directory Item Semantic" {
+                parsedData[currentElement] = trimmedString
+            }
+        }
+    }
+    
+    func parserDidEndDocument(_ parser: XMLParser) {
+        // 在解析完成后，将收集到的Item属性组合成标准格式
+        if !itemLengths.isEmpty {
+            parsedData["Directory Item Length"] = itemLengths.joined(separator: ", ")
+        }
+        if !itemPaddings.isEmpty {
+            parsedData["Directory Item Padding"] = itemPaddings.joined(separator: ", ")
+        }
+        if !itemMimes.isEmpty {
+            parsedData["Directory Item Mime"] = itemMimes.joined(separator: ", ")
+        }
+        if !itemSemantics.isEmpty {
+            parsedData["Directory Item Semantic"] = itemSemantics.joined(separator: ", ")
+        }
+        
+        // 同时保持GContainer格式的兼容性
+        if !itemLengths.isEmpty {
+            parsedData["GContainer:ItemLength"] = itemLengths.joined(separator: ", ")
         }
     }
 }
