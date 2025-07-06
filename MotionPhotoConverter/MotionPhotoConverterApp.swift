@@ -183,6 +183,8 @@ struct MotionPhotoView: View {
                 }
             }, onNonMotionPhotoSelected: {
                 self.showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+            }, onCancelled: {
+                // 用户取消选择，不显示任何提示
             })
         }
         .alert(isPresented: $showAlert) {
@@ -720,7 +722,8 @@ struct SizePreferenceKey: PreferenceKey {
 
 struct PhotoPicker: UIViewControllerRepresentable {
     let onImagePicked: (URL, Bool) -> Void
-    let onNonMotionPhotoSelected: () -> Void  // 新增回调函数
+    let onNonMotionPhotoSelected: () -> Void
+    let onCancelled: (() -> Void)?  // 用户取消选择的回调
     
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
@@ -750,7 +753,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
             
             guard let provider = results.first?.itemProvider else { 
                 DispatchQueue.main.async {
-                    self.parent.onNonMotionPhotoSelected()
+                    self.parent.onCancelled?()
                 }
                 return 
             }
