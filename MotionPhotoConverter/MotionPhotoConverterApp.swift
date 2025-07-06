@@ -16,7 +16,7 @@ import PhotosUI
 import ImageIO
 import Foundation
 
-// MARK: - 导出选项面板
+// MARK: - Export Options Panel
 struct ExportOptionsView: View {
     let fileName: String
     let fileSize: Int64
@@ -33,23 +33,23 @@ struct ExportOptionsView: View {
     }
     
     private var videoDurationString: String {
-        String(format: "%.1f秒", videoDuration)
+        String(format: "%.1fs", videoDuration)
     }
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // 文件信息部分
+                // File information section
                 VStack(spacing: 16) {
                     HStack {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("文件信息")
+                            Text("File Information")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text("文件名:")
+                                    Text("File Name:")
                                         .foregroundColor(.secondary)
                                     Spacer()
                                     Text(fileName)
@@ -57,7 +57,7 @@ struct ExportOptionsView: View {
                                 }
                                 
                                 HStack {
-                                    Text("文件大小:")
+                                    Text("File Size:")
                                         .foregroundColor(.secondary)
                                     Spacer()
                                     Text(fileSizeString)
@@ -66,7 +66,7 @@ struct ExportOptionsView: View {
                                 
                                 if let date = creationDate {
                                     HStack {
-                                        Text("拍摄时间:")
+                                        Text("Creation Date:")
                                             .foregroundColor(.secondary)
                                         Spacer()
                                         Text(date, style: .date)
@@ -75,7 +75,7 @@ struct ExportOptionsView: View {
                                 }
                                 
                                 HStack {
-                                    Text("视频时长:")
+                                    Text("Video Duration:")
                                         .foregroundColor(.secondary)
                                     Spacer()
                                     Text(videoDurationString)
@@ -93,9 +93,9 @@ struct ExportOptionsView: View {
                 Divider()
                     .padding(.vertical, 20)
                 
-                // 导出选项部分
+                // Export options section
                 VStack(spacing: 0) {
-                    Text("选择导出格式")
+                    Text("Choose Export Format")
                         .font(.headline)
                         .fontWeight(.semibold)
                         .padding(.bottom, 16)
@@ -103,8 +103,8 @@ struct ExportOptionsView: View {
                     VStack(spacing: 12) {
                         ExportOptionRow(
                             icon: "video.fill",
-                            title: "保存为视频",
-                            subtitle: "导出为 MP4 视频文件",
+                            title: "Save as Video",
+                            subtitle: "Export as MP4 video file",
                             action: {
                                 dismiss()
                                 onExportVideo()
@@ -113,8 +113,8 @@ struct ExportOptionsView: View {
                         
                         ExportOptionRow(
                             icon: "livephoto",
-                            title: "保存为 Live Photo",
-                            subtitle: "导出为 iOS Live Photo",
+                            title: "Save as Live Photo",
+                            subtitle: "Export as iOS Live Photo",
                             action: {
                                 dismiss()
                                 onExportLivePhoto()
@@ -123,8 +123,8 @@ struct ExportOptionsView: View {
                         
                         ExportOptionRow(
                             icon: "gift.fill",
-                            title: "保存为 GIF",
-                            subtitle: "导出为动态 GIF 图片",
+                            title: "Save as GIF",
+                            subtitle: "Export as animated GIF",
                             action: {
                                 dismiss()
                                 onExportGIF()
@@ -136,11 +136,11 @@ struct ExportOptionsView: View {
                 
                 Spacer()
             }
-            .navigationTitle("导出选项")
+            .navigationTitle("Export Options")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("取消") {
+                    Button("Cancel") {
                         dismiss()
                     }
                 }
@@ -149,7 +149,7 @@ struct ExportOptionsView: View {
     }
 }
 
-// MARK: - 导出选项行
+// MARK: - Export Option Row
 struct ExportOptionRow: View {
     let icon: String
     let title: String
@@ -198,14 +198,14 @@ struct MotionPhotoConverterApp: App {
 }
 
 
-// 播放引导提示视图
+// Playback guide hint view
 struct PlaybackHintView: View {
     let onDismiss: () -> Void
     @State private var isAnimating = false
     
     var body: some View {
         VStack(spacing: 12) {
-            // 动态的 Live Photo 图标
+            // Dynamic Live Photo icon
             Image(systemName: "livephoto.play")
                 .font(.system(size: 32, weight: .medium))
                 .foregroundColor(.white)
@@ -216,8 +216,8 @@ struct PlaybackHintView: View {
                     value: isAnimating
                 )
             
-            // 文字提示
-            Text("按住可播放")
+            // Text hint
+            Text("Hold to Play")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.white)
         }
@@ -240,7 +240,7 @@ struct PlaybackHintView: View {
     }
 }
 
-// 在文件顶部添加 VideoPlayerObserver 类的定义
+// Add VideoPlayerObserver class definition at the top of the file
 class VideoPlayerObserver: NSObject, ObservableObject {
     @Published var isVideoReady = false
     var player: AVPlayer? {
@@ -270,7 +270,7 @@ class VideoPlayerObserver: NSObject, ObservableObject {
 
 struct MotionPhotoView: View {
     @Environment(\.presentationMode) var presentationMode
-    @State var sourceURL: URL  // 将 sourceURL 改为可变属性
+    @State var sourceURL: URL  // Make sourceURL a mutable property
     
     @State private var selectedImage: UIImage?
     @State private var videoPlayer: AVPlayer?
@@ -292,11 +292,11 @@ struct MotionPhotoView: View {
     @State private var videoDuration: Double = 0
     @State private var fileSize: Int64 = 0
     
-    // 用户引导相关状态
+    // User guidance related states
     @State private var showPlaybackHint = false
     @State private var hasUserPlayedVideo = UserDefaults.standard.bool(forKey: "hasUserPlayedMotionPhoto")
     
-    // 触感反馈生成器
+    // Haptic feedback generator
     private let lightImpactFeedback = UIImpactFeedbackGenerator(style: .light)
     private let softImpactFeedback = UIImpactFeedbackGenerator(style: .soft)
     
@@ -307,7 +307,7 @@ struct MotionPhotoView: View {
     
     var body: some View {
         ZStack {
-            // 主要内容区域
+            // Main content area
             VStack(spacing: 0) {
                 if let image = selectedImage {
                     ZStack {
@@ -325,7 +325,7 @@ struct MotionPhotoView: View {
                                 .clipped()
                         }
                         
-                        // 首次使用引导提示
+                        // First-time use guidance hint
                         if showPlaybackHint {
                             PlaybackHintView {
                                 hidePlaybackHint()
@@ -347,7 +347,7 @@ struct MotionPhotoView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(UIColor.systemBackground))
             
-            // 底部中心浮动的分享按钮
+            // Bottom center floating share button
             VStack {
                 Spacer()
                 
@@ -361,10 +361,10 @@ struct MotionPhotoView: View {
                         .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
                 .disabled(selectedImage == nil)
-                .padding(.bottom, 34) // 适配底部安全区域
+                .padding(.bottom, 34) // Adapt to bottom safe area
             }
         }
-        .navigationTitle("预览")
+        .navigationTitle("Preview")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -375,7 +375,7 @@ struct MotionPhotoView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .medium))
-                        Text("返回")
+                        Text("Back")
                             .font(.system(size: 16))
                     }
                     .foregroundColor(.blue)
@@ -417,7 +417,7 @@ struct MotionPhotoView: View {
             }, onNonMotionPhotoSelected: {
                 self.showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
             }, onCancelled: {
-                // 用户取消选择，不显示任何提示
+                // User cancelled selection, no alert needed
             })
         }
         .alert(isPresented: $showAlert) {
@@ -427,7 +427,7 @@ struct MotionPhotoView: View {
             Task {
                 await extractVideoFromMotionPhoto(url: sourceURL)
                 
-                // 检查是否需要显示首次使用引导
+                // Check if first-time use guidance should be shown
                 await MainActor.run {
                     if !hasUserPlayedVideo && selectedImage != nil {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -454,10 +454,10 @@ struct MotionPhotoView: View {
     }
     
     func startVideoPlaybackWithFeedback() {
-        // 触发轻微触感反馈
+        // Trigger light haptic feedback
         lightImpactFeedback.impactOccurred()
         
-        // 如果是首次播放，隐藏引导提示并记录状态
+        // If first playback, hide guidance hint and record state
         if showPlaybackHint {
             hidePlaybackHint()
         }
@@ -466,7 +466,7 @@ struct MotionPhotoView: View {
     }
     
     func stopVideoPlaybackWithFeedback() {
-        // 触发更轻微的触感反馈
+        // Trigger softer haptic feedback
         softImpactFeedback.impactOccurred()
         
         stopVideoPlayback()
@@ -477,7 +477,7 @@ struct MotionPhotoView: View {
             showPlaybackHint = false
         }
         
-        // 记录用户已经学会播放操作
+        // Record that user has learned playback operation
         if !hasUserPlayedVideo {
             hasUserPlayedVideo = true
             UserDefaults.standard.set(true, forKey: "hasUserPlayedMotionPhoto")
@@ -485,28 +485,28 @@ struct MotionPhotoView: View {
     }
     
     func extractVideoFromMotionPhoto(url: URL) async {
-        print("开始处理文件: \(url.path)")
+        print("Starting to process file: \(url.path)")
         
         guard let data = try? Data(contentsOf: url) else {
             await MainActor.run {
-                print("无法读取文件: \(url.path)")
+                print("Cannot read file: \(url.path)")
                 showAlert(message: Localizable.string(.cannotReadFile))
             }
             return
         }
         
-        print("文件大小: \(data.count) bytes")
+        print("File size: \(data.count) bytes")
         
-        // 获取文件大小
+        // Get file size
         await MainActor.run {
             self.fileSize = Int64(data.count)
         }
         
-        // 尝试提取和解析 XMP 数据
+        // Try to extract and parse XMP data
         guard let xmpData = extractXMPData(from: data),
               let xmpInfo = parseXMP(data: xmpData) else {
             await MainActor.run {
-                print("无法提取或解析 XMP 数据")
+                print("Cannot extract or parse XMP data")
                 showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
             }
             return
@@ -514,66 +514,66 @@ struct MotionPhotoView: View {
         
         print("XMPInfo: \(xmpInfo)")
         
-        // 使用新的处理器架构
+        // Use new processor architecture
         guard let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo) else {
             await MainActor.run {
-                print("不支持的动态照片格式")
+                print("Unsupported motion photo format")
                 showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
             }
             return
         }
         
-        print("检测到 \(processor.brand.displayName) 动态照片")
+        print("Detected \(processor.brand.displayName) motion photo")
         
         let result = processor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
         
         guard result.success, let motionPhotoData = result.data else {
             await MainActor.run {
-                print("处理动态照片失败: \(result.errorMessage ?? "未知错误")")
+                print("Failed to process motion photo: \(result.errorMessage ?? "Unknown error")")
                 showAlert(message: result.errorMessage ?? Localizable.string(.selectedPhotoIsNotMotionPhoto))
             }
             return
         }
         
-        // 更新状态变量
+        // Update state variables
         self.originalImageData = motionPhotoData.imageData
         self.videoData = motionPhotoData.videoData
         self.microVideoOffset = motionPhotoData.videoOffset
         
-        print("提取的视频数据大小: \(motionPhotoData.videoData.count) bytes")
-        print("提取的图片数据大小: \(motionPhotoData.imageData.count) bytes")
+        print("Extracted video data size: \(motionPhotoData.videoData.count) bytes")
+        print("Extracted image data size: \(motionPhotoData.imageData.count) bytes")
         
-        // 设置图片
+        // Set image
         self.selectedImage = UIImage(data: motionPhotoData.imageData)
         
-        // 处理视频
+        // Process video
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("temp_video.mp4")
         do {
             try motionPhotoData.videoData.write(to: tempURL)
             let asset = AVAsset(url: tempURL)
             
-            // 获取视频时长和帧率
+            // Get video duration and frame rate
             let duration = try await asset.load(.duration)
             let videoDuration = CMTimeGetSeconds(duration)
             
             let tracks = try await asset.loadTracks(withMediaType: .video)
             let frameRate = try await tracks.first?.load(.nominalFrameRate) ?? 30.0
             
-            // 使用处理器计算 stillImageTime
+            // Use processor to calculate stillImageTime
             self.stillImageTime = processor.calculateStillImageTime(
                 videoDuration: videoDuration,
                 presentationTimestamp: motionPhotoData.presentationTimestamp,
                 frameRate: Double(frameRate)
             )
             
-            print("视频时长: \(videoDuration) 秒")
-            print("视频帧率: \(frameRate) fps")
+            print("Video duration: \(videoDuration) seconds")
+            print("Video frame rate: \(frameRate) fps")
             if let timestamp = motionPhotoData.presentationTimestamp {
-                print("照片时间戳: \(timestamp) 微秒")
+                print("Photo timestamp: \(timestamp) microseconds")
             }
-            print("计算得 stillImageTime: \(self.stillImageTime)")
+            print("Calculated stillImageTime: \(self.stillImageTime)")
             
-            // 保存视频时长
+            // Save video duration
             self.videoDuration = videoDuration
             
             await MainActor.run {
@@ -585,23 +585,23 @@ struct MotionPhotoView: View {
                     self.videoPlayer?.play()
                 }
                 
-                // 设置视频播放器观察者
+                // Set video player observer
                 videoPlayerObserver.player = self.videoPlayer
             }
         } catch {
-            print("处理视频文件时出错: \(error)")
-            print("错误详情: \(error.localizedDescription)")
+            print("Error processing video file: \(error)")
+            print("Error details: \(error.localizedDescription)")
             if let nsError = error as NSError? {
-                print("错误域: \(nsError.domain)")
-                print("错误码: \(nsError.code)")
-                print("错误用户信息: \(nsError.userInfo)")
+                print("Error domain: \(nsError.domain)")
+                print("Error code: \(nsError.code)")
+                print("Error user info: \(nsError.userInfo)")
             }
             await MainActor.run {
                 showAlert(message: Localizable.string(.errorProcessingVideoFile))
             }
         }
         
-        // 获取创建日期
+        // Get creation date
         if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
            let creationDate = attributes[.creationDate] as? Date {
             await MainActor.run {
@@ -624,7 +624,7 @@ struct MotionPhotoView: View {
             
             let asset = AVAsset(url: tempVideoURL)
             
-            // 创建导出会话
+            // Create export session
             guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
                 showAlert(message: Localizable.string(.cannotCreateExportSession))
                 isProcessing = false
@@ -650,7 +650,7 @@ struct MotionPhotoView: View {
                         self.showAlert(message: Localizable.string(.videoExportUnknownError))
                     }
                     
-                    // 清理临时文件
+                    // Clean up temporary files
                     try? FileManager.default.removeItem(at: tempVideoURL)
                 }
             }
@@ -671,7 +671,7 @@ struct MotionPhotoView: View {
                     self.showAlert(message: Localizable.string(.savingVideoFailed) + ": \(error?.localizedDescription ?? Localizable.string(.unknownError))")
                 }
                 
-                // 清理导出的视频文件
+                // Clean up exported video file
                 try? FileManager.default.removeItem(at: videoURL)
             }
         }
@@ -684,10 +684,10 @@ struct MotionPhotoView: View {
             return
         }
         
-        print("开始导出 Live Photo")
-        print("原始数据大小: \(imageData.count) bytes")
-        print("视频数据大小: \(videoData.count) bytes")
-        print("源文件 URL: \(sourceURL.path)")
+        print("Starting to export Live Photo")
+        print("Original data size: \(imageData.count) bytes")
+        print("Video data size: \(videoData.count) bytes")
+        print("Source file URL: \(sourceURL.path)")
 
         let sourceFileName = sourceURL.deletingPathExtension().lastPathComponent
         let uniqueID = UUID().uuidString
@@ -696,23 +696,23 @@ struct MotionPhotoView: View {
         let movURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(sourceFileName)-\(uniqueID).mov")
         
         do {
-            // 获取源文件的创建日期和修改日期
+            // Get source file creation and modification dates
             let attributes = try FileManager.default.attributesOfItem(atPath: sourceURL.path)
             let creationDate = attributes[.creationDate] as? Date
             let modificationDate = attributes[.modificationDate] as? Date
             
-            // 使用已经处理好的纯图像数据
-            // 新的架构中，originalImageData 已经是纯图像数据，不包含视频部分
+            // Use processed pure image data
+            // In the new architecture, originalImageData is already pure image data without video part
             let pureImageData = imageData
             
-            // 将纯图像数据写入 JPEG 文件
+            // Write pure image data to JPEG file
             try pureImageData.write(to: jpegURL)
-            print("成功写入纯 JPEG 图片数据到: \(jpegURL.path)")
+            print("Successfully wrote pure JPEG image data to: \(jpegURL.path)")
             
             try videoData.write(to: mp4URL)
-            print("成功写入视频据到: \(mp4URL.path)")
+            print("Successfully wrote video data to: \(mp4URL.path)")
             
-            // 将 MP4 转换为 MOV
+            // Convert MP4 to MOV
             let asset = AVAsset(url: mp4URL)
             
             Task { @MainActor in
@@ -721,12 +721,12 @@ struct MotionPhotoView: View {
                     
                     switch exportResult.status {
                     case .completed:
-                        print("视频转换成功，输出文件：\(exportResult.outputURL.path)")
+                        print("Video conversion successful, output file: \(exportResult.outputURL.path)")
                         self.saveLivePhoto(imageURL: jpegURL, videoURL: exportResult.outputURL, creationDate: creationDate, modificationDate: modificationDate)
                     case .failed:
                         if let error = exportResult.error {
                             showAlert(message: Localizable.string(.videoConversionFailed) + ": \(error.localizedDescription)")
-                            print("错误详情: \(error)")
+                            print("Error details: \(error)")
                         } else {
                             showAlert(message: Localizable.string(.videoConversionFailedNoErrorInfo))
                         }
@@ -736,10 +736,10 @@ struct MotionPhotoView: View {
                         showAlert(message: Localizable.string(.videoConversionUnknownStatus) + ": \(exportResult.status.rawValue)")
                     }
                     
-                    // 清理临时文件
+                    // Clean up temporary files
                     try FileManager.default.removeItem(at: jpegURL)
                     try FileManager.default.removeItem(at: mp4URL)
-                    print("成功删除临时文")
+                    print("Successfully deleted temporary files")
                 } catch {
                     showAlert(message: Localizable.string(.errorProcessingVideoFile) + ": \(error.localizedDescription)")
                 }
@@ -766,13 +766,13 @@ struct MotionPhotoView: View {
     @MainActor
     func saveLivePhoto(imageURL: URL, videoURL: URL, creationDate: Date?, modificationDate: Date?) {
         isProcessing = true
-        print("开始保存 Live Photo")
+        print("Starting to save Live Photo")
 
-        // 生成唯一的标识符
+        // Generate unique identifier
         let assetIdentifier = UUID().uuidString
-        print("生成资产标识符: \(assetIdentifier)")
+        print("Generated asset identifier: \(assetIdentifier)")
 
-        // 处理图像
+        // Process image
         guard let imageSource = CGImageSourceCreateWithURL(imageURL as CFURL, nil) else {
             showAlert(message: Localizable.string(.cannotCreateImageSource))
             isProcessing = false
@@ -792,7 +792,7 @@ struct MotionPhotoView: View {
             return
         }
 
-        // 添加 Live Photo 必要的元数据
+        // Add necessary Live Photo metadata
         if var makerAppleDict = mutableImageProperties[kCGImagePropertyMakerAppleDictionary as String] as? [String: Any] {
             makerAppleDict["17"] = assetIdentifier
             mutableImageProperties[kCGImagePropertyMakerAppleDictionary as String] = makerAppleDict
@@ -803,7 +803,7 @@ struct MotionPhotoView: View {
         CGImageDestinationAddImageFromSource(imageDestination, imageSource, 0, mutableImageProperties as CFDictionary)
         CGImageDestinationFinalize(imageDestination)
 
-        // 处理视频
+        // Process video
         let avAsset = AVAsset(url: videoURL)
 
         Task {
@@ -846,7 +846,7 @@ struct MotionPhotoView: View {
 
                 await MainActor.run {
                     if exporter.status == .completed {
-                        print("视频导出成功")
+                        print("Video export successful")
                         self.performLivePhotoSave(imageData: imageData as Data, videoURL: exportURL, creationDate: creationDate, modificationDate: modificationDate)
                     } else {
                         showAlert(message: Localizable.string(.videoExportFailed) + ": \(exporter.error?.localizedDescription ?? Localizable.string(.unknownError))")
@@ -872,22 +872,22 @@ struct MotionPhotoView: View {
                 creationRequest.creationDate = creationDate
             }
             
-            // 设置修改日期
+            // Set modification date
             if let modificationDate = modificationDate {
-                creationRequest.creationDate = modificationDate // 使用 creationDate 来设置修改日期
+                creationRequest.creationDate = modificationDate // Use creationDate to set modification date
             }
         } completionHandler: { success, error in
             DispatchQueue.main.async {
                 self.isProcessing = false
                 if success {
-                    print("Live Photo 保存成功")
+                    print("Live Photo saved successfully")
                     self.showAlert(message: Localizable.string(.livePhotoSaved))
                 } else {
-                    print("保存 Live Photo 时出错: \(error?.localizedDescription ?? Localizable.string(.unknownError))")
+                    print("Error saving Live Photo: \(error?.localizedDescription ?? Localizable.string(.unknownError))")
                     self.showAlert(message: Localizable.string(.savingLivePhotoFailed))
                 }
                 
-                // 清理临时文件
+                // Clean up temporary files
                 try? FileManager.default.removeItem(at: videoURL)
             }
         }
@@ -953,7 +953,7 @@ struct MotionPhotoView: View {
     }
     
     func createGIF(from asset: AVAsset, duration: Double, outputURL: URL) async throws {
-        let frameCount = 30 // 可以调整这个值来改变 GIF 的帧数
+        let frameCount = 30 // Can adjust this value to change GIF frame count
         let frameInterval = duration / Double(frameCount)
         
         let generator = AVAssetImageGenerator(asset: asset)
@@ -991,7 +991,7 @@ struct MotionPhotoView: View {
             showAlert(message: Localizable.string(.failedToSaveGIF) + ": \(error.localizedDescription)")
         }
         
-        // 清理临时文件
+        // Clean up temporary files
         try? FileManager.default.removeItem(at: gifURL)
     }
 }
@@ -1006,7 +1006,7 @@ struct SizePreferenceKey: PreferenceKey {
 struct PhotoPicker: UIViewControllerRepresentable {
     let onImagePicked: (URL, Bool) -> Void
     let onNonMotionPhotoSelected: () -> Void
-    let onCancelled: (() -> Void)?  // 用户取消选择的回调
+    let onCancelled: (() -> Void)?  // Callback for user cancellation
     
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
@@ -1047,7 +1047,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
                 if provider.hasItemConformingToTypeIdentifier(type) {
                     provider.loadFileRepresentation(forTypeIdentifier: type) { url, error in
                         if let error = error {
-                            print("加载文件时出错: \(error.localizedDescription)")
+                            print("Error loading file: \(error.localizedDescription)")
                             DispatchQueue.main.async {
                                 self.parent.onNonMotionPhotoSelected()
                             }
@@ -1055,14 +1055,14 @@ struct PhotoPicker: UIViewControllerRepresentable {
                         }
                         
                         guard let url = url else {
-                            print("未返回 URL")
+                            print("No URL returned")
                             DispatchQueue.main.async {
                                 self.parent.onNonMotionPhotoSelected()
                             }
                             return
                         }
                         
-                        // 创建一个临时文件来保存选中的图片
+                        // Create a temporary file to save the selected image
                         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + "." + url.pathExtension)
                         do {
                             if FileManager.default.fileExists(atPath: tempURL.path) {
@@ -1070,7 +1070,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
                             }
                             try FileManager.default.copyItem(at: url, to: tempURL)
                             
-                            // 检查是否为 Motion Photo
+                            // Check if it's a Motion Photo
                             let isMotionPhoto = self.isMotionPhoto(url: tempURL)
                             
                             DispatchQueue.main.async {
@@ -1081,7 +1081,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
                                 }
                             }
                         } catch {
-                            print("复制文件时出错: \(error.localizedDescription)")
+                            print("Error copying file: \(error.localizedDescription)")
                             DispatchQueue.main.async {
                                 self.parent.onNonMotionPhotoSelected()
                             }
@@ -1091,7 +1091,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
                 }
             }
             
-            // 如果没有匹配到支持的类型
+            // If no supported type is matched
             DispatchQueue.main.async {
                 self.parent.onNonMotionPhotoSelected()
             }
@@ -1099,20 +1099,20 @@ struct PhotoPicker: UIViewControllerRepresentable {
         
         func isMotionPhoto(url: URL) -> Bool {
             guard let data = try? Data(contentsOf: url) else {
-                print("无法读取文件数据")
+                print("Unable to read file data")
                 return false
             }
             
             let supportedExtensions = ["jpg", "jpeg", "heic", "avif"]
             guard supportedExtensions.contains(url.pathExtension.lowercased()) else {
-                print("不支持的文件扩展名: \(url.pathExtension)")
+                print("Unsupported file extension: \(url.pathExtension)")
                 return false
             }
             
             if let xmpData = extractXMPData(from: data),
                let xmpInfo = parseXMP(data: xmpData) {
                 print("XMP Info: \(xmpInfo)")
-                // 检查各种 Motion Photo 标识
+                // Check various Motion Photo identifiers
                 if xmpInfo["GCamera:MicroVideoOffset"] != nil || 
                    xmpInfo["GContainer:ItemLength"] != nil || 
                    xmpInfo["GCamera:MotionPhoto"] == "1" ||
@@ -1120,11 +1120,11 @@ struct PhotoPicker: UIViewControllerRepresentable {
                    xmpInfo["Directory Item Length"] != nil {
                     return true
                 } else {
-                    print("XMP 数据中不包含 Motion Photo 所需的键")
+                    print("XMP data does not contain required Motion Photo keys")
                     return false
                 }
             } else {
-                print("无法提取或解析 XMP 数据")
+                print("Unable to extract or parse XMP data")
                 return false
             }
         }
@@ -1139,7 +1139,7 @@ struct PlayerView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
-        // 不需要在这里更新，为我们使用了自定义的 UIView
+        // No need to update here as we use custom UIView
     }
 }
 
@@ -1167,14 +1167,14 @@ func extractXMPData(from data: Data) -> Data? {
     if let xmpStartRange = data.range(of: Data("<x:xmpmeta".utf8)),
        let xmpEndRange = data.range(of: Data("</x:xmpmeta>".utf8), in: xmpStartRange.lowerBound..<data.count) {
         print("Found <x:xmpmeta> tags.")
-        // 确保包含完整的 <x:xmpmeta> 标签
+        // Ensure complete <x:xmpmeta> tag is included
         let fullXMPStart = xmpStartRange.lowerBound
         let fullXMPEnd = xmpEndRange.upperBound
         print("XMP Start: \(fullXMPStart), XMP End: \(fullXMPEnd)")
         return data[fullXMPStart..<fullXMPEnd]
     }
 
-    // Fallback: 尝试查找 <?xpacket ... ?> 标签 (如果主要查找失败)
+    // Fallback: try to find <?xpacket ... ?> tag (if main search fails)
     if let xpacketStartRange = data.range(of: Data("<?xpacket begin=".utf8)),
        let xpacketEndRange = data.range(of: Data("<?xpacket end=".utf8), in: xpacketStartRange.lowerBound..<data.count) {
         print("Found <?xpacket> tags as fallback.")
@@ -1187,10 +1187,10 @@ func extractXMPData(from data: Data) -> Data? {
 }
 
 func parseXMP(data: Data) -> [String: String]? {
-    // 尝试清理数据，移除BOM或无效前缀
+    // Try to clean data, remove BOM or invalid prefixes
     var cleanedData = data
     if let utf8String = String(data: data, encoding: .utf8) {
-        // 尝试找到第一个有效的XML标签，并截取之后的内容
+        // Try to find the first valid XML tag and extract content after it
         if let range = utf8String.range(of: "<x:") ?? utf8String.range(of: "<?xpacket") {
             let startIndex = range.lowerBound
             cleanedData = Data(utf8String[startIndex...].utf8)
@@ -1208,7 +1208,7 @@ func parseXMP(data: Data) -> [String: String]? {
     if parser.parse() {
         return delegate.parsedData
     } else {
-        print("XML 解析错误: \(parser.parserError?.localizedDescription ?? Localizable.string(.unknownError))")
+        print("XML parsing error: \(parser.parserError?.localizedDescription ?? Localizable.string(.unknownError))")
         print("Parsed XML data was: \(String(data: cleanedData, encoding: .utf8) ?? "Invalid UTF-8")") // Add debug print for cleaned data
         return nil
     }
@@ -1225,9 +1225,9 @@ class XMPParserDelegate: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
         currentElement = elementName
         
-        // 处理属性中的数据
+        // Process data in attributes
         for (key, value) in attributeDict {
-            // 检查所有可能的 Motion Photo 相关字段
+            // Check all possible Motion Photo related fields
             if key.contains("MicroVideoOffset") || 
                key.contains("ItemLength") || 
                key.contains("PresentationTimestampUs") || 
@@ -1239,7 +1239,7 @@ class XMPParserDelegate: NSObject, XMLParserDelegate {
                 parsedData[key] = value
             }
             
-            // 特别处理Container Item的属性
+            // Special handling for Container Item attributes
             if key == "Item:Length" {
                 itemLengths.append(value)
             } else if key == "Item:Padding" {
@@ -1255,7 +1255,7 @@ class XMPParserDelegate: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, foundCharacters string: String) {
         let trimmedString = string.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedString.isEmpty {
-            // 检查当前元素是否是我们关心的字段
+            // Check if current element is a field we care about
             if currentElement.contains("MicroVideoOffset") ||
                currentElement.contains("ItemLength") ||
                currentElement.contains("PresentationTimestampUs") ||
@@ -1277,7 +1277,7 @@ class XMPParserDelegate: NSObject, XMLParserDelegate {
     }
     
     func parserDidEndDocument(_ parser: XMLParser) {
-        // 在解析完成后，将收集到的Item属性组合成标准格式
+        // After parsing, combine collected Item attributes into standard format
         if !itemLengths.isEmpty {
             parsedData["Directory Item Length"] = itemLengths.joined(separator: ", ")
         }
@@ -1291,7 +1291,7 @@ class XMPParserDelegate: NSObject, XMLParserDelegate {
             parsedData["Directory Item Semantic"] = itemSemantics.joined(separator: ", ")
         }
         
-        // 同时保持GContainer格式的兼容性
+        // While maintaining GContainer format compatibility
         if !itemLengths.isEmpty {
             parsedData["GContainer:ItemLength"] = itemLengths.joined(separator: ", ")
         }

@@ -19,30 +19,30 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    // 主图区
+                    // Main image area
                     // heroSectionView
                     
-                    // 核心操作区
+                    // Core operation area
                     primaryActionView
                         .padding(.horizontal, 20)
                         .padding(.top, 40)
                     
-                    // 功能概览区
+                    // Feature overview area
                     featuresOverviewView
                         .padding(.horizontal, 20)
                         .padding(.top, 40)
                     
-                    // 实验室功能入口
+                    // Lab feature entrance
                     labEntryView
                         .padding(.horizontal, 20)
                         .padding(.top, 30)
                         .padding(.bottom, 40)
                 }
             }
-            .navigationTitle("Motion2Live")
+            .navigationTitle(Localizable.string(.appTitle))
             .navigationBarTitleDisplayMode(.large)
             .alert(isPresented: $showAlert) {
-                Alert(title: Text("提示"), message: Text(alertMessage), dismissButton: .default(Text("确定")))
+                Alert(title: Text(Localizable.string(.tip)), message: Text(alertMessage), dismissButton: .default(Text(Localizable.string(.ok))))
             }
             .sheet(isPresented: $viewModel.isShowingPhotoPicker) {
                 PhotoPicker(
@@ -50,14 +50,14 @@ struct HomeView: View {
                         if isMotionPhoto {
                             selectedMotionPhotoURL = url
                         } else {
-                            showAlert(message: "所选照片不是动态照片")
+                            showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
                         }
                     },
                     onNonMotionPhotoSelected: {
-                        showAlert(message: "所选照片不是动态照片")
+                        showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
                     },
                     onCancelled: {
-                        // 用户取消选择，不显示任何提示
+                        // User cancelled selection, no prompt displayed
                     }
                 )
             }
@@ -80,9 +80,7 @@ struct HomeView: View {
                 }
             }
             .sheet(isPresented: $showingLabView) {
-                Text("实验室功能即将推出")
-                    .font(.title2)
-                    .padding()
+                LabView()
             }
             .sheet(isPresented: $showingHelpSheet) {
                 HelpSheetView()
@@ -91,16 +89,16 @@ struct HomeView: View {
     }
     
     private func showAlert(message: String) {
-        print("显示警告: \(message)") // 添加调试信息
+        print("Show alert: \(message)") // Add debug info
         alertMessage = message
         showAlert = true
-        print("alertMessage: \(alertMessage), showAlert: \(showAlert)") // 添加更多调试信息
+        print("alertMessage: \(alertMessage), showAlert: \(showAlert)") // Add more debug info
     }
     
-    // MARK: - 主图区
+    // MARK: - Hero Section
     private var heroSectionView: some View {
         VStack(spacing: 20) {
-            // 动态表情网格背景
+            // Dynamic emoji grid background
             ZStack {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
                     ForEach(viewModel.randomEmojis, id: \.self) { emoji in
@@ -111,7 +109,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 30)
                 
-                // 主图标
+                // Main icon
                 Image(systemName: "photo.on.rectangle.angled")
                     .font(.system(size: 60, weight: .light))
                     .foregroundColor(.blue)
@@ -135,7 +133,7 @@ struct HomeView: View {
 //        )
     }
     
-    // MARK: - 核心操作区
+    // MARK: - Primary Action Section
     private var primaryActionView: some View {
         VStack(spacing: 16) {
             Button(action: {
@@ -144,7 +142,7 @@ struct HomeView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.title2)
-                    Text("选择动态照片")
+                    Text(Localizable.string(.selectMotionPhoto))
                         .font(.headline)
                         .fontWeight(.semibold)
                 }
@@ -168,10 +166,10 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - 功能概览区
+    // MARK: - Features Overview Section
     private var featuresOverviewView: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("主要功能")
+            Text(Localizable.string(.mainFeatures))
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
@@ -179,22 +177,22 @@ struct HomeView: View {
             VStack(spacing: 12) {
                 FeatureRowView(
                     icon: "livephoto",
-                    title: "转换 Live Photo",
-                    description: "将动态照片转换为 iOS 原生实况照片格式",
+                    title: Localizable.string(.convertToLivePhoto),
+                    description: Localizable.string(.convertToLivePhotoDescription),
                     color: .blue
                 )
                 
                 FeatureRowView(
                     icon: "video.fill",
-                    title: "提取独立视频",
-                    description: "从动态照片中提取视频部分并保存",
+                    title: Localizable.string(.extractVideo),
+                    description: Localizable.string(.extractVideoDescription),
                     color: .green
                 )
                 
                 FeatureRowView(
                     icon: "rectangle.stack.fill",
-                    title: "生成 GIF 动图",
-                    description: "将动态照片转换为可分享的 GIF 格式",
+                    title: Localizable.string(.generateGIF),
+                    description: Localizable.string(.generateGIFDescription),
                     color: .orange
                 )
             }
@@ -204,7 +202,7 @@ struct HomeView: View {
         .cornerRadius(16)
     }
     
-    // MARK: - 实验室功能入口
+    // MARK: - Lab Features Entry
     private var labEntryView: some View {
         Button(action: {
             showingLabView = true
@@ -215,11 +213,11 @@ struct HomeView: View {
                     .foregroundColor(.purple)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("实验室功能")
+                    Text(Localizable.string(.lab))
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text("探索更多创新功能")
+                    Text(Localizable.string(.exploreMoreFeatures))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -238,7 +236,7 @@ struct HomeView: View {
     }
 }
 
-// MARK: - 功能行视图
+// MARK: - Feature Row View
 struct FeatureRowView: View {
     let icon: String
     let title: String
@@ -269,7 +267,7 @@ struct FeatureRowView: View {
     }
 }
 
-// MARK: - 帮助页面
+// MARK: - Help Sheet
 struct HelpSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTab = 0
@@ -277,18 +275,18 @@ struct HelpSheetView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 标签选择器
-                Picker("帮助类型", selection: $selectedTab) {
-                    Text("快速开始").tag(0)
-                    Text("功能介绍").tag(1)
-                    Text("常见问题").tag(2)
-                    Text("故障排除").tag(3)
+                // Tab selector
+                Picker("Help Type", selection: $selectedTab) {
+                    Text("Quick Start").tag(0)
+                    Text("Features").tag(1)
+                    Text("FAQ").tag(2)
+                    Text("Troubleshooting").tag(3)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
                 
-                // 内容区域
+                // Content area
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         switch selectedTab {
@@ -307,10 +305,10 @@ struct HelpSheetView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("帮助")
+            .navigationTitle("Help")
             .toolbar {
                 ToolbarItem(placement: .automatic) {
-                    Button("完成") {
+                    Button("Done") {
                         dismiss()
                     }
                 }
@@ -318,89 +316,89 @@ struct HelpSheetView: View {
         }
     }
     
-    // MARK: - 快速开始内容
+    // MARK: - Quick Start Content
     private var quickStartContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HelpSectionView(title: "关于 Motion2Live", icon: "info.circle.fill", color: .blue) {
-                Text("Motion2Live 是一款专业的动态照片转换工具，支持将各种品牌设备拍摄的动态照片转换为 iOS 原生的 Live Photo 格式，让您的回忆更加生动。")
+            HelpSectionView(title: "About Motion2Live", icon: "info.circle.fill", color: .blue) {
+                Text("Motion2Live is a professional motion photo converter that supports converting motion photos from various device brands to iOS native Live Photo format, making your memories more vivid.")
                     .font(.body)
                     .foregroundColor(.secondary)
             }
             
-            HelpSectionView(title: "系统要求", icon: "iphone", color: .green) {
+            HelpSectionView(title: "System Requirements", icon: "iphone", color: .green) {
                 VStack(alignment: .leading, spacing: 8) {
-                    HelpBulletPoint(text: "iOS 16.0 或更高版本")
-                    HelpBulletPoint(text: "足够的存储空间用于处理照片和视频")
-                    HelpBulletPoint(text: "照片库访问权限")
+                    HelpBulletPoint(text: "iOS 16.0 or later")
+                    HelpBulletPoint(text: "Sufficient storage space for processing photos and videos")
+                    HelpBulletPoint(text: "Photo library access permission")
                 }
             }
             
-            HelpSectionView(title: "支持的动态照片格式", icon: "camera.fill", color: .orange) {
+            HelpSectionView(title: "Supported Motion Photo Formats", icon: "camera.fill", color: .orange) {
                 VStack(alignment: .leading, spacing: 8) {
-                    HelpBulletPoint(text: "✅ 小米动态照片（包括 MIUI 和 HyperOS 版本）")
+                    HelpBulletPoint(text: "✅ Xiaomi Motion Photos (including MIUI and HyperOS versions)")
                     HelpBulletPoint(text: "✅ Google Pixel Motion Photo")
-                    HelpBulletPoint(text: "✅ 三星动态照片")
+                    HelpBulletPoint(text: "✅ Samsung Motion Photos")
                 }
             }
             
-            HelpSectionView(title: "使用步骤", icon: "list.number", color: .purple) {
+            HelpSectionView(title: "Usage Steps", icon: "list.number", color: .purple) {
                 VStack(alignment: .leading, spacing: 12) {
-                    HelpStepView(step: "1", title: "选择动态照片", description: "点击主页的'选择动态照片'按钮，从相册中选择您要转换的动态照片")
-                    HelpStepView(step: "2", title: "预览和播放", description: "查看静态图像，按住屏幕播放视频部分")
-                    HelpStepView(step: "3", title: "选择导出格式", description: "选择导出为 Live Photo、视频或 GIF")
-                    HelpStepView(step: "4", title: "保存到相册", description: "转换完成后，文件将自动保存到您的相册中")
+                    HelpStepView(step: "1", title: "Select Motion Photo", description: "Tap the 'Select Motion Photo' button on the home page and choose the motion photo you want to convert from your album")
+                    HelpStepView(step: "2", title: "Preview and Play", description: "View the static image and press and hold the screen to play the video portion")
+                    HelpStepView(step: "3", title: "Choose Export Format", description: "Select to export as Live Photo, video, or GIF")
+                    HelpStepView(step: "4", title: "Save to Album", description: "After conversion is complete, the file will be automatically saved to your photo album")
                 }
             }
         }
     }
     
-    // MARK: - 功能介绍内容
+    // MARK: - Features Content
     private var featuresContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HelpSectionView(title: "基本功能", icon: "star.fill", color: .blue) {
+            HelpSectionView(title: "Basic Features", icon: "star.fill", color: .blue) {
                 VStack(alignment: .leading, spacing: 12) {
                     FeatureDetailView(
                         icon: "livephoto",
-                        title: "转换 Live Photo",
-                        description: "将动态照片转换为 iOS 原生实况照片格式，支持在 Apple 设备间完美播放",
+                        title: "Convert to Live Photo",
+                        description: "Convert motion photos to iOS native Live Photo format, supporting perfect playback across Apple devices",
                         color: .blue
                     )
                     
                     FeatureDetailView(
                         icon: "video.fill",
-                        title: "提取独立视频",
-                        description: "从动态照片中提取视频部分并保存为 MP4 格式，便于分享和编辑",
+                        title: "Extract Video",
+                        description: "Extract the video portion from motion photos and save as MP4 format for easy sharing and editing",
                         color: .green
                     )
                     
                     FeatureDetailView(
                         icon: "rectangle.stack.fill",
-                        title: "生成 GIF 动图",
-                        description: "将动态照片转换为 GIF 格式，支持跨平台分享和社交媒体使用",
+                        title: "Generate GIF",
+                        description: "Convert motion photos to GIF format, supporting cross-platform sharing and social media use",
                         color: .orange
                     )
                 }
             }
             
-            HelpSectionView(title: "实验室功能", icon: "flask.fill", color: .purple) {
+            HelpSectionView(title: "Lab Features", icon: "flask.fill", color: .purple) {
                 VStack(alignment: .leading, spacing: 8) {
-                    HelpBulletPoint(text: "自定义 Live Photo：使用静态照片和视频文件创建 Live Photo")
-                    HelpBulletPoint(text: "批量处理：同时处理多个动态照片")
-                    HelpBulletPoint(text: "高级导出选项：自定义视频质量和 GIF 参数")
+                    HelpBulletPoint(text: "Custom Live Photo: Create Live Photos using static images and video files")
+                    HelpBulletPoint(text: "Batch Processing: Process multiple motion photos simultaneously")
+                    HelpBulletPoint(text: "Advanced Export Options: Customize video quality and GIF parameters")
                 }
             }
             
-            HelpSectionView(title: "文件格式说明", icon: "doc.fill", color: .indigo) {
+            HelpSectionView(title: "File Format Description", icon: "doc.fill", color: .indigo) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Motion Photo vs Live Photo")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text("• Motion Photo：Android 设备的动态照片格式，通常是单个 JPEG 文件包含视频数据")
+                    Text("• Motion Photo: Android device motion photo format, typically a single JPEG file containing video data")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("• Live Photo：Apple 设备的专有格式，由静态图像和 MOV 视频组成")
+                    Text("• Live Photo: Apple device proprietary format, consisting of a static image and MOV video")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -408,131 +406,145 @@ struct HelpSheetView: View {
         }
     }
     
-    // MARK: - 常见问题内容
+    // MARK: - FAQ Content
     private var faqContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HelpSectionView(title: "识别和选择", icon: "questionmark.circle.fill", color: .blue) {
+            HelpSectionView(title: "Identification and Selection", icon: "questionmark.circle.fill", color: .blue) {
                 VStack(alignment: .leading, spacing: 12) {
                     FAQItemView(
-                        question: "如何知道我的照片是否是 Motion Photo？",
-                        answer: "在相册中，Motion Photo 通常会显示特殊图标或标签。在 Motion2Live 中，如果选择的不是 Motion Photo，应用会显示提示信息。"
+                        question: "How do I know if my photo is a Motion Photo?",
+                        answer: "In your photo album, Motion Photos usually display special icons or labels. In Motion2Live, if the selected photo is not a Motion Photo, the app will show a notification."
                     )
                     
                     FAQItemView(
-                        question: "为什么应用提示'不是有效的 Motion Photo'？",
-                        answer: "可能是不支持的格式变体、文件已被编辑修改，或文件在传输过程中损坏。建议使用原始未编辑的文件。"
+                        question: "Why does the app say 'Not a valid Motion Photo'?",
+                        answer: "This could be due to an unsupported format variant, the file being edited or modified, or corruption during transfer. We recommend using original, unedited files."
                     )
                 }
             }
             
-            HelpSectionView(title: "转换和导出", icon: "arrow.triangle.2.circlepath", color: .green) {
+            HelpSectionView(title: "Conversion and Export", icon: "arrow.triangle.2.circlepath", color: .green) {
                 VStack(alignment: .leading, spacing: 12) {
                     FAQItemView(
-                        question: "导出的文件保存在哪里？",
-                        answer: "所有导出的文件（Live Photo、GIF 和视频）都保存在您设备的照片库中，可在 iOS 的'照片'应用中查看。"
+                        question: "Where are the exported files saved?",
+                        answer: "All exported files (Live Photos, GIFs, and videos) are saved to your device's photo library and can be viewed in the iOS Photos app."
                     )
                     
                     FAQItemView(
-                        question: "导出的 Live Photo 质量如何？",
-                        answer: "应用会尽量保持原始质量，但由于格式转换可能有轻微质量损失。质量取决于原始文件的分辨率和比特率。"
+                        question: "What is the quality of exported Live Photos?",
+                        answer: "The app tries to maintain original quality, but there may be slight quality loss due to format conversion. Quality depends on the resolution and bitrate of the original file."
                     )
                     
                     FAQItemView(
-                        question: "为什么导出的视频没有声音？",
-                        answer: "这是正常的。大多数 Motion Photo 格式只捕捉视频而不包含音频，因此提取的视频通常没有声音。"
+                        question: "Why do exported videos have no sound?",
+                        answer: "This is normal. Most Motion Photo formats only capture video without audio, so extracted videos typically have no sound."
                     )
                 }
             }
             
-            HelpSectionView(title: "兼容性", icon: "checkmark.shield.fill", color: .orange) {
+            HelpSectionView(title: "Compatibility", icon: "checkmark.shield.fill", color: .orange) {
                 VStack(alignment: .leading, spacing: 12) {
                     FAQItemView(
-                        question: "Live Photo 在其他设备上能正常工作吗？",
-                        answer: "Live Photo 是 Apple 专有格式，仅在 iOS 9+、macOS El Capitan+ 和 watchOS 2+ 设备上完全支持。"
+                        question: "Do Live Photos work properly on other devices?",
+                        answer: "Live Photo is Apple's proprietary format, fully supported only on iOS 9+, macOS El Capitan+, and watchOS 2+ devices."
                     )
                     
                     FAQItemView(
-                        question: "应用支持批量处理吗？",
-                        answer: "当前版本不支持批量处理，需要逐个转换。我们计划在未来版本中添加批量处理功能。"
+                        question: "Does the app support batch processing?",
+                        answer: "The current version does not support batch processing; files need to be converted individually. We plan to add batch processing functionality in future versions."
+                    )
+                }
+            }
+            
+            HelpSectionView(title: "Performance Issues", icon: "speedometer", color: .purple) {
+                VStack(alignment: .leading, spacing: 12) {
+                    FAQItemView(
+                        question: "What to do when processing large files is slow?",
+                        answer: "Large files require more processing time. We recommend keeping the app in the foreground during processing and avoiding running other resource-intensive apps simultaneously."
+                    )
+                    
+                    FAQItemView(
+                        question: "Does the app drain battery quickly?",
+                        answer: "Video processing is computationally intensive and consumes more power. We recommend performing bulk conversion operations while charging."
                     )
                 }
             }
         }
     }
     
-    // MARK: - 故障排除内容
+    // MARK: - Troubleshooting Content
     private var troubleshootingContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HelpSectionView(title: "权限问题", icon: "lock.fill", color: .red) {
+            HelpSectionView(title: "Permission Issues", icon: "lock.fill", color: .red) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("如果应用无法访问照片库：")
+                    Text("If the app cannot access photo library:")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        HelpBulletPoint(text: "打开设置 > 隐私 > 照片")
-                        HelpBulletPoint(text: "找到 Motion2Live 并设置为'所有照片'")
-                        HelpBulletPoint(text: "重启应用或设备")
+                        HelpBulletPoint(text: "Open Settings > Privacy > Photos")
+                        HelpBulletPoint(text: "Find Motion2Live and set to 'All Photos'")
+                        HelpBulletPoint(text: "Restart the app or device")
                     }
                 }
             }
             
-            HelpSectionView(title: "导出失败", icon: "exclamationmark.triangle.fill", color: .orange) {
+            HelpSectionView(title: "Export Failure", icon: "exclamationmark.triangle.fill", color: .orange) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("可能的解决方案：")
+                    Text("Possible solutions:")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        HelpBulletPoint(text: "检查设备存储空间是否充足")
-                        HelpBulletPoint(text: "关闭其他应用释放内存")
-                        HelpBulletPoint(text: "重新启动应用")
-                        HelpBulletPoint(text: "尝试处理较小的文件")
+                        HelpBulletPoint(text: "Check if device has sufficient storage space")
+                        HelpBulletPoint(text: "Close other apps to free up memory")
+                        HelpBulletPoint(text: "Restart the application")
+                        HelpBulletPoint(text: "Try processing smaller files")
                     }
                 }
             }
             
-            HelpSectionView(title: "性能优化", icon: "speedometer", color: .blue) {
+            HelpSectionView(title: "Performance Optimization", icon: "speedometer", color: .blue) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("提升处理速度的建议：")
+                    Text("Suggestions to improve processing speed:")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        HelpBulletPoint(text: "关闭不必要的后台应用")
-                        HelpBulletPoint(text: "确保设备有足够的可用存储空间")
-                        HelpBulletPoint(text: "在设备连接电源时处理大文件")
-                        HelpBulletPoint(text: "避免在电池电量低时处理")
+                        HelpBulletPoint(text: "Close unnecessary background apps")
+                        HelpBulletPoint(text: "Ensure device has sufficient available storage space")
+                        HelpBulletPoint(text: "Process large files when device is connected to power")
+                        HelpBulletPoint(text: "Avoid processing when battery is low")
                     }
                 }
             }
             
-            HelpSectionView(title: "应用崩溃", icon: "exclamationmark.octagon.fill", color: .red) {
+            HelpSectionView(title: "App Crashes", icon: "exclamationmark.octagon.fill", color: .red) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("如果应用在处理文件时崩溃：")
+                    Text("If the app crashes while processing files:")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        HelpBulletPoint(text: "重启应用和设备")
-                        HelpBulletPoint(text: "尝试处理较小的文件")
-                        HelpBulletPoint(text: "更新应用到最新版本")
-                        HelpBulletPoint(text: "联系开发者报告问题")
+                        HelpBulletPoint(text: "Restart the app and device")
+                        HelpBulletPoint(text: "Try processing smaller files")
+                        HelpBulletPoint(text: "Update the app to the latest version")
+                        HelpBulletPoint(text: "Contact the developer to report the issue")
                     }
                 }
             }
             
-            HelpSectionView(title: "联系支持", icon: "envelope.fill", color: .purple) {
+            HelpSectionView(title: "Contact Support", icon: "envelope.fill", color: .purple) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("如需进一步帮助，请联系：")
+                    Text("For further assistance, please contact:")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text("📧 开发者邮箱：shenjy302@live.com")
+                    Text("📧 Developer Email: shenjy302@live.com")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("🔗 GitHub：Motion2Live 项目页面")
+                    Text("🔗 GitHub: Motion2Live Project Page")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
@@ -546,7 +558,7 @@ struct HelpSheetView: View {
     }
 }
 
-// MARK: - 帮助步骤视图
+// MARK: - Help Step View
 struct HelpStepView: View {
     let step: String
     let title: String
@@ -575,7 +587,7 @@ struct HelpStepView: View {
     }
 }
 
-// MARK: - 帮助区块视图
+// MARK: - Help Section View
 struct HelpSectionView<Content: View>: View {
     let title: String
     let icon: String
@@ -616,7 +628,7 @@ struct HelpSectionView<Content: View>: View {
     }
 }
 
-// MARK: - 帮助要点视图
+// MARK: - Help Bullet Point View
 struct HelpBulletPoint: View {
     let text: String
     
@@ -633,7 +645,7 @@ struct HelpBulletPoint: View {
     }
 }
 
-// MARK: - 功能详情视图
+// MARK: - Feature Detail View
 struct FeatureDetailView: View {
     let icon: String
     let title: String
@@ -665,7 +677,7 @@ struct FeatureDetailView: View {
     }
 }
 
-// MARK: - FAQ 项目视图
+// MARK: - FAQ Item View
 struct FAQItemView: View {
     let question: String
     let answer: String

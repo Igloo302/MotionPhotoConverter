@@ -371,7 +371,7 @@ class LivePhotoCreator {
                             completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.unknownError)])))
                         }
                         
-                        // 清理临时文件
+                        // Clean up temporary files
                         try? FileManager.default.removeItem(at: exportURL)
                     }
                 } else {

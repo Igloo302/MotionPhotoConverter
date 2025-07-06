@@ -118,6 +118,14 @@ enum LocalizableKey {
     case imageDestinationCreationFailed
     case metadataWriteFailed
     case imagePropertiesUnavailable
+    case mainFeatures
+    case exploreMoreFeatures
+    case convertToLivePhoto
+    case convertToLivePhotoDescription
+    case extractVideo
+    case extractVideoDescription
+    case generateGIF
+    case generateGIFDescription
     
     var english: String {
         switch self {
@@ -201,6 +209,14 @@ enum LocalizableKey {
         case .imageDestinationCreationFailed: return "Failed to create image destination"
         case .metadataWriteFailed: return "Failed to write metadata"
         case .imagePropertiesUnavailable: return "Image properties are unavailable"
+        case .mainFeatures: return "Main Features"
+        case .exploreMoreFeatures: return "Explore more innovative features"
+        case .convertToLivePhoto: return "Convert to Live Photo"
+        case .convertToLivePhotoDescription: return "Convert motion photos to iOS native Live Photo format"
+        case .extractVideo: return "Extract Video"
+        case .extractVideoDescription: return "Extract and save the video portion from motion photos"
+        case .generateGIF: return "Generate GIF"
+        case .generateGIFDescription: return "Convert motion photos to shareable GIF format"
         }
     }
     
@@ -286,6 +302,14 @@ enum LocalizableKey {
         case .imageDestinationCreationFailed: return "创建图像目标失败"
         case .metadataWriteFailed: return "写入元数据失败"
         case .imagePropertiesUnavailable: return "图像属性不可用"
+        case .mainFeatures: return "主要功能"
+        case .exploreMoreFeatures: return "探索更多创新功能"
+        case .convertToLivePhoto: return "转换为实况照片"
+        case .convertToLivePhotoDescription: return "将动态照片转换为 iOS 原生实况照片格式"
+        case .extractVideo: return "提取视频"
+        case .extractVideoDescription: return "从动态照片中提取并保存视频部分"
+        case .generateGIF: return "生成 GIF"
+        case .generateGIFDescription: return "将动态照片转换为可分享的 GIF 格式"
         }
     }
     
@@ -371,6 +395,14 @@ enum LocalizableKey {
         case .imageDestinationCreationFailed: return "Échec de la création de la destination d'image"
         case .metadataWriteFailed: return "Échec de l'écriture des métadonnées"
         case .imagePropertiesUnavailable: return "Les propriétés de l'image ne sont pas disponibles"
+        case .mainFeatures: return "Fonctionnalités principales"
+        case .exploreMoreFeatures: return "Explorez plus de fonctionnalités innovantes"
+        case .convertToLivePhoto: return "Convertir en Photo Live"
+        case .convertToLivePhotoDescription: return "Convertir les photos en mouvement au format Photo Live natif iOS"
+        case .extractVideo: return "Extraire la vidéo"
+        case .extractVideoDescription: return "Extraire et sauvegarder la partie vidéo des photos en mouvement"
+        case .generateGIF: return "Générer un GIF"
+        case .generateGIFDescription: return "Convertir les photos en mouvement en format GIF partageable"
         }
     }
     
@@ -456,6 +488,14 @@ enum LocalizableKey {
         case .imageDestinationCreationFailed: return "Erstellung des Bildziels fehlgeschlagen"
         case .metadataWriteFailed: return "Schreiben der Metadaten fehlgeschlagen"
         case .imagePropertiesUnavailable: return "Bildeigenschaften nicht verfügbar"
+        case .mainFeatures: return "Hauptfunktionen"
+        case .exploreMoreFeatures: return "Entdecken Sie weitere innovative Funktionen"
+        case .convertToLivePhoto: return "In Live-Foto konvertieren"
+        case .convertToLivePhotoDescription: return "Bewegungsfotos in das native iOS Live-Foto-Format konvertieren"
+        case .extractVideo: return "Video extrahieren"
+        case .extractVideoDescription: return "Den Videoteil aus Bewegungsfotos extrahieren und speichern"
+        case .generateGIF: return "GIF generieren"
+        case .generateGIFDescription: return "Bewegungsfotos in teilbares GIF-Format konvertieren"
         }
     }
     
@@ -541,6 +581,14 @@ enum LocalizableKey {
         case .imageDestinationCreationFailed: return "Error al crear el destino de imagen"
         case .metadataWriteFailed: return "Error al escribir los metadatos"
         case .imagePropertiesUnavailable: return "Las propiedades de la imagen no están disponibles"
+        case .mainFeatures: return "Características principales"
+        case .exploreMoreFeatures: return "Explora más características innovadoras"
+        case .convertToLivePhoto: return "Convertir a Foto en vivo"
+        case .convertToLivePhotoDescription: return "Convertir fotos en movimiento al formato nativo de Foto en vivo de iOS"
+        case .extractVideo: return "Extraer video"
+        case .extractVideoDescription: return "Extraer y guardar la parte de video de las fotos en movimiento"
+        case .generateGIF: return "Generar GIF"
+        case .generateGIFDescription: return "Convertir fotos en movimiento a formato GIF compartible"
         }
     }
     
@@ -626,6 +674,14 @@ enum LocalizableKey {
         case .imageDestinationCreationFailed: return "画像の宛先の作成に失敗しました"
         case .metadataWriteFailed: return "メタデータの書き込みに失敗しました"
         case .imagePropertiesUnavailable: return "画像のプロパティが利用できません"
+        case .mainFeatures: return "主な機能"
+        case .exploreMoreFeatures: return "より多くの革新的な機能を探索"
+        case .convertToLivePhoto: return "ライブフォトに変換"
+        case .convertToLivePhotoDescription: return "モーションフォトをiOSネイティブのライブフォト形式に変換"
+        case .extractVideo: return "ビデオを抽出"
+        case .extractVideoDescription: return "モーションフォトからビデオ部分を抽出して保存"
+        case .generateGIF: return "GIFを生成"
+        case .generateGIFDescription: return "モーションフォトを共有可能なGIF形式に変換"
         }
     }
     
@@ -711,6 +767,14 @@ enum LocalizableKey {
         case .imageDestinationCreationFailed: return "이미지 대상 생성 실패"
         case .metadataWriteFailed: return "메타데이터 쓰기 실패"
         case .imagePropertiesUnavailable: return "이미지 속성 사용 불가"
+        case .mainFeatures: return "주요 기능"
+        case .exploreMoreFeatures: return "더 많은 혁신적인 기능 탐색"
+        case .convertToLivePhoto: return "라이브 포토로 변환"
+        case .convertToLivePhotoDescription: return "모션 포토를 iOS 네이티브 라이브 포토 형식으로 변환"
+        case .extractVideo: return "비디오 추출"
+        case .extractVideoDescription: return "모션 포토에서 비디오 부분을 추출하여 저장"
+        case .generateGIF: return "GIF 생성"
+        case .generateGIFDescription: return "모션 포토를 공유 가능한 GIF 형식으로 변환"
         }
     }
 }

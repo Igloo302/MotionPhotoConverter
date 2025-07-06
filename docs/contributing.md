@@ -77,9 +77,10 @@ Bug 是指程序的实际行为与预期行为不符。报告 Bug 是对项目�
 
 开发 Motion2Live 需要以下环境：
 
-- macOS 12.0 或更高版本
-- Xcode 14.0 或更高版本
+- macOS 13.0 或更高版本
+- Xcode 15.0 或更高版本
 - iOS 15.0 SDK 或更高版本
+- Swift 5.9 或更高版本
 - Git 版本控制系统
 
 设置步骤：
@@ -173,6 +174,79 @@ Closes #123
 - 使用 `/* ... */` 进行多行注释
 - 为公共 API 提供文档注释，使用 `///` 或 `/** ... */`
 
+### 用户体验功能贡献指南
+
+#### 智能引导系统
+
+在为应用添加新的引导功能时，请遵循以下原则：
+
+- **状态管理**：使用 UserDefaults 持久化用户的引导状态
+- **时机控制**：确保引导在合适的时机显示，不干扰用户正常操作
+- **动画效果**：使用平滑的动画过渡，提升用户体验
+- **可访问性**：确保引导内容支持 VoiceOver 等辅助功能
+
+```swift
+// 示例：添加新的引导功能
+@State private var showNewFeatureHint = false
+@State private var hasSeenNewFeature = UserDefaults.standard.bool(forKey: "hasSeenNewFeature")
+
+// 在适当时机显示引导
+.onAppear {
+    if !hasSeenNewFeature {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showNewFeatureHint = true
+            }
+        }
+    }
+}
+```
+
+#### 触感反馈
+
+添加触感反馈时，请注意：
+
+- **反馈类型**：根据交互类型选择合适的反馈强度（light、medium、heavy、soft）
+- **时机准确**：确保反馈与用户操作同步
+- **性能考虑**：避免频繁触发反馈，影响性能
+
+```swift
+// 示例：添加触感反馈
+private let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+
+func performActionWithFeedback() {
+    impactFeedback.impactOccurred()
+    // 执行实际操作
+}
+```
+
+#### 多品牌支持扩展
+
+在添加新品牌支持时，请遵循现有的架构模式：
+
+1. **扩展 MotionPhotoBrand 枚举**
+2. **创建品牌特定的处理器类**
+3. **实现 MotionPhotoProcessorProtocol**
+4. **在工厂类中注册新处理器**
+5. **添加相应的测试用例**
+
+```swift
+// 示例：添加华为品牌支持
+enum MotionPhotoBrand {
+    case xiaomi, pixel, samsung, huawei // 新增华为
+}
+
+class HuaweiMotionPhotoProcessor: BaseMotionPhotoProcessor {
+    override func canProcess(_ data: Data) -> Bool {
+        // 实现华为动态照片的识别逻辑
+    }
+    
+    override func processMotionPhoto(_ data: Data) async throws -> MotionPhotoData {
+        // 实现华为动态照片的处理逻辑
+    }
+}
+```
+
 ## 测试
 
 所有代码贡献都应包含适当的测试：
@@ -180,15 +254,46 @@ Closes #123
 - **单元测试**：测试单个组件或函数的功能
 - **集成测试**：测试多个组件之间的交互
 - **UI 测试**：测试用户界面和交互
+- **用户体验测试**：测试引导系统、触感反馈等用户体验功能
 
-测试应该覆盖正常情况和边缘情况，确保代码在各种条件下都能正常工作。
+### 重点测试领域
+
+#### 多品牌处理器测试
+```swift
+// 测试不同品牌的动态照片处理
+func testXiaomiMotionPhotoProcessing() {
+    let processor = XiaomiMotionPhotoProcessor()
+    // 测试小米动态照片的识别和处理
+}
+
+func testPixelMotionPhotoProcessing() {
+    let processor = AndroidMotionPhotoProcessor()
+    // 测试 Pixel 动态照片的识别和处理
+}
+```
+
+#### 用户体验功能测试
+```swift
+// 测试首次使用引导
+func testFirstTimeUserGuidance() {
+    // 验证引导在首次使用时正确显示
+    // 验证用户交互后引导正确隐藏
+    // 验证状态正确保存到 UserDefaults
+}
+
+// 测试触感反馈
+func testHapticFeedback() {
+    // 验证播放开始时的触感反馈
+    // 验证播放结束时的触感反馈
+}
+```
 
 运行测试：
 
 ```bash
 # 在 Xcode 中使用快捷键 Cmd+U
 # 或使用 xcodebuild 命令行工具
-xcodebuild test -project Motion2Live.xcodeproj -scheme Motion2Live -destination 'platform=iOS Simulator,name=iPhone 14'
+xcodebuild test -project MotionPhotoConverter.xcodeproj -scheme MotionPhotoConverter -destination 'platform=iOS Simulator,name=iPhone 15'
 ```
 
 ## 文档

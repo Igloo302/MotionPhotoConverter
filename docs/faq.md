@@ -94,11 +94,12 @@ Motion2Live 的主要功能是：
 
 目前，Motion2Live 支持以下设备拍摄的 Motion Photo：
 
-- Google Pixel 系列设备
-- Samsung Galaxy 系列设备
-- 部分其他 Android 设备
+- **小米设备**：支持 MIUI 和 HyperOS 系统的动态照片，包括小米、Redmi 等品牌
+- **Google Pixel 系列设备**：完全支持 Pixel 动态照片格式
+- **Samsung Galaxy 系列设备**：支持三星动态照片格式
+- **部分其他 Android 设备**：基于标准 Android Motion Photo 格式的设备
 
-由于不同制造商的 Motion Photo 格式可能有所不同，如果您的设备不在上述列表中，应用可能无法正确识别或处理您的 Motion Photo。
+由于不同制造商的 Motion Photo 格式可能有所不同，如果您的设备不在上述列表中，应用可能无法正确识别或处理您的 Motion Photo。我们正在持续添加对更多品牌的支持。
 
 ### 导出的 Live Photo 质量如何？
 

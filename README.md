@@ -1,67 +1,158 @@
-# MotionPhotoConverter
+# Motion2Live
 
-MotionPhotoConverter 是一个 iOS 应用程序，旨在帮助用户处理和转换 Motion Photo。Motion Photo 是一种包含静态图像和短视频的照片格式，常见于 Google 相册和某些 Android 设备。通过 MotionPhotoConverter，用户可以轻松地从 Motion Photo 中提取视频、导出为 Live Photo 或 GIF，并将其保存到相册中。
+Motion2Live 是一个功能强大的 iOS 应用程序，专为处理和转换动态照片而设计。支持多种品牌的动态照片格式，包括小米、Google Pixel 和三星设备。通过 Motion2Live，用户可以轻松地从动态照片中提取视频、导出为 Live Photo 或 GIF，并享受直观的用户体验和智能引导功能。
 
-MotionPhotoConverter is an iOS application designed to help users process and convert Motion Photos. Motion Photos are a type of photo format that includes a static image and a short video, commonly found in Google Photos and some Android devices. With MotionPhotoConverter, users can easily extract videos from Motion Photos, export them as Live Photos or GIFs, and save them to their photo library.
+Motion2Live is a powerful iOS application designed for processing and converting Motion Photos. It supports multiple brands of Motion Photo formats, including Xiaomi, Google Pixel, and Samsung devices. With Motion2Live, users can easily extract videos from Motion Photos, export them as Live Photos or GIFs, and enjoy an intuitive user experience with smart guidance features.
 
-## 功能介绍 / Features
+## ✨ 核心功能 / Core Features
 
-### 1. 提取视频 / Extract Video
-用户可以从 Motion Photo 中提取视频，并将其保存为独立的视频文件。应用会自动识别 Motion Photo 并提取其中的视频数据。
+### 🎯 多品牌支持 / Multi-Brand Support
+- **小米动态照片** - 完全支持新旧版本格式
+- **Google Pixel Motion Photo** - 支持 GContainer 和 Directory Item 格式
+- **三星动态照片** - 支持多种三星设备格式
+- **智能识别** - 自动检测并选择合适的处理器
 
-Users can extract videos from Motion Photos and save them as standalone video files. The app automatically recognizes Motion Photos and extracts the video data.
+Supports multiple Motion Photo formats from Xiaomi, Google Pixel, and Samsung devices with intelligent format detection.
 
-### 2. 导出为 Live Photo / Export as Live Photo
-用户可以将 Motion Photo 转换为 Live Photo，并将其保存到相册中。Live Photo 是一种包含短视频的照片格式，常见于 iOS 设备。
+### 📱 智能用户体验 / Smart User Experience
+- **首次使用引导** - 半透明提示面板，动态 Live Photo 图标指引
+- **触感反馈** - 播放开始和结束时的精准触感反馈
+- **直观操作** - 按住播放，松开停止的自然交互
+- **状态记忆** - 智能记住用户操作习惯，引导仅在首次显示
 
-Users can convert Motion Photos to Live Photos and save them to their photo library. Live Photos are a type of photo format that includes a short video, commonly found on iOS devices.
+Intuitive first-time user guidance with haptic feedback and natural gesture-based interactions.
 
-### 3. 导出为 GIF / Export as GIF
-用户可以将 Motion Photo 中的视频部分导出为 GIF 动图，并将其保存到相册中。GIF 动图是一种广泛使用的动画图片格式，适用于社交媒体分享。
+### 🎬 视频处理 / Video Processing
+- **高质量提取** - 保持原始视频质量和分辨率
+- **智能播放** - 流畅的视频预览和播放控制
+- **元数据保留** - 保持创建时间和修改时间信息
 
-Users can export the video part of a Motion Photo as a GIF animation and save it to their photo library. GIF animations are a widely used format for animated images, suitable for sharing on social media.
+High-quality video extraction with metadata preservation and smooth playback controls.
 
-### 4. 照片选择器 / Photo Picker
-应用内置了照片选择器，用户可以从相册中选择 Motion Photo 进行处理。照片选择器会自动过滤非 Motion Photo，并提示用户选择有效的 Motion Photo。
+### 📸 Live Photo 转换 / Live Photo Conversion
+- **原生兼容** - 完全兼容 iOS Live Photo 格式
+- **时间同步** - 精确计算静态图片在视频中的时间点
+- **质量优化** - 自动优化图片和视频质量匹配
 
-The app includes a photo picker that allows users to select Motion Photos from their photo library for processing. The photo picker automatically filters out non-Motion Photos and prompts users to select valid Motion Photos.
+Native iOS Live Photo compatibility with precise timing synchronization.
 
-### 5. 视频播放 / Video Playback
-用户可以在应用中播放 Motion Photo 中的视频部分。应用提供了视频播放控件，用户可以通过手势控制视频的播放和暂停。
+### 🎨 GIF 导出 / GIF Export
+- **高质量转换** - 保持动画流畅度和清晰度
+- **自动优化** - 智能调整帧率和文件大小
+- **社交分享** - 适合各种社交媒体平台的格式
 
-Users can play the video part of a Motion Photo within the app. The app provides video playback controls, allowing users to control video playback and pause with gestures.
+High-quality GIF conversion optimized for social media sharing.
 
-### 6. 导出菜单 / Export Menu
-应用提供了导出菜单，用户可以选择将 Motion Photo 导出为视频、Live Photo 或 GIF。导出过程简单直观，用户可以轻松完成转换和保存操作。
+### 🏠 现代化界面 / Modern Interface
+- **SwiftUI 设计** - 现代化、响应式的用户界面
+- **深色模式** - 完整支持系统深色模式
+- **动画效果** - 流畅的过渡动画和视觉反馈
+- **帮助系统** - 内置详细的帮助文档和故障排除指南
 
-The app provides an export menu, allowing users to choose to export Motion Photos as videos, Live Photos, or GIFs. The export process is simple and intuitive, enabling users to easily complete the conversion and save operations.
+Modern SwiftUI interface with dark mode support and comprehensive help system.
 
-## 使用方法 / Usage
-[Motion Photo Sample](https://github.com/Igloo302/MotionPhotoConverter/blob/main/MotionPhotoSample.jpg)
+## 🚀 快速开始 / Quick Start
 
-1. 打开应用并选择一个 Motion Photo。
-2. 应用会自动提取 Motion Photo 中的视频数据，并显示静态图像和视频预览。
-3. 用户可以通过导出菜单选择导出为视频、Live Photo 或 GIF。
-4. 导出完成后，用户可以将转换后的文件保存到相册中。
+### 第一步：选择动态照片
+1. 点击主界面的「选择动态照片」按钮
+2. 从相册中选择支持的动态照片格式
+3. 应用会自动识别并显示预览
 
-1. Open the app and select a Motion Photo.
-2. The app will automatically extract the video data from the Motion Photo and display the static image and video preview.
-3. Users can choose to export as a video, Live Photo, or GIF through the export menu.
-4. After the export is complete, users can save the converted file to their photo library.
+### 第二步：预览和播放
+- **按住屏幕**播放视频部分（首次使用会有引导提示）
+- 松开手指停止播放
+- 享受流畅的触感反馈体验
 
-## 依赖库 / Dependencies
+### 第三步：选择导出格式
+点击「导出」按钮，选择您需要的格式：
+- **📹 视频** - 提取为独立的 MP4 视频文件
+- **📸 Live Photo** - 转换为 iOS 原生 Live Photo
+- **🎨 GIF** - 转换为适合分享的 GIF 动图
 
-- SwiftUI
-- AVKit
-- PhotosUI
-- UniformTypeIdentifiers
+### Step 1: Select Motion Photo
+1. Tap "Select Motion Photo" on the main interface
+2. Choose from supported Motion Photo formats in your library
+3. The app will automatically recognize and display preview
 
-## 开发者 / Developer
+### Step 2: Preview and Play
+- **Press and hold** to play video (first-time guidance included)
+- Release to stop playback
+- Enjoy smooth haptic feedback
 
-- Larry Shen
+### Step 3: Choose Export Format
+Tap "Export" and select your desired format:
+- **📹 Video** - Extract as standalone MP4 video
+- **📸 Live Photo** - Convert to native iOS Live Photo
+- **🎨 GIF** - Convert to shareable GIF animation
 
-## 许可证 / License
+## 🛠 技术栈 / Tech Stack
 
-此项目遵循 MIT 许可证。详细信息请参阅 LICENSE 文件。
+### 核心框架 / Core Frameworks
+- **SwiftUI** - 现代化用户界面框架
+- **AVFoundation** - 视频和音频处理
+- **PhotosUI** - 照片库集成
+- **UniformTypeIdentifiers** - 文件类型识别
+- **ImageIO** - 图像处理和元数据
 
-This project is licensed under the MIT License. For more details, please refer to the LICENSE file.
+### 架构模式 / Architecture
+- **MVVM** - Model-View-ViewModel 架构
+- **协议导向编程** - 可扩展的处理器架构
+- **异步处理** - Swift Concurrency (async/await)
+- **响应式设计** - SwiftUI 数据绑定
+
+## 📋 系统要求 / System Requirements
+
+- **iOS 15.0+** - 支持最新的 iOS 功能
+- **iPhone/iPad** - 通用应用，适配所有设备
+- **存储空间** - 建议至少 100MB 可用空间
+- **权限** - 需要照片库访问权限
+
+## 📚 文档 / Documentation
+
+- [用户指南](docs/user-guide.md) - 详细的使用说明
+- [技术架构](docs/architecture.md) - 应用架构和设计原理
+- [开发指南](docs/development-guide.md) - 开发环境搭建和贡献指南
+- [常见问题](docs/faq.md) - 常见问题解答
+- [更新日志](docs/changelog.md) - 版本更新记录
+
+## 🤝 贡献 / Contributing
+
+欢迎贡献代码、报告问题或提出建议！请查看 [贡献指南](docs/contributing.md) 了解详细信息。
+
+Contributions are welcome! Please check the [Contributing Guide](docs/contributing.md) for details.
+
+## 📞 支持 / Support
+
+如需帮助或有任何问题，请通过以下方式联系：
+
+- **📧 邮箱**: shenjy302@live.com
+- **🐛 问题反馈**: [GitHub Issues](https://github.com/Igloo302/MotionPhotoConverter/issues)
+- **💡 功能建议**: [GitHub Discussions](https://github.com/Igloo302/MotionPhotoConverter/discussions)
+
+## 👨‍💻 开发者 / Developer
+
+**Larry Shen (Igloo)**
+- GitHub: [@Igloo302](https://github.com/Igloo302)
+- Email: shenjy302@live.com
+
+## 📄 许可证 / License
+
+此项目遵循 MIT 许可证。详细信息请参阅 [LICENSE](LICENSE) 文件。
+
+This project is licensed under the MIT License. For more details, please refer to the [LICENSE](LICENSE) file.
+
+## 🙏 致谢 / Acknowledgments
+
+感谢所有为这个项目做出贡献的开发者和用户。特别感谢：
+
+- SwiftUI 社区的技术支持
+- 测试用户的宝贵反馈
+- 开源社区的持续支持
+
+Thanks to all developers and users who contributed to this project. Special thanks to the SwiftUI community, beta testers, and the open-source community.
+
+---
+
+**Motion2Live v1.2** © 2024 Igloo. 用❤️制作。
+
+**Motion2Live v1.2** © 2024 Igloo. Made with ❤️.

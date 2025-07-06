@@ -32,14 +32,18 @@
 
 ```
 Motion2Live/
-├── Motion2LiveApp.swift           # 应用入口
-├── Views/                         # 视图组件
-│   ├── HomeView.swift            # 主界面
-│   └── LabView.swift             # 实验室功能
-├── ViewModels/
-│   └── HomeViewModel.swift       # 主页视图模型
-├── Utils/                         # 核心工具类
-│   ├── MotionPhotoProcessor.swift # 动态照片处理
+├── MotionPhotoConverterApp.swift  # 应用入口和主要视图
+├── HomeView.swift                 # 主界面
+├── HomeViewModel.swift            # 主页视图模型
+├── Models/                        # 数据模型
+│   ├── MotionPhoto.swift         # 动态照片数据模型
+│   └── MotionPhotoProcessor.swift # 多品牌处理器架构
+├── Components/                    # UI 组件
+│   ├── PlaybackHintView          # 播放引导组件
+│   ├── ExportOptionsView         # 导出选项组件
+│   └── SupportedBrandsView       # 支持品牌展示组件
+├── Utils/                         # 工具类
+│   ├── XMPParser.swift           # XMP 元数据解析
 │   ├── VideoExporter.swift       # 视频导出
 │   └── LivePhotoCreator.swift    # Live Photo 创建
 ├── Resources/
@@ -50,13 +54,27 @@ Motion2Live/
 
 ### 核心组件
 
-- **Motion2LiveApp.swift**: 应用入口点
+#### 主要视图和模型
+- **MotionPhotoConverterApp.swift**: 应用入口点和主要视图逻辑
 - **HomeView.swift**: 主界面，处理照片选择和预览
-- **LabView.swift**: 实验室功能界面
 - **HomeViewModel.swift**: 主页业务逻辑处理
-- **MotionPhotoProcessor.swift**: 动态照片解析和提取核心逻辑
-- **VideoExporter.swift**: 视频导出功能
-- **LivePhotoCreator.swift**: Live Photo 创建逻辑
+- **MotionPhoto.swift**: 动态照片数据模型
+
+#### 多品牌处理器架构
+- **MotionPhotoProcessor.swift**: 基于协议的可扩展处理器架构
+- **XiaomiMotionPhotoProcessor**: 小米动态照片处理器
+- **AndroidMotionPhotoProcessor**: Android (Pixel/Samsung) 处理器
+- **MotionPhotoProcessorFactory**: 处理器工厂类
+
+#### 用户体验组件
+- **PlaybackHintView**: 首次使用引导组件
+- **ExportOptionsView**: 导出选项面板
+- **SupportedBrandsView**: 支持品牌展示
+
+#### 核心功能模块
+- **XMPParser**: XMP 元数据解析
+- **VideoExporter**: 视频导出功能
+- **LivePhotoCreator**: Live Photo 创建逻辑
 
 ## 编码规范
 
@@ -91,6 +109,64 @@ class HomeView: View {
 - 使用 `@State` 管理本地状态
 - 使用 `@StateObject` 管理视图模型
 - 使用 `@Binding` 在视图间传递状态
+
+### 用户体验功能开发
+
+#### 智能引导系统
+```swift
+// 状态管理
+@State private var showPlaybackHint = false
+@State private var hasUserPlayedVideo = UserDefaults.standard.bool(forKey: "hasUserPlayedVideo")
+
+// 引导显示逻辑
+.onAppear {
+    if !hasUserPlayedVideo && selectedImageURL != nil {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showPlaybackHint = true
+            }
+        }
+    }
+}
+```
+
+#### 触感反馈实现
+```swift
+// 触感反馈生成器
+private let lightImpactFeedback = UIImpactFeedbackGenerator(style: .light)
+private let softImpactFeedback = UIImpactFeedbackGenerator(style: .soft)
+
+// 播放开始时的反馈
+func startVideoPlaybackWithFeedback() {
+    lightImpactFeedback.impactOccurred()
+    startVideoPlayback()
+    hidePlaybackHint()
+}
+
+// 播放结束时的反馈
+func stopVideoPlaybackWithFeedback() {
+    softImpactFeedback.impactOccurred()
+    stopVideoPlayback()
+}
+```
+
+#### 组件化设计原则
+```swift
+// 独立的引导组件
+struct PlaybackHintView: View {
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        // 组件实现
+    }
+}
+
+// 在主视图中使用
+if showPlaybackHint {
+    PlaybackHintView(onDismiss: hidePlaybackHint)
+        .transition(.opacity)
+}
+```
 
 ## 开发工作流
 
@@ -129,7 +205,9 @@ git commit -m "fix: resolve crash when processing large files"
 
 ## 调试和测试
 
-### 单元测试
+### 测试策略
+
+#### 单元测试
 项目使用 XCTest 框架：
 
 ```swift
@@ -144,7 +222,13 @@ class MotionPhotoProcessorTests: XCTestCase {
 }
 ```
 
-### UI 测试
+重点测试模块：
+- `MotionPhotoProcessor` 各品牌处理器
+- `XMPParser` 元数据解析
+- `VideoExporter` 和 `LivePhotoCreator`
+- 用户状态管理逻辑
+
+#### UI 测试
 使用 XCUITest 测试用户界面：
 
 ```swift
@@ -159,7 +243,13 @@ class MotionPhotoConverterUITests: XCTestCase {
 }
 ```
 
-### 运行测试
+重点测试场景：
+- 首次使用引导流程
+- 触感反馈响应
+- 动态照片选择和预览
+- 导出功能完整性
+
+#### 集成测试
 ```bash
 # 运行所有测试
 xcodebuild test -scheme MotionPhotoConverter -destination 'platform=iOS Simulator,name=iPhone 15 Pro'
@@ -169,23 +259,43 @@ xcodebuild test -scheme MotionPhotoConverter -destination 'platform=iOS Simulato
 
 ### 调试技巧
 
-**日志记录**：
+#### 日志记录
 ```swift
+// 使用统一的日志系统
 import os.log
 
-static let logger = Logger(subsystem: "com.app.motionphoto", category: "processing")
-logger.info("Processing motion photo")
+static let logger = Logger(subsystem: "com.motion2live", category: "MotionPhoto")
+
+// 不同级别的日志
+logger.info("Motion photo processing started")
+logger.debug("Processing \(brand.rawValue) motion photo")
+logger.error("Failed to extract video: \(error.localizedDescription)")
 ```
 
-**性能分析**：
-- 使用 Instruments 的 Time Profiler 分析 CPU 使用
-- 使用 Allocations 监控内存使用
-- 使用 Leaks 检测内存泄漏
+#### 用户体验调试
+```swift
+// 调试引导系统
+print("[UX] Playback hint shown: \(showPlaybackHint)")
+print("[UX] User has played video: \(hasUserPlayedVideo)")
 
-**真机测试**：
+// 调试触感反馈
+print("[Haptic] Light impact triggered")
+print("[Haptic] Soft impact triggered")
+```
+
+#### 性能分析
+- 使用 Instruments 的 Time Profiler 分析 CPU 使用
+- 使用 Allocations 监控内存使用，特别是大文件处理时
+- 使用 Leaks 检测内存泄漏
+- 测试不同尺寸动态照片的处理时间
+
+#### 真机测试
 - 连接 iOS 设备进行真实环境测试
 - 测试相机和照片库集成
 - 验证真实 Motion Photo 文件处理
+- 验证不同品牌手机的兼容性（小米、Pixel、三星）
+- 验证触感反馈在不同设备上的表现
+- 测试用户引导在不同屏幕尺寸上的显示效果
 
 ---
 

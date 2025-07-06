@@ -10,24 +10,24 @@ import SwiftUI
 struct SupportedBrandsView: View {
     let supportedBrands = MotionPhotoProcessorFactory.getAllSupportedBrands()
     
-    // 待支持的机型
+    // Pending support brands
     let pendingBrands = [
-        (name: "华为", icon: "camera.circle", color: Color.red),
+        (name: "Huawei", icon: "camera.circle", color: Color.red),
         (name: "Vivo", icon: "camera.viewfinder", color: Color.purple),
         (name: "OPPO", icon: "camera.metering.spot", color: Color.green)
     ]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // 已支持的机型
+            // Supported brands
             VStack(alignment: .leading, spacing: 8) {
-                Text("✅ 已支持的机型")
+                Text("✅ Supported Brands")
                     .font(.headline)
                     .foregroundColor(.primary)
                 
                 ForEach(supportedBrands, id: \.self) { brand in
                     if brand == .android {
-                        // Android设备分别显示Pixel和三星
+                        // Android devices show Pixel and Samsung separately
                         ForEach(getAndroidSubBrands(), id: \.name) { subBrand in
                             HStack {
                                 Image(systemName: subBrand.icon)
@@ -65,9 +65,9 @@ struct SupportedBrandsView: View {
             
             Divider()
             
-            // 待支持的机型
+            // Pending support brands
             VStack(alignment: .leading, spacing: 8) {
-                Text("🔄 待支持的机型")
+                Text("🔄 Pending Support")
                     .font(.headline)
                     .foregroundColor(.primary)
                 
@@ -88,7 +88,7 @@ struct SupportedBrandsView: View {
                     .padding(.vertical, 2)
                 }
                 
-                Text("敬请期待后续版本更新")
+                Text("Coming in future updates")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.top, 4)
@@ -124,23 +124,23 @@ struct SupportedBrandsView: View {
     private func getBrandDisplayName(for brand: MotionPhotoBrand) -> String {
         switch brand {
         case .xiaomi:
-            return "小米"
+            return "Xiaomi"
         case .android:
-            return "Android设备"
+            return "Android Devices"
         case .unknown:
-            return "未知"
+            return "Unknown"
         }
     }
     
     private func getAndroidSubBrands() -> [(name: String, icon: String, color: Color)] {
         return [
             (name: "Pixel", icon: "camera.macro", color: Color.blue),
-            (name: "三星", icon: "camera.aperture", color: Color.purple)
+            (name: "Samsung", icon: "camera.aperture", color: Color.purple)
         ]
     }
     
     private func isFullySupported(_ brand: MotionPhotoBrand) -> Bool {
-        // 小米、Android（Pixel/三星）均已完全支持
+        // Xiaomi and Android (Pixel/Samsung) are fully supported
         return brand == .xiaomi || brand == .android
     }
 }
