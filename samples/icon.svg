@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024px" height="1024px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Motion2Live 应用图标</title>
+    
+    <defs>
+        <!-- 背景的线性渐变 -->
+        <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="background-gradient">
+            <stop stop-color="#28CD7B" offset="0%"></stop> <!-- 代表安卓的绿色 -->
+            <stop stop-color="#3B82F6" offset="100%"></stop> <!-- 代表苹果/科技的蓝色 -->
+        </linearGradient>
+
+        <!-- 为中心圆添加立体感的径向渐变，模拟光泽 -->
+        <radialGradient id="center-gloss" cx="50%" cy="50%" r="50%" fx="35%" fy="35%">
+            <stop offset="0%" style="stop-color:rgb(255,255,255);stop-opacity:1" />
+            <stop offset="100%" style="stop-color:rgb(230,235,245);stop-opacity:1" />
+        </radialGradient>
+        
+        <!-- 为中心圆添加柔和的投影效果，增加深度 -->
+        <filter id="soft-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.15"/>
+        </filter>
+    </defs>
+    
+    <g id="Icon" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <!-- iOS App Icon 标准圆角背景 -->
+        <rect id="background" fill="url(#background-gradient)" x="0" y="0" width="1024" height="1024" rx="232"></rect>
+        
+        <!-- 中心图标组合 -->
+        <g id="new-symbol" transform="translate(256.000000, 256.000000)">
+            
+            <!-- 周围的旋转小圆，代表转换过程 -->
+            <g id="conversion-dots" transform="translate(256, 256)" fill="#FFFFFF">
+                <circle transform="rotate(0)" cx="200" cy="0" r="28" opacity="1.0"></circle>
+                <circle transform="rotate(45)" cx="200" cy="0" r="26" opacity="0.9"></circle>
+                <circle transform="rotate(90)" cx="200" cy="0" r="24" opacity="0.8"></circle>
+                <circle transform="rotate(135)" cx="200" cy="0" r="22" opacity="0.7"></circle>
+                <circle transform="rotate(180)" cx="200" cy="0" r="20" opacity="0.6"></circle>
+                <circle transform="rotate(225)" cx="200" cy="0" r="18" opacity="0.5"></circle>
+                <circle transform="rotate(270)" cx="200" cy="0" r="16" opacity="0.4"></circle>
+                <circle transform="rotate(315)" cx="200" cy="0" r="14" opacity="0.3"></circle>
+            </g>
+
+            <!-- 中心圆，应用了投影和光泽效果 -->
+            <g id="center-element" filter="url(#soft-shadow)">
+                <circle id="center-photo" fill="url(#center-gloss)" cx="256" cy="256" r="120" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="2"></circle>
+            </g>
+        </g>
+    </g>
+</svg>

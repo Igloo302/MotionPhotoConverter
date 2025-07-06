@@ -16,6 +16,178 @@ import PhotosUI
 import ImageIO
 import Foundation
 
+// MARK: - 导出选项面板
+struct ExportOptionsView: View {
+    let fileName: String
+    let fileSize: Int64
+    let creationDate: Date?
+    let videoDuration: Double
+    let onExportVideo: () -> Void
+    let onExportLivePhoto: () -> Void
+    let onExportGIF: () -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    private var fileSizeString: String {
+        ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
+    }
+    
+    private var videoDurationString: String {
+        String(format: "%.1f秒", videoDuration)
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // 文件信息部分
+                VStack(spacing: 16) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("文件信息")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("文件名:")
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text(fileName)
+                                        .fontWeight(.medium)
+                                }
+                                
+                                HStack {
+                                    Text("文件大小:")
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text(fileSizeString)
+                                        .fontWeight(.medium)
+                                }
+                                
+                                if let date = creationDate {
+                                    HStack {
+                                        Text("拍摄时间:")
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text(date, style: .date)
+                                            .fontWeight(.medium)
+                                    }
+                                }
+                                
+                                HStack {
+                                    Text("视频时长:")
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text(videoDurationString)
+                                        .fontWeight(.medium)
+                                }
+                            }
+                            .font(.subheadline)
+                        }
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                
+                Divider()
+                    .padding(.vertical, 20)
+                
+                // 导出选项部分
+                VStack(spacing: 0) {
+                    Text("选择导出格式")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .padding(.bottom, 16)
+                    
+                    VStack(spacing: 12) {
+                        ExportOptionRow(
+                            icon: "video.fill",
+                            title: "保存为视频",
+                            subtitle: "导出为 MP4 视频文件",
+                            action: {
+                                dismiss()
+                                onExportVideo()
+                            }
+                        )
+                        
+                        ExportOptionRow(
+                            icon: "livephoto",
+                            title: "保存为 Live Photo",
+                            subtitle: "导出为 iOS Live Photo",
+                            action: {
+                                dismiss()
+                                onExportLivePhoto()
+                            }
+                        )
+                        
+                        ExportOptionRow(
+                            icon: "gift.fill",
+                            title: "保存为 GIF",
+                            subtitle: "导出为动态 GIF 图片",
+                            action: {
+                                dismiss()
+                                onExportGIF()
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal, 20)
+                
+                Spacer()
+            }
+            .navigationTitle("导出选项")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 导出选项行
+struct ExportOptionRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.blue)
+                    .frame(width: 32, height: 32)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                    Text(subtitle)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
 @main
 struct MotionPhotoConverterApp: App {
     var body: some Scene {
@@ -25,6 +197,48 @@ struct MotionPhotoConverterApp: App {
     }
 }
 
+
+// 播放引导提示视图
+struct PlaybackHintView: View {
+    let onDismiss: () -> Void
+    @State private var isAnimating = false
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // 动态的 Live Photo 图标
+            Image(systemName: "livephoto.play")
+                .font(.system(size: 32, weight: .medium))
+                .foregroundColor(.white)
+                .scaleEffect(isAnimating ? 1.1 : 1.0)
+                .animation(
+                    Animation.easeInOut(duration: 1.0)
+                        .repeatForever(autoreverses: true),
+                    value: isAnimating
+                )
+            
+            // 文字提示
+            Text("按住可播放")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.white)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.ultraThinMaterial)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.black.opacity(0.3))
+                )
+        )
+        .onAppear {
+            isAnimating = true
+        }
+        .onTapGesture {
+            onDismiss()
+        }
+    }
+}
 
 // 在文件顶部添加 VideoPlayerObserver 类的定义
 class VideoPlayerObserver: NSObject, ObservableObject {
@@ -75,6 +289,16 @@ struct MotionPhotoView: View {
     @State private var creationDate: Date?
     @StateObject private var videoPlayerObserver = VideoPlayerObserver()
     @State private var imageSize: CGSize = .zero
+    @State private var videoDuration: Double = 0
+    @State private var fileSize: Int64 = 0
+    
+    // 用户引导相关状态
+    @State private var showPlaybackHint = false
+    @State private var hasUserPlayedVideo = UserDefaults.standard.bool(forKey: "hasUserPlayedMotionPhoto")
+    
+    // 触感反馈生成器
+    private let lightImpactFeedback = UIImpactFeedbackGenerator(style: .light)
+    private let softImpactFeedback = UIImpactFeedbackGenerator(style: .soft)
     
     init(sourceURL: URL) {
         self.sourceURL = sourceURL
@@ -83,8 +307,7 @@ struct MotionPhotoView: View {
     
     var body: some View {
         ZStack {
-            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
-            
+            // 主要内容区域
             VStack(spacing: 0) {
                 if let image = selectedImage {
                     ZStack {
@@ -92,83 +315,93 @@ struct MotionPhotoView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(maxWidth: .infinity)
-                            .edgesIgnoringSafeArea(.horizontal)
                         
                         if let player = videoPlayer {
                             PlayerView(player: player)
                                 .aspectRatio(contentMode: .fill)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .edgesIgnoringSafeArea(.horizontal)
                                 .opacity(isPlayingVideo ? 1 : 0)
                                 .animation(.easeInOut(duration: 0.2), value: isPlayingVideo)
                                 .clipped()
                         }
+                        
+                        // 首次使用引导提示
+                        if showPlaybackHint {
+                            PlaybackHintView {
+                                hidePlaybackHint()
+                            }
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                        }
                     }
                     .gesture(
                         DragGesture(minimumDistance: 0)
-                            .onChanged { _ in startVideoPlayback() }
-                            .onEnded { _ in stopVideoPlayback() }
+                            .onChanged { _ in startVideoPlaybackWithFeedback() }
+                            .onEnded { _ in stopVideoPlaybackWithFeedback() }
                     )
                 } else {
                     Text(Localizable.string(.pleaseSelectMotionPhoto))
                         .font(.title2)
                         .foregroundColor(.secondary)
                 }
-                
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(UIColor.systemBackground))
+            
+            // 底部中心浮动的分享按钮
+            VStack {
                 Spacer()
                 
-                // 优化后的导出按钮
                 Button(action: { isExportMenuPresented = true }) {
-                    Text(Localizable.string(.export))
-                        .font(.headline)
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 20, weight: .medium))
                         .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                        .frame(width: 56, height: 56)
                         .background(Color.blue)
-                        .cornerRadius(10)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 40)
                 .disabled(selectedImage == nil)
+                .padding(.bottom, 34) // 适配底部安全区域
             }
         }
+        .navigationTitle("预览")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)  // 添加这一行来隐藏返回按钮
+        .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                if let date = creationDate {
-                    VStack(alignment: .leading) {
-                        Text(date, style: .date)
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        Text(date, style: .time)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .medium))
+                        Text("返回")
+                            .font(.system(size: 16))
                     }
+                    .foregroundColor(.blue)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack {
-                    Button(action: {
-                        isShowingPhotoPicker = true
-                    }) {
-                        Image(systemName: "photo.on.rectangle")
-                    }
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "xmark")
-                    }
+                Button(action: {
+                    isShowingPhotoPicker = true
+                }) {
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 16, weight: .medium))
                 }
             }
         }
-        .actionSheet(isPresented: $isExportMenuPresented) {
-            ActionSheet(title: Text(Localizable.string(.export)), buttons: [
-                .default(Text(Localizable.string(.livePhoto))) { exportAsLivePhoto() },
-                .default(Text(Localizable.string(.gif))) { exportAsGIF() },
-                .default(Text(Localizable.string(.video))) { exportVideo() },
-                .cancel(Text(Localizable.string(.cancel)))
-            ])
+        .sheet(isPresented: $isExportMenuPresented) {
+            ExportOptionsView(
+                fileName: sourceURL.lastPathComponent,
+                fileSize: fileSize,
+                creationDate: creationDate,
+                videoDuration: videoDuration,
+                onExportVideo: { exportVideo() },
+                onExportLivePhoto: { exportAsLivePhoto() },
+                onExportGIF: { exportAsGIF() }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isShowingPhotoPicker) {
             PhotoPicker(onImagePicked: { url, isMotionPhoto in
@@ -193,6 +426,17 @@ struct MotionPhotoView: View {
         .onAppear {
             Task {
                 await extractVideoFromMotionPhoto(url: sourceURL)
+                
+                // 检查是否需要显示首次使用引导
+                await MainActor.run {
+                    if !hasUserPlayedVideo && selectedImage != nil {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                showPlaybackHint = true
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -209,6 +453,37 @@ struct MotionPhotoView: View {
         videoPlayer?.seek(to: .zero)
     }
     
+    func startVideoPlaybackWithFeedback() {
+        // 触发轻微触感反馈
+        lightImpactFeedback.impactOccurred()
+        
+        // 如果是首次播放，隐藏引导提示并记录状态
+        if showPlaybackHint {
+            hidePlaybackHint()
+        }
+        
+        startVideoPlayback()
+    }
+    
+    func stopVideoPlaybackWithFeedback() {
+        // 触发更轻微的触感反馈
+        softImpactFeedback.impactOccurred()
+        
+        stopVideoPlayback()
+    }
+    
+    func hidePlaybackHint() {
+        withAnimation(.easeOut(duration: 0.3)) {
+            showPlaybackHint = false
+        }
+        
+        // 记录用户已经学会播放操作
+        if !hasUserPlayedVideo {
+            hasUserPlayedVideo = true
+            UserDefaults.standard.set(true, forKey: "hasUserPlayedMotionPhoto")
+        }
+    }
+    
     func extractVideoFromMotionPhoto(url: URL) async {
         print("开始处理文件: \(url.path)")
         
@@ -221,6 +496,11 @@ struct MotionPhotoView: View {
         }
         
         print("文件大小: \(data.count) bytes")
+        
+        // 获取文件大小
+        await MainActor.run {
+            self.fileSize = Int64(data.count)
+        }
         
         // 尝试提取和解析 XMP 数据
         guard let xmpData = extractXMPData(from: data),
@@ -292,6 +572,9 @@ struct MotionPhotoView: View {
                 print("照片时间戳: \(timestamp) 微秒")
             }
             print("计算得 stillImageTime: \(self.stillImageTime)")
+            
+            // 保存视频时长
+            self.videoDuration = videoDuration
             
             await MainActor.run {
                 self.videoPlayer = AVPlayer(url: tempURL)
