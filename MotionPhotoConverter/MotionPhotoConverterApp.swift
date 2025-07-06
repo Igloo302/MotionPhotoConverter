@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 import AVKit
 import UniformTypeIdentifiers
 import Photos
@@ -13,7 +14,6 @@ import CoreServices
 import CoreLocation
 import PhotosUI
 import ImageIO
-import MobileCoreServices
 import Foundation
 
 @main
@@ -675,7 +675,7 @@ struct MotionPhotoView: View {
         generator.appliesPreferredTrackTransform = true
         
         let destProperties = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]]
-        guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, kUTTypeGIF, frameCount, nil) else {
+        guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, UTType.gif.identifier as CFString, frameCount, nil) else {
             throw NSError(domain: "GIFCreationError", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.cannotCreateGIFDestination)])
         }
         
@@ -701,9 +701,9 @@ struct MotionPhotoView: View {
                 let request = PHAssetCreationRequest.forAsset()
                 request.addResource(with: .photo, fileURL: gifURL, options: nil)
             }
-            await showAlert(message: Localizable.string(.gifSavedToPhotos))
+            showAlert(message: Localizable.string(.gifSavedToPhotos))
         } catch {
-            await showAlert(message: Localizable.string(.failedToSaveGIF) + ": \(error.localizedDescription)")
+            showAlert(message: Localizable.string(.failedToSaveGIF) + ": \(error.localizedDescription)")
         }
         
         // 清理临时文件
@@ -841,8 +841,6 @@ struct PhotoPicker: UIViewControllerRepresentable {
                 print("无法提取或解析 XMP 数据")
                 return false
             }
-            
-            return false
         }
     }
 }
@@ -1016,16 +1014,18 @@ class XMPParserDelegate: NSObject, XMLParserDelegate {
 
 class MotionPhotoProcessor {
     static func extractVideo(from url: URL, completion: @escaping (Result<URL, Error>) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task {
             do {
                 let asset = AVURLAsset(url: url)
-                guard let videoTrack = asset.tracks(withMediaType: .video).first else {
-                    throw NSError(domain: "MotionPhotoProcessor", code: 1, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.noVideoData)])
+                let videoTracks = try await asset.loadTracks(withMediaType: .video)
+                guard let videoTrack = videoTracks.first else {
+                    throw NSError(domain: "MotionPhotoProcessor", code: 1, userInfo: [NSLocalizedDescriptionKey: Localizable.string(LocalizableKey.noVideoData)])
                 }
                 
                 let composition = AVMutableComposition()
                 let compositionTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
-                try compositionTrack?.insertTimeRange(CMTimeRangeMake(start: .zero, duration: asset.duration), of: videoTrack, at: .zero)
+                let duration = try await asset.load(.duration)
+                try compositionTrack?.insertTimeRange(CMTimeRangeMake(start: .zero, duration: duration), of: videoTrack, at: .zero)
                 
                 let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality)
                 let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
@@ -1038,9 +1038,9 @@ class MotionPhotoProcessor {
                     case .completed:
                         completion(.success(outputURL))
                     case .failed:
-                        completion(.failure(exportSession?.error ?? NSError(domain: "MotionPhotoProcessor", code: 2, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.videoExportFailed)])))
+                        completion(.failure(exportSession?.error ?? NSError(domain: "MotionPhotoProcessor", code: 2, userInfo: [NSLocalizedDescriptionKey: Localizable.string(LocalizableKey.videoExportFailed)])))
                     default:
-                        completion(.failure(NSError(domain: "MotionPhotoProcessor", code: 3, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.unknownError)])))
+                        completion(.failure(NSError(domain: "MotionPhotoProcessor", code: 3, userInfo: [NSLocalizedDescriptionKey: Localizable.string(LocalizableKey.unknownError)])))
                     }
                 }
             } catch {

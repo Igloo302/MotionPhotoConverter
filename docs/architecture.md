@@ -1,212 +1,72 @@
 # Motion2Live 技术架构
 
-本文档详细介绍 Motion2Live 应用的技术架构、代码结构和实现细节。
+本文档介绍 Motion2Live 应用的技术架构和实现细节。
 
 ## 技术栈
 
 Motion2Live 使用以下技术和框架开发：
 
 - **SwiftUI**：用于构建现代化、响应式的用户界面
-- **AVKit**：处理视频播放和编辑
+- **AVFoundation**：处理视频和音频媒体
 - **PhotosUI**：与设备相册交互
 - **UniformTypeIdentifiers**：处理文件类型识别
-- **CoreServices**：提供系统级服务支持
-- **CoreLocation**：处理地理位置信息
 - **ImageIO**：处理图像数据和元数据
-- **MobileCoreServices**：提供移动设备特定的系统服务
 
 ## 架构设计
 
-Motion2Live 采用 MVVM (Model-View-ViewModel) 架构模式，将用户界面、业务逻辑和数据模型分离，提高代码的可维护性和可测试性。
+Motion2Live 采用 MVVM (Model-View-ViewModel) 架构模式，结合基于协议的可扩展动态照片处理架构，将用户界面、业务逻辑和数据模型分离，提高代码的可维护性和可测试性。
 
-### 架构组件
+### 整体架构组件
 
-1. **View**：使用 SwiftUI 构建的用户界面组件，负责展示数据和接收用户输入。
-2. **ViewModel**：处理业务逻辑，连接 View 和 Model，提供数据绑定和命令执行。
-3. **Model**：表示应用的数据模型和业务规则。
-4. **Service**：提供特定功能的服务，如文件处理、照片库访问等。
+1. **View**：使用 SwiftUI 构建的用户界面组件，负责展示数据和接收用户输入
+2. **ViewModel**：处理业务逻辑，连接 View 和 Model，提供数据绑定和命令执行
+3. **Model**：表示应用的数据模型和业务规则
+4. **Service**：提供特定功能的服务，如文件处理、照片库访问等
 
-### 数据流
+### 动态照片处理架构
 
-1. 用户在 View 中进行操作（如选择照片、点击导出按钮）
-2. View 将操作传递给 ViewModel
-3. ViewModel 处理业务逻辑，可能会调用 Service 执行特定任务
-4. Service 执行任务并返回结果给 ViewModel
-5. ViewModel 更新状态
-6. View 通过数据绑定自动更新界面
+为了更好地支持不同品牌的动态照片格式，我们采用了基于协议的可扩展架构。
 
-## 代码结构
+#### 核心组件
 
-### 主要文件和组件
+##### 1. MotionPhotoProcessorProtocol
+定义了处理动态照片的标准接口：
+- `canProcess(xmpInfo:)` - 检测是否能处理特定格式
+- `processMotionPhoto(data:xmpInfo:)` - 处理动态照片数据
+- `calculateStillImageTime(...)` - 计算静态图片时间
 
-#### 应用入口
+##### 2. BaseMotionPhotoProcessor
+提供基础实现和通用逻辑的抽象基类。
 
-- **Motion2LiveApp.swift**：应用的入口点，设置应用的主窗口和初始视图。
+##### 3. 品牌特定处理器
+- **XiaomiMotionPhotoProcessor** - 处理小米动态照片（已完全实现）
+- **PixelMotionPhotoProcessor** - 处理Pixel动态照片（已完全实现）
+- **SamsungMotionPhotoProcessor** - 处理三星动态照片（已完全实现）
 
+##### 4. MotionPhotoProcessorFactory
+工厂类，负责根据XMP数据自动选择合适的处理器。
+
+#### 数据结构
+
+##### MotionPhotoBrand
 ```swift
-@main
-struct Motion2LiveApp: App {
-    var body: some Scene {
-        WindowGroup {
-            HomeView()
-        }
-    }
+enum MotionPhotoBrand: String, CaseIterable {
+    case xiaomi = "Xiaomi"
+    case pixel = "Pixel"
+    case samsung = "Samsung"
+    case unknown = "Unknown"
 }
 ```
 
-#### 视图组件
-
-- **HomeView.swift**：应用的主页视图，显示欢迎信息和照片选择按钮。
-
+##### MotionPhotoData
 ```swift
-struct HomeView: View {
-    @StateObject private var viewModel = HomeViewModel()
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                emojiGridView
-                contentView
-            }
-            // 其他视图配置...
-        }
-    }
-    
-    // 子视图和辅助方法...
-}
-```
-
-- **MotionPhotoView.swift**：显示选定的 Motion Photo 并提供导出选项。
-
-```swift
-struct MotionPhotoView: View {
-    @Environment(\presentationMode) var presentationMode
-    @State var sourceURL: URL
-    
-    // 状态变量...
-    
-    var body: some View {
-        ZStack {
-            // 视图内容...
-        }
-        // 视图修饰符和事件处理...
-    }
-    
-    // 方法实现...
-}
-```
-
-- **LabView.swift**：实验室功能视图，提供实验性功能如自定义 Live Photo 创建。
-
-```swift
-struct LabView: View {
-    var body: some View {
-        NavigationView {
-            List {
-                Section(header: Text(Localizable.string(.labDescription))) {
-                    NavigationLink(destination: CustomLivePhotoView()) {
-                        // 链接内容...
-                    }
-                }
-            }
-            .navigationTitle(Localizable.string(.lab))
-        }
-    }
-}
-```
-
-#### 视图模型
-
-- **HomeViewModel.swift**：HomeView 的视图模型，处理主页相关的业务逻辑。
-
-```swift
-class HomeViewModel: ObservableObject {
-    @Published var selectedImageURL: URL?
-    @Published var isShowingPhotoPicker = false
-    
-    let randomEmojis: [String] = ["🌟", "🎉", "🎈", "🎊", "🎁", "🎀", "🎵", "🎶", "🌈", "🍭", "🍬", "🍫", "🍿", "🧁", "🍰", "🍩"]
-    
-    func selectPhoto() {
-        isShowingPhotoPicker = true
-    }
-}
-```
-
-#### 辅助组件
-
-- **VideoPlayerObserver.swift**：观察视频播放器状态的辅助类。
-
-```swift
-class VideoPlayerObserver: NSObject, ObservableObject {
-    @Published var isVideoReady = false
-    var player: AVPlayer? {
-        didSet {
-            if let player = player {
-                player.currentItem?.addObserver(self, forKeyPath: "status", options: [.new], context: nil)
-            }
-        }
-    }
-    
-    // 观察者方法实现...
-}
-```
-
-- **PhotoPicker.swift**：照片选择器组件，允许用户从相册中选择照片。
-
-```swift
-struct PhotoPicker: UIViewControllerRepresentable {
-    var onImagePicked: (URL, Bool) -> Void
-    var onNonMotionPhotoSelected: () -> Void
-    
-    // UIViewControllerRepresentable 协议实现...
-}
-```
-
-- **LivePhotoCreator.swift**：创建 Live Photo 的辅助类。
-
-```swift
-class LivePhotoCreator {
-    static func create(from image: UIImage, videoURL: URL, completion: @escaping (Result<Void, Error>) -> Void) {
-        // Live Photo 创建逻辑...
-    }
-    
-    // 辅助方法...
-}
-```
-
-#### 本地化
-
-- **Localizable.swift**：处理应用的多语言支持。
-
-```swift
-enum Language: String {
-    case english = "en"
-    case chinese = "zh"
-    // 其他语言...
-    
-    static var current: Language {
-        // 获取当前语言的逻辑...
-    }
-}
-
-struct Localizable {
-    static func string(_ key: LocalizableKey) -> String {
-        // 根据当前语言返回对应的字符串...
-    }
-}
-
-enum LocalizableKey {
-    // 本地化键定义...
-    
-    var english: String {
-        // 英文字符串...
-    }
-    
-    var chinese: String {
-        // 中文字符串...
-    }
-    
-    // 其他语言...
+struct MotionPhotoData {
+    let imageData: Data
+    let videoData: Data
+    let stillImageTime: Int
+    let brand: MotionPhotoBrand
+    let videoOffset: Int?
+    let presentationTimestamp: Double?
 }
 ```
 
@@ -218,8 +78,8 @@ Motion Photo 是一种特殊的 JPEG 文件，其中包含静态图像和视频�
 
 1. 读取文件数据
 2. 提取 XMP 元数据
-3. 解析元数据获取视频偏移量和时间戳
-4. 根据偏移量提取视频数据
+3. 使用工厂模式选择合适的处理器
+4. 根据品牌特定逻辑提取视频数据
 
 ```swift
 func extractVideoFromMotionPhoto(url: URL) async {
@@ -231,16 +91,11 @@ func extractVideoFromMotionPhoto(url: URL) async {
     if let xmpData = extractXMPData(from: data),
        let xmpInfo = parseXMP(data: xmpData) {
         
-        if let offset = xmpInfo["GCamera:MicroVideoOffset"] ?? xmpInfo["GContainer:ItemLength"],
-           let offsetValue = Int(offset),
-           let timestampString = xmpInfo["GCamera:MicroVideoPresentationTimestampUs"] ?? xmpInfo["GCamera:MotionPhotoPresentationTimestampUs"],
-           let timestamp = Double(timestampString) {
-            
-            // 提取视频数据
-            self.videoData = data.suffix(offsetValue)
-            
-            // 处理视频数据...
-        }
+        // 使用工厂模式选择处理器
+        let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo)
+        let result = processor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
+        
+        // 处理结果...
     }
 }
 ```
@@ -315,6 +170,60 @@ func exportAsGIF() {
     }
 }
 ```
+
+## 扩展新品牌支持
+
+要添加对新品牌动态照片的支持，只需要：
+
+1. 在 `MotionPhotoBrand` 枚举中添加新品牌
+2. 创建继承自 `BaseMotionPhotoProcessor` 的新处理器类
+3. 实现 `canProcess` 和 `processMotionPhoto` 方法
+4. 在 `MotionPhotoProcessorFactory` 中注册新处理器
+
+### 示例：添加华为支持
+
+```swift
+// 1. 添加枚举值
+enum MotionPhotoBrand: String, CaseIterable {
+    // ... 现有品牌
+    case huawei = "Huawei"
+}
+
+// 2. 创建处理器
+class HuaweiMotionPhotoProcessor: BaseMotionPhotoProcessor {
+    init() {
+        super.init(brand: .huawei)
+    }
+    
+    override func canProcess(xmpInfo: [String: String]) -> Bool {
+        // 检测华为特有的XMP标签
+        return xmpInfo["Huawei:MotionPhoto"] != nil
+    }
+    
+    override func processMotionPhoto(data: Data, xmpInfo: [String: String]) -> MotionPhotoProcessingResult {
+        // 实现华为动态照片的处理逻辑
+        // ...
+    }
+}
+
+// 3. 在工厂中注册
+class MotionPhotoProcessorFactory {
+    private static let processors: [MotionPhotoProcessorProtocol] = [
+        XiaomiMotionPhotoProcessor(),
+        PixelMotionPhotoProcessor(),
+        SamsungMotionPhotoProcessor(),
+        HuaweiMotionPhotoProcessor() // 添加新处理器
+    ]
+}
+```
+
+## 当前支持状态
+
+| 品牌 | 状态 | 说明 |
+|------|------|------|
+| 小米 | ✅ 完全支持 | 新旧版本动态照片均支持 |
+| Pixel | ✅ 完全支持 | 支持GContainer:ItemLength格式 |
+| 三星 | ✅ 完全支持 | 支持Directory Item和GCamera两种格式 |
 
 ## 性能优化
 
@@ -415,11 +324,25 @@ PlayerView(player: player)
     .clipped()
 ```
 
+## UI 改进
+
+- 添加了 `SupportedBrandsView` 组件，在主界面显示支持的品牌信息
+- 用户可以清楚地了解当前支持哪些品牌的动态照片
+- 所有支持的格式均已完全实现，提供完整的功能体验
+
+## 代码质量提升
+
+1. **单一职责原则** - 每个处理器只负责一个品牌
+2. **开放封闭原则** - 对扩展开放，对修改封闭
+3. **依赖倒置原则** - 依赖抽象而非具体实现
+4. **可测试性** - 每个处理器可以独立测试
+5. **可维护性** - 代码结构清晰，易于理解和修改
+
 ## 测试策略
 
 ### 单元测试
 
-应用使用 XCTest 框架进行单元测试，测试关键组件和功能的正确性。
+应用使用 XCTest 框架进行单元测试，测试关键组件和功能的正确性，特别是各品牌处理器的独立测试。
 
 ### UI 测试
 
@@ -435,20 +358,17 @@ PlayerView(player: player)
 
 应用实现了错误恢复机制，确保在出现问题时能够优雅地恢复并提供有用的反馈。
 
-## 未来架构改进
+## 下一步计划
 
-### 模块化
-
-计划将应用拆分为更小的模块，提高代码的可维护性和可重用性。
-
-### 依赖注入
-
-计划引入依赖注入框架，减少组件之间的耦合，提高代码的可测试性。
-
-### 响应式编程
-
-计划引入更多响应式编程模式，简化状态管理和数据流。
+1. 添加单元测试覆盖所有品牌处理器
+2. 性能优化和内存使用优化
+3. 错误处理和用户体验改进
+4. 支持更多设备厂商的动态照片格式
+5. 批量处理功能
+6. 模块化架构进一步优化
+7. 依赖注入框架引入
+8. 响应式编程模式扩展
 
 ## 总结
 
-Motion2Live 采用现代化的架构设计和技术栈，提供高效、可靠的 Motion Photo 处理功能。通过 MVVM 架构模式、异步处理和响应式设计，应用实现了良好的用户体验和代码可维护性。未来的开发将继续优化架构，提高性能和可扩展性。
+Motion2Live 采用现代化的架构设计和技术栈，通过基于协议的可扩展架构实现了高效、可靠的多品牌动态照片处理功能。结合 MVVM 架构模式、异步处理和响应式设计，应用实现了良好的用户体验和代码可维护性。新的架构设计使得添加新品牌支持变得简单，同时保持了代码的清晰性和可测试性。
