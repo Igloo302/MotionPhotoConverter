@@ -126,6 +126,8 @@ enum LocalizableKey {
     case extractVideoDescription
     case generateGIF
     case generateGIFDescription
+    case photoAccessDenied
+    case photoNotAccessibleInLimitedMode
     
     var english: String {
         switch self {
@@ -217,6 +219,8 @@ enum LocalizableKey {
         case .extractVideoDescription: return "Extract and save the video portion from motion photos"
         case .generateGIF: return "Generate GIF"
         case .generateGIFDescription: return "Convert motion photos to shareable GIF format"
+        case .photoAccessDenied: return "Photo access denied"
+        case .photoNotAccessibleInLimitedMode: return "This photo is not accessible in limited access mode. Please grant full photo library access or select a different photo."
         }
     }
     
@@ -310,6 +314,8 @@ enum LocalizableKey {
         case .extractVideoDescription: return "从动态照片中提取并保存视频部分"
         case .generateGIF: return "生成 GIF"
         case .generateGIFDescription: return "将动态照片转换为可分享的 GIF 格式"
+        case .photoAccessDenied: return "照片访问被拒绝"
+        case .photoNotAccessibleInLimitedMode: return "在限制访问模式下无法访问此照片。请授予完整的照片库访问权限或选择其他照片。"
         }
     }
     
@@ -403,6 +409,8 @@ enum LocalizableKey {
         case .extractVideoDescription: return "Extraire et sauvegarder la partie vidéo des photos en mouvement"
         case .generateGIF: return "Générer un GIF"
         case .generateGIFDescription: return "Convertir les photos en mouvement en format GIF partageable"
+        case .photoAccessDenied: return "Accès aux photos refusé"
+        case .photoNotAccessibleInLimitedMode: return "Cette photo n'est pas accessible en mode d'accès limité. Veuillez accorder un accès complet à la bibliothèque de photos ou sélectionner une autre photo."
         }
     }
     
@@ -496,6 +504,8 @@ enum LocalizableKey {
         case .extractVideoDescription: return "Den Videoteil aus Bewegungsfotos extrahieren und speichern"
         case .generateGIF: return "GIF generieren"
         case .generateGIFDescription: return "Bewegungsfotos in teilbares GIF-Format konvertieren"
+        case .photoAccessDenied: return "Fotozugriff verweigert"
+        case .photoNotAccessibleInLimitedMode: return "Dieses Foto ist im eingeschränkten Zugriffsmodus nicht verfügbar. Bitte gewähren Sie vollen Zugriff auf die Fotobibliothek oder wählen Sie ein anderes Foto."
         }
     }
     
@@ -589,6 +599,8 @@ enum LocalizableKey {
         case .extractVideoDescription: return "Extraer y guardar la parte de video de las fotos en movimiento"
         case .generateGIF: return "Generar GIF"
         case .generateGIFDescription: return "Convertir fotos en movimiento a formato GIF compartible"
+        case .photoAccessDenied: return "Acceso a fotos denegado"
+        case .photoNotAccessibleInLimitedMode: return "Esta foto no es accesible en modo de acceso limitado. Por favor, conceda acceso completo a la biblioteca de fotos o seleccione otra foto."
         }
     }
     
@@ -682,6 +694,8 @@ enum LocalizableKey {
         case .extractVideoDescription: return "モーションフォトからビデオ部分を抽出して保存"
         case .generateGIF: return "GIFを生成"
         case .generateGIFDescription: return "モーションフォトを共有可能なGIF形式に変換"
+        case .photoAccessDenied: return "写真アクセスが拒否されました"
+        case .photoNotAccessibleInLimitedMode: return "この写真は制限アクセスモードでは利用できません。写真ライブラリへの完全なアクセスを許可するか、別の写真を選択してください。"
         }
     }
     
@@ -775,6 +789,8 @@ enum LocalizableKey {
         case .extractVideoDescription: return "모션 포토에서 비디오 부분을 추출하여 저장"
         case .generateGIF: return "GIF 생성"
         case .generateGIFDescription: return "모션 포토를 공유 가능한 GIF 형식으로 변환"
+        case .photoAccessDenied: return "사진 접근 거부됨"
+        case .photoNotAccessibleInLimitedMode: return "이 사진은 제한된 접근 모드에서 사용할 수 없습니다. 사진 라이브러리에 대한 전체 접근 권한을 부여하거나 다른 사진을 선택해주세요."
         }
     }
 }

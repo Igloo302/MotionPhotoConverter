@@ -44,6 +44,14 @@ struct HomeView: View {
             .alert(isPresented: $showAlert) {
                 Alert(title: Text(Localizable.string(.tip)), message: Text(alertMessage), dismissButton: .default(Text(Localizable.string(.ok))))
             }
+            .alert("照片库访问权限", isPresented: $viewModel.showPermissionAlert) {
+                Button("前往设置") {
+                    viewModel.openAppSettings()
+                }
+                Button("取消", role: .cancel) { }
+            } message: {
+                Text(viewModel.permissionAlertMessage)
+            }
             .sheet(isPresented: $viewModel.isShowingPhotoPicker) {
                 PhotoPicker(
                     onImagePicked: { url, isMotionPhoto in
@@ -55,6 +63,9 @@ struct HomeView: View {
                     },
                     onNonMotionPhotoSelected: {
                         showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+                    },
+                    onPhotoAccessDenied: {
+                        showAlert(message: Localizable.string(.photoNotAccessibleInLimitedMode))
                     },
                     onCancelled: {
                         // User cancelled selection, no prompt displayed

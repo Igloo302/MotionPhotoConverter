@@ -8,7 +8,8 @@ Motion2Live 使用以下技术和框架开发：
 
 - **SwiftUI**：用于构建现代化、响应式的用户界面
 - **AVFoundation**：处理视频和音频媒体
-- **PhotosUI**：与设备相册交互
+- **PhotosUI**：与设备相册交互，包括 PHPickerViewController 照片选择
+- **Photos**：访问照片库资源，使用 PHAssetResourceManager 获取完整原始数据
 - **UniformTypeIdentifiers**：处理文件类型识别
 - **ImageIO**：处理图像数据和元数据
 
@@ -78,6 +79,63 @@ struct MotionPhotoData {
 ```
 
 ## 核心功能实现
+
+### 照片获取与数据完整性保障
+
+为了确保动态照片数据的完整性和准确性，Motion2Live 采用了基于 PHAssetResourceManager 的照片获取方案。
+
+#### 技术方案演进
+
+**传统方案问题**：
+- 使用 `PHPickerResult.itemProvider.loadFileRepresentation` 可能导致数据不完整
+- 系统可能对文件进行压缩或格式转换
+- 无法保证获取到原始的完整文件数据
+
+**新方案优势**：
+- 通过 `assetIdentifier` 直接访问照片库中的原始资源
+- 使用 `PHAssetResourceManager` 获取完整的原始数据
+- 支持 iCloud 照片的网络访问
+- 确保 XMP 元数据和视频数据的完整性
+
+#### 实现流程
+
+```swift
+func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+    guard let result = results.first,
+          let assetIdentifier = result.assetIdentifier else { return }
+    
+    // 1. 通过 assetIdentifier 获取 PHAsset
+    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetIdentifier], options: nil)
+    guard let asset = fetchResult.firstObject else { return }
+    
+    // 2. 获取原始照片资源
+    let resources = PHAssetResource.assetResources(for: asset)
+    guard let originalResource = resources.first(where: { $0.type == .photo }) else { return }
+    
+    // 3. 使用 PHAssetResourceManager 获取完整数据
+    let manager = PHAssetResourceManager.default()
+    let options = PHAssetResourceRequestOptions()
+    options.isNetworkAccessAllowed = true  // 支持 iCloud 照片
+    
+    var imageData = Data()
+    manager.requestData(for: originalResource, options: options,
+                       dataReceivedHandler: { data in
+                           imageData.append(data)
+                       },
+                       completionHandler: { error in
+                           // 处理完整的原始数据
+                           self.processMotionPhoto(data: imageData)
+                       })
+}
+```
+
+#### 关键技术特性
+
+1. **数据完整性保障**：直接从照片库获取原始文件数据，避免系统压缩
+2. **iCloud 支持**：通过 `isNetworkAccessAllowed` 支持云端照片下载
+3. **流式数据处理**：使用 `dataReceivedHandler` 处理大文件，避免内存溢出
+4. **向后兼容性**：保留原有的 `isMotionPhoto(url:)` 方法，确保代码兼容性
+5. **错误处理**：完善的错误处理机制，包括网络错误和权限错误
 
 ### Motion Photo 解析
 

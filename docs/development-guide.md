@@ -168,6 +168,324 @@ if showPlaybackHint {
 }
 ```
 
+### 照片获取与数据完整性开发
+
+#### PHAssetResourceManager 最佳实践
+
+为确保动态照片数据的完整性，推荐使用基于 `PHAssetResourceManager` 的照片获取方案：
+
+```swift
+// 照片选择器实现
+func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+    guard let result = results.first,
+          let assetIdentifier = result.assetIdentifier else {
+        // 处理无效选择
+        return
+    }
+    
+    // 1. 通过 assetIdentifier 获取 PHAsset
+    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetIdentifier], options: nil)
+    guard let asset = fetchResult.firstObject else {
+        print("[Error] Failed to fetch asset with identifier: \(assetIdentifier)")
+        return
+    }
+    
+    // 2. 获取原始照片资源
+    let resources = PHAssetResource.assetResources(for: asset)
+    guard let originalResource = resources.first(where: { $0.type == .photo }) else {
+        print("[Error] No photo resource found for asset")
+        return
+    }
+    
+    // 3. 配置请求选项
+    let options = PHAssetResourceRequestOptions()
+    options.isNetworkAccessAllowed = true  // 支持 iCloud 照片
+    options.progressHandler = { progress in
+        DispatchQueue.main.async {
+            // 更新进度 UI
+            print("[Progress] Download progress: \(progress)")
+        }
+    }
+    
+    // 4. 请求完整数据
+    let manager = PHAssetResourceManager.default()
+    var imageData = Data()
+    
+    manager.requestData(for: originalResource, options: options,
+                       dataReceivedHandler: { data in
+                           imageData.append(data)
+                       },
+                       completionHandler: { error in
+                           DispatchQueue.main.async {
+                               if let error = error {
+                                   print("[Error] Failed to load image data: \(error.localizedDescription)")
+                                   return
+                               }
+                               
+                               // 保存到临时文件
+                               let tempURL = self.saveToTemporaryFile(data: imageData, 
+                                                                     originalFilename: originalResource.originalFilename)
+                               
+                               // 检测并处理动态照片
+                               if self.isMotionPhoto(data: imageData) {
+                                   self.onImagePicked(tempURL)
+                               } else {
+                                   self.showNotMotionPhotoAlert = true
+                               }
+                           }
+                       })
+}
+
+// 临时文件保存
+private func saveToTemporaryFile(data: Data, originalFilename: String) -> URL {
+    let tempDir = FileManager.default.temporaryDirectory
+    let tempURL = tempDir.appendingPathComponent(originalFilename)
+    
+    do {
+        try data.write(to: tempURL)
+        return tempURL
+    } catch {
+        print("[Error] Failed to save temporary file: \(error.localizedDescription)")
+        // 使用备用文件名
+        let fallbackURL = tempDir.appendingPathComponent("motion_photo_\(UUID().uuidString).jpg")
+        try? data.write(to: fallbackURL)
+        return fallbackURL
+    }
+}
+```
+
+# Motion2Live 开发指南
+## 编码规范
+### 照片获取与数据完整性开发
+#### 照片库权限管理最佳实践
+
+应用需要访问用户的照片库来选择和处理动态照片，因此需要实现完善的权限管理机制：
+
+```swift
+// 权限检查和请求的完整实现
+private func checkPhotoLibraryPermission() {
+    let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    
+    switch status {
+    case .authorized:
+        // 用户已授权完全访问，可以继续选择照片
+        isShowingPhotoPicker = true
+        
+    case .limited:
+        // 用户选择了限制访问，仍然可以使用但提醒用户
+        isShowingPhotoPicker = true
+        
+    case .denied, .restricted:
+        // 用户拒绝或受限制，引导用户到设置页面
+        showPermissionDeniedAlert()
+        
+    case .notDetermined:
+        // 首次使用，请求权限
+        requestPhotoLibraryPermission()
+        
+    @unknown default:
+        // 未知状态，请求权限
+        requestPhotoLibraryPermission()
+    }
+}
+
+private func requestPhotoLibraryPermission() {
+    PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] newStatus in
+        DispatchQueue.main.async {
+            switch newStatus {
+            case .authorized, .limited:
+                // 用户授权后，打开照片选择器
+                self?.isShowingPhotoPicker = true
+                
+            case .denied, .restricted:
+                // 用户拒绝权限，显示引导信息
+                self?.showPermissionDeniedAlert()
+                
+            case .notDetermined:
+                // 权限状态未确定，可能需要重试
+                break
+                
+            @unknown default:
+                break
+            }
+        }
+    }
+}
+
+private func showPermissionDeniedAlert() {
+    permissionAlertMessage = "Motion2Live 需要访问您的照片库来选择动态照片。请前往设置 > Motion2Live > 照片，选择"所有照片"以获得最佳体验。"
+    showPermissionAlert = true
+}
+
+func openAppSettings() {
+    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+        UIApplication.shared.open(settingsURL)
+    }
+}
+```
+
+#### 权限状态说明
+
+- **`.authorized`**: 用户授权完全访问，应用可以访问所有照片
+- **`.limited`**: 用户选择限制访问，应用只能访问用户选择的照片
+- **`.denied`**: 用户明确拒绝访问权限
+- **`.restricted`**: 由于家长控制等原因限制访问
+- **`.notDetermined`**: 首次使用，权限状态未确定
+
+#### 用户体验最佳实践
+
+1. **权限请求时机**: 在用户主动选择照片时请求权限，而不是应用启动时
+2. **清晰的权限说明**: 向用户解释为什么需要照片库访问权限
+3. **优雅的降级处理**: 在权限被拒绝时，提供明确的引导信息
+4. **设置页面引导**: 提供便捷的跳转到系统设置的方式
+
+### 边界场景处理最佳实践
+
+#### 限制访问模式下的照片选择
+
+当用户选择了「限制访问」权限，但尝试访问未授权的照片时，需要准确识别并处理这种边界场景：
+
+```swift
+// 在 PhotoPicker 中区分权限问题和照片格式问题
+struct PhotoPicker: UIViewControllerRepresentable {
+    let onImagePicked: (URL, Bool) -> Void
+    let onNonMotionPhotoSelected: () -> Void
+    let onPhotoAccessDenied: () -> Void  // 专门处理权限问题
+    let onCancelled: (() -> Void)?
+}
+
+// 在错误处理中检查权限状态
+private func processWithAssetIdentifier(_ assetIdentifier: String) {
+    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetIdentifier], options: nil)
+    guard let asset = fetchResult.firstObject else {
+        // 检查是否是权限问题
+        let authStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        DispatchQueue.main.async {
+            if authStatus == .limited {
+                self.parent.onPhotoAccessDenied()  // 权限问题
+            } else {
+                self.parent.onNonMotionPhotoSelected()  // 其他问题
+            }
+        }
+        return
+    }
+}
+```
+
+#### 错误信息本地化
+
+为不同的错误场景提供准确的本地化信息：
+
+```swift
+// 在 Localizable.swift 中定义专门的错误信息
+case photoAccessDenied
+case photoNotAccessibleInLimitedMode
+case selectedPhotoIsNotMotionPhoto
+
+// 中文版本
+case .photoNotAccessibleInLimitedMode: 
+    return "在限制访问模式下无法访问此照片。请授予完整的照片库访问权限或选择其他照片。"
+case .selectedPhotoIsNotMotionPhoto: 
+    return "所选照片不是动态照片"
+```
+
+#### 核心原则
+
+1. **准确的错误识别**: 区分权限问题、网络问题、格式问题等不同类型的错误
+2. **用户友好的提示**: 提供具体的解决方案而不是技术性错误信息
+3. **一致的用户体验**: 在不同权限状态下保持一致的交互逻辑
+4. **渐进式权限请求**: 根据用户的使用情况适时引导权限升级
+
+#### 错误处理和用户体验
+
+```swift
+// 网络权限检查（已更新为完整的权限管理）
+private func checkPhotoLibraryPermission() -> Bool {
+    let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    switch status {
+    case .authorized, .limited:
+        return true
+    case .denied, .restricted:
+        // 引导用户到设置页面
+        showPermissionAlert = true
+        return false
+    case .notDetermined:
+        // 请求权限
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
+            DispatchQueue.main.async {
+                self.checkPhotoLibraryPermission()
+            }
+        }
+        return false
+    @unknown default:
+        return false
+    }
+}
+
+// iCloud 下载进度显示
+@State private var downloadProgress: Double = 0.0
+@State private var isDownloading: Bool = false
+
+// 在 UI 中显示进度
+if isDownloading {
+    ProgressView("正在下载照片...", value: downloadProgress, total: 1.0)
+        .progressViewStyle(LinearProgressViewStyle())
+}
+```
+
+#### 性能优化建议
+
+1. **内存管理**：
+   ```swift
+   // 使用流式处理避免大文件内存溢出
+   var imageData = Data()
+   imageData.reserveCapacity(10 * 1024 * 1024) // 预分配 10MB
+   ```
+
+2. **并发处理**：
+   ```swift
+   // 在后台队列处理数据
+   DispatchQueue.global(qos: .userInitiated).async {
+       let isMotion = self.isMotionPhoto(data: imageData)
+       DispatchQueue.main.async {
+           // 更新 UI
+       }
+   }
+   ```
+
+3. **缓存策略**：
+   ```swift
+   // 缓存已处理的动态照片信息
+   private var motionPhotoCache: [String: Bool] = [:]
+   
+   func isMotionPhoto(assetIdentifier: String, data: Data) -> Bool {
+       if let cached = motionPhotoCache[assetIdentifier] {
+           return cached
+       }
+       let result = isMotionPhoto(data: data)
+       motionPhotoCache[assetIdentifier] = result
+       return result
+   }
+   ```
+
+#### 调试和测试
+
+```swift
+// 调试日志
+static let photoLogger = Logger(subsystem: "com.motion2live", category: "PhotoPicker")
+
+// 在关键步骤添加日志
+photoLogger.info("Starting photo selection with assetIdentifier: \(assetIdentifier)")
+photoLogger.debug("Image data size: \(imageData.count) bytes")
+photoLogger.error("Photo processing failed: \(error.localizedDescription)")
+
+// 性能测试
+let startTime = CFAbsoluteTimeGetCurrent()
+// ... 处理逻辑
+let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+photoLogger.info("Photo processing completed in \(timeElapsed) seconds")
+```
+
 ## 开发工作流
 
 ### Git 工作流

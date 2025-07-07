@@ -6,6 +6,33 @@
 
 ## 🎉 最新完成 (2024-12-19)
 
+### 照片访问权限边界场景处理
+- [x] **权限边界场景错误提示优化** - 修复限制访问模式下的错误信息
+  - [x] 区分照片访问权限问题和非动态照片问题
+  - [x] 添加专门的权限拒绝错误信息 `photoAccessDenied` 和 `photoNotAccessibleInLimitedMode`
+  - [x] 在 PhotoPicker 中添加 `onPhotoAccessDenied` 回调，准确识别权限相关错误
+  - [x] 增强 `processWithAssetIdentifier` 错误检测逻辑
+  - [x] 优化用户体验，避免在权限问题时显示「这不是动态照片」的误导信息
+
+### 核心技术架构优化
+- [x] **照片获取方案重构与修复** - 从 PHPickerResult 获取完整原始数据
+  - [x] 使用 `assetIdentifier` 获取 PHAsset 对象
+  - [x] 通过 `PHAssetResourceManager` 获取完整原始数据
+  - [x] 替换 `loadFileRepresentation` 方案，确保数据完整性
+  - [x] 支持网络资源访问，处理 iCloud 照片
+  - [x] 保持向后兼容性的 `isMotionPhoto` 方法重载
+  - [x] 提升动态照片检测准确性和可靠性
+  - [x] **修复 assetIdentifier 为 nil 的问题**
+    - [x] 配置 `PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())` 确保访问照片库资源
+    - [x] 添加备用方案：当 `assetIdentifier` 不可用时，回退到 `itemProvider` 方式
+    - [x] 实现双重保障机制，提高照片选择的成功率和兼容性
+
+- [x] **照片库权限管理优化** - 完善权限检查和用户引导机制
+  - [x] 添加完整的权限检查逻辑，支持所有权限状态处理
+  - [x] 实现权限请求流程，首次使用时自动请求权限
+  - [x] 添加权限被拒绝时的用户引导，提供前往设置页面的便捷入口
+  - [x] 支持限制访问模式，确保在各种权限状态下的良好用户体验
+
 ### UI 优化改进
 - [x] **预览页面UI简化** - 移除预览页面右上角的照片选择按钮
   - [x] 移除导航栏右上角的 `photo.on.rectangle` 按钮

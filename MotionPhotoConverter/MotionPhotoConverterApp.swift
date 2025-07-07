@@ -974,10 +974,11 @@ struct SizePreferenceKey: PreferenceKey {
 struct PhotoPicker: UIViewControllerRepresentable {
     let onImagePicked: (URL, Bool) -> Void
     let onNonMotionPhotoSelected: () -> Void
+    let onPhotoAccessDenied: () -> Void  // New callback for access denied
     let onCancelled: (() -> Void)?  // Callback for user cancellation
     
     func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration()
+        var config = PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())
         config.filter = .images
         config.selectionLimit = 1
         
@@ -1002,75 +1003,176 @@ struct PhotoPicker: UIViewControllerRepresentable {
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             picker.dismiss(animated: true)
             
-            guard let provider = results.first?.itemProvider else { 
+            guard let result = results.first else { 
                 DispatchQueue.main.async {
                     self.parent.onCancelled?()
                 }
                 return 
             }
             
-            let supportedTypes = [UTType.jpeg.identifier, UTType.heic.identifier]
+            // 优先使用 assetIdentifier 获取 PHAsset
+            if let assetIdentifier = result.assetIdentifier {
+                self.processWithAssetIdentifier(assetIdentifier)
+            } else {
+                print("No asset identifier available, falling back to itemProvider")
+                self.processWithItemProvider(result.itemProvider)
+            }
+        }
+        
+        private func processWithAssetIdentifier(_ assetIdentifier: String) {
             
-            for type in supportedTypes {
-                if provider.hasItemConformingToTypeIdentifier(type) {
-                    provider.loadFileRepresentation(forTypeIdentifier: type) { url, error in
-                        if let error = error {
-                            print("Error loading file: \(error.localizedDescription)")
-                            DispatchQueue.main.async {
-                                self.parent.onNonMotionPhotoSelected()
-                            }
-                            return
-                        }
-                        
-                        guard let url = url else {
-                            print("No URL returned")
-                            DispatchQueue.main.async {
-                                self.parent.onNonMotionPhotoSelected()
-                            }
-                            return
-                        }
-                        
-                        // Create a temporary file to save the selected image
-                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + "." + url.pathExtension)
-                        do {
-                            if FileManager.default.fileExists(atPath: tempURL.path) {
-                                try FileManager.default.removeItem(at: tempURL)
-                            }
-                            try FileManager.default.copyItem(at: url, to: tempURL)
-                            
-                            // Check if it's a Motion Photo
-                            let isMotionPhoto = self.isMotionPhoto(url: tempURL)
-                            
-                            DispatchQueue.main.async {
-                                if isMotionPhoto {
-                                    self.parent.onImagePicked(tempURL, isMotionPhoto)
-                                } else {
-                                    self.parent.onNonMotionPhotoSelected()
-                                }
-                            }
-                        } catch {
-                            print("Error copying file: \(error.localizedDescription)")
-                            DispatchQueue.main.async {
-                                self.parent.onNonMotionPhotoSelected()
-                            }
+            // 通过 assetIdentifier 获取 PHAsset
+            let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetIdentifier], options: nil)
+            guard let asset = fetchResult.firstObject else {
+                print("Unable to fetch PHAsset with identifier: \(assetIdentifier)")
+                // 检查是否是权限问题
+                let authStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+                DispatchQueue.main.async {
+                    if authStatus == .limited {
+                        self.parent.onPhotoAccessDenied()
+                    } else {
+                        self.parent.onNonMotionPhotoSelected()
+                    }
+                }
+                return
+            }
+            
+            // 获取原始资源
+            let resources = PHAssetResource.assetResources(for: asset)
+            guard let originalResource = resources.first(where: { $0.type == .photo }) else {
+                print("No original photo resource found")
+                DispatchQueue.main.async {
+                    self.parent.onNonMotionPhotoSelected()
+                }
+                return
+            }
+            
+            // 使用 PHAssetResourceManager 获取完整数据
+            let manager = PHAssetResourceManager.default()
+            let options = PHAssetResourceRequestOptions()
+            options.isNetworkAccessAllowed = true
+            
+            var imageData = Data()
+            
+            manager.requestData(for: originalResource, options: options, dataReceivedHandler: { data in
+                imageData.append(data)
+            }, completionHandler: { error in
+                if let error = error {
+                    print("Error requesting asset data: \(error.localizedDescription)")
+                    // 检查是否是权限相关的错误
+                    let authStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+                    let isAccessError = error.localizedDescription.contains("access") || 
+                                       error.localizedDescription.contains("permission") ||
+                                       error.localizedDescription.contains("denied") ||
+                                       (error as NSError).code == -1
+                    
+                    DispatchQueue.main.async {
+                        if authStatus == .limited && isAccessError {
+                            self.parent.onPhotoAccessDenied()
+                        } else {
+                            self.parent.onNonMotionPhotoSelected()
                         }
                     }
                     return
                 }
-            }
-            
-            // If no supported type is matched
-            DispatchQueue.main.async {
-                self.parent.onNonMotionPhotoSelected()
+                
+                // 创建临时文件保存完整数据
+                let fileExtension = originalResource.originalFilename.components(separatedBy: ".").last ?? "jpg"
+                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + "." + fileExtension)
+                
+                do {
+                    try imageData.write(to: tempURL)
+                    
+                    // 检查是否为动态照片
+                    let isMotionPhoto = self.isMotionPhoto(data: imageData, url: tempURL)
+                    
+                    DispatchQueue.main.async {
+                        if isMotionPhoto {
+                            self.parent.onImagePicked(tempURL, isMotionPhoto)
+                        } else {
+                            self.parent.onNonMotionPhotoSelected()
+                        }
+                    }
+                } catch {
+                    print("Error writing data to file: \(error.localizedDescription)")
+                    DispatchQueue.main.async {
+                        self.parent.onNonMotionPhotoSelected()
+                    }
+                }
+            })
+        }
+        
+        private func processWithItemProvider(_ itemProvider: NSItemProvider) {
+            // 备用方案：使用 itemProvider 获取图片数据
+            if itemProvider.canLoadObject(ofClass: UIImage.self) {
+                itemProvider.loadFileRepresentation(forTypeIdentifier: UTType.jpeg.identifier) { url, error in
+                    if let error = error {
+                        print("Error loading JPEG: \(error.localizedDescription)")
+                        // 尝试 HEIC 格式
+                        itemProvider.loadFileRepresentation(forTypeIdentifier: UTType.heic.identifier) { url, error in
+                            if let error = error {
+                                print("Error loading HEIC: \(error.localizedDescription)")
+                                DispatchQueue.main.async {
+                                    self.parent.onNonMotionPhotoSelected()
+                                }
+                                return
+                            }
+                            
+                            if let url = url {
+                                self.processImageFile(url: url)
+                            } else {
+                                DispatchQueue.main.async {
+                                    self.parent.onNonMotionPhotoSelected()
+                                }
+                            }
+                        }
+                        return
+                    }
+                    
+                    if let url = url {
+                        self.processImageFile(url: url)
+                    } else {
+                        DispatchQueue.main.async {
+                            self.parent.onNonMotionPhotoSelected()
+                        }
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.parent.onNonMotionPhotoSelected()
+                }
             }
         }
         
-        func isMotionPhoto(url: URL) -> Bool {
-            guard let data = try? Data(contentsOf: url) else {
-                print("Unable to read file data")
-                return false
+        private func processImageFile(url: URL) {
+            do {
+                let imageData = try Data(contentsOf: url)
+                
+                // 创建临时文件保存数据
+                let fileExtension = url.pathExtension.isEmpty ? "jpg" : url.pathExtension
+                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + "." + fileExtension)
+                
+                try imageData.write(to: tempURL)
+                
+                // 检查是否为动态照片
+                let isMotionPhoto = self.isMotionPhoto(data: imageData, url: tempURL)
+                
+                DispatchQueue.main.async {
+                    if isMotionPhoto {
+                        self.parent.onImagePicked(tempURL, isMotionPhoto)
+                    } else {
+                        self.parent.onNonMotionPhotoSelected()
+                    }
+                }
+            } catch {
+                print("Error processing image file: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self.parent.onNonMotionPhotoSelected()
+                }
             }
-            
+        }
+        
+        func isMotionPhoto(data: Data, url: URL) -> Bool {
             let supportedExtensions = ["jpg", "jpeg", "heic", "avif"]
             guard supportedExtensions.contains(url.pathExtension.lowercased()) else {
                 print("Unsupported file extension: \(url.pathExtension)")
@@ -1095,6 +1197,15 @@ struct PhotoPicker: UIViewControllerRepresentable {
                 print("Unable to extract or parse XMP data")
                 return false
             }
+        }
+        
+        // 保持向后兼容性的重载方法
+        func isMotionPhoto(url: URL) -> Bool {
+            guard let data = try? Data(contentsOf: url) else {
+                print("Unable to read file data")
+                return false
+            }
+            return isMotionPhoto(data: data, url: url)
         }
     }
 }
