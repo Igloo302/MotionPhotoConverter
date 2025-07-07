@@ -102,18 +102,42 @@ Tap "Export" and select your desired format:
 
 ## 📋 系统要求 / System Requirements
 
-- **iOS 15.0+** - 支持最新的 iOS 功能
+- **iOS 16.0+** - 支持最新的 iOS 功能
 - **iPhone/iPad** - 通用应用，适配所有设备
 - **存储空间** - 建议至少 100MB 可用空间
 - **权限** - 需要照片库访问权限
 
-## 📚 文档 / Documentation
+## 📚 文档中心 / Documentation Center
 
-- [用户指南](docs/user-guide.md) - 详细的使用说明
-- [技术架构](docs/architecture.md) - 应用架构和设计原理
-- [开发指南](docs/development-guide.md) - 开发环境搭建和贡献指南
-- [常见问题](docs/faq.md) - 常见问题解答
-- [更新日志](docs/changelog.md) - 版本更新记录
+欢迎来到 Motion2Live 文档中心！本项目是一个 iOS 应用，用于处理和转换动态照片（Motion Photo）。
+
+### 📱 用户文档 / User Documentation
+- [用户指南](docs/user-guide.md) - 完整的用户操作指南 / Complete user operation guide
+- [常见问题解答 (FAQ)](docs/faq.md) - 用户常见问题和解答 / Common questions and answers
+
+### 🔧 开发文档 / Development Documentation
+- [产品需求文档](docs/prd.md) - 详细的产品功能需求和规划 / Detailed product requirements and planning
+- [开发任务清单](docs/todo.md) - 模块化的后续开发工作计划 / Modular development task planning
+- [技术架构](docs/architecture.md) - 应用架构和设计原理 / Application architecture and design principles
+- [开发指南](docs/development-guide.md) - 参与项目开发的完整指南 / Complete guide for project development
+- [本地化指南](docs/localization-guide.md) - 多语言支持和本地化流程 / Multi-language support and localization process
+
+### 📋 项目管理 / Project Management
+- [更新日志](docs/changelog.md) - 版本历史和变更记录 / Version history and change records
+
+## 📱 支持的动态照片格式 / Supported Motion Photo Formats
+
+| 品牌 / Brand | 状态 / Status | 说明 / Description |
+|------|------|------|
+| 小米 / Xiaomi | ✅ 完全支持 / Fully Supported | 新旧版本动态照片均支持 / Both new and old formats supported |
+| Google Pixel | ✅ 完全支持 / Fully Supported | 支持 GContainer 和 Directory Item 格式 / Supports GContainer and Directory Item formats |
+| 三星 / Samsung | ✅ 完全支持 / Fully Supported | 支持 Directory Item 和 GCamera 两种格式 / Supports Directory Item and GCamera formats |
+
+### 快速导航 / Quick Navigation
+
+1. **用户 / Users**：查看 [用户指南](docs/user-guide.md) 了解如何使用应用 / Check [User Guide](docs/user-guide.md) to learn how to use the app
+2. **开发者 / Developers**：查看 [技术架构](docs/architecture.md) 了解架构设计 / Check [Architecture](docs/architecture.md) to understand the design
+3. **贡献者 / Contributors**：查看 [开发指南](docs/development-guide.md) 参与项目开发 / Check [Development Guide](docs/development-guide.md) to contribute
 
 ## 🤝 贡献 / Contributing
 
