@@ -40,7 +40,7 @@ Motion2Live/
 │   └── MotionPhotoProcessor.swift # 多品牌处理器架构
 ├── Components/                    # UI 组件
 │   ├── PlaybackHintView          # 播放引导组件
-│   ├── ExportOptionsView         # 导出选项组件
+│   └── ExportOptionsView         # 导出选项组件
 │   └── SupportedBrandsView       # 支持品牌展示组件
 ├── Utils/                         # 工具类
 │   ├── XMPParser.swift           # XMP 元数据解析

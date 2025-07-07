@@ -1,6 +1,6 @@
-### **第零部分：文档管理**
-1. 项目背景信息、技术架构等信息从根目录下的 readme 文件和 docs 文件夹查阅，用户发起指令后，有任何不理解的上下文情况，都需要去 docs 查阅。
-2. 在完成一轮编程后，都需要根据修改情况，检查 readme 文件和 docs 文件夹并更新相关文档，尤其注意要对 todo 文件进行更新，以说明最新的进度。
+1. 项目背景信息、技术架构等信息从根目录下的 readme 文件和 docs 文件夹查阅，有任何不理解的上下文情况，都需要去 docs 查阅。
+2. 在执行完代码修改后，更新 readme 文件和 docs 文件夹的文档，尤其注意要对 todo 文件进行更新说明最新的进度。
+
 
 -----
 
@@ -83,7 +83,3 @@
                     /Networking
                     /Database
                     /Extensions
-                /App
-                    /AppDelegate.swift
-                    /SceneDelegate.swift
-            ```

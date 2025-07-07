@@ -18,6 +18,8 @@ enum MotionPhotoBrand: String, CaseIterable {
         switch self {
         case .android:
             return "Android (Pixel/Samsung)"
+        case .unknown:
+            return "Unknown (MP4 Detection)"
         default:
             return self.rawValue
         }
@@ -353,6 +355,100 @@ class AndroidMotionPhotoProcessor: BaseMotionPhotoProcessor {
     }
 }
 
+// MARK: - Unknown Motion Photo Processor (File Type Box Detection)
+class UnknownMotionPhotoProcessor: BaseMotionPhotoProcessor {
+    
+    init() {
+        super.init(brand: .unknown)
+    }
+    
+    override func canProcess(xmpInfo: [String: String]) -> Bool {
+        // For unknown types, we check if no other processor can handle it
+        // but the file might still contain MP4 video data
+        // This processor should be used as a fallback when other processors fail
+        return false // Will be called explicitly as fallback
+    }
+    
+    /// Check if the file contains MP4 video by looking for File Type Box (ftyp)
+    func canProcessByFileTypeBox(data: Data) -> Bool {
+        return findMP4VideoByFileTypeBox(data: data) != nil
+    }
+    
+    override func processMotionPhoto(data: Data, xmpInfo: [String: String]) -> MotionPhotoProcessingResult {
+        guard let videoInfo = findMP4VideoByFileTypeBox(data: data) else {
+            return MotionPhotoProcessingResult(
+                success: false,
+                data: nil,
+                errorMessage: "No MP4 video found using File Type Box detection"
+            )
+        }
+        
+        let videoStartOffset = videoInfo.offset
+        let videoLength = videoInfo.length
+        
+        // Extract image and video data
+        let imageData = data.prefix(videoStartOffset)
+        let videoData = data.subdata(in: videoStartOffset..<(videoStartOffset + videoLength))
+        
+        let motionPhotoData = MotionPhotoData(
+            imageData: imageData,
+            videoData: videoData,
+            stillImageTime: 0, // Default to middle frame
+            brand: .unknown,
+            videoOffset: videoStartOffset,
+            presentationTimestamp: nil // No timestamp available for unknown format
+        )
+        
+        return MotionPhotoProcessingResult(
+            success: true,
+            data: motionPhotoData,
+            errorMessage: nil
+        )
+    }
+    
+    /// Find MP4 video data by searching for File Type Box (ftyp) with "mp4" value
+    private func findMP4VideoByFileTypeBox(data: Data) -> (offset: Int, length: Int)? {
+        let ftypSignature = Data([0x66, 0x74, 0x79, 0x70]) // "ftyp"
+        let mp4Brand = "mp4".data(using: .ascii)!
+        
+        var searchIndex = 0
+        let dataCount = data.count
+        
+        while searchIndex < dataCount - 8 {
+            if let ftypRange = data.range(of: ftypSignature, in: searchIndex..<dataCount) {
+                let ftypStart = ftypRange.lowerBound
+                
+                if ftypStart >= 4 {
+                    let boxSizeStart = ftypStart - 4
+                    let boxSizeData = data.subdata(in: boxSizeStart..<ftypStart)
+                    let boxSize = boxSizeData.withUnsafeBytes { $0.load(as: UInt32.self).bigEndian }
+                    
+                    if boxSize >= 16 && boxSize <= 1024 {
+                        let brandStart = ftypStart + 4
+                        let brandEnd = min(brandStart + Int(boxSize) - 8, dataCount)
+                        
+                        if brandEnd > brandStart {
+                            let brandData = data.subdata(in: brandStart..<brandEnd)
+                            
+                            if brandData.range(of: mp4Brand) != nil {
+                                // Found MP4 ftyp box, return the video data from box start to end of file
+                                let mp4Length = dataCount - boxSizeStart
+                                return (offset: boxSizeStart, length: mp4Length)
+                            }
+                        }
+                    }
+                }
+                
+                searchIndex = ftypRange.upperBound
+            } else {
+                break
+            }
+        }
+        
+        return nil
+    }
+}
+
 // MARK: - Motion Photo Processor Factory
 class MotionPhotoProcessorFactory {
     private static let processors: [MotionPhotoProcessorProtocol] = [
@@ -360,11 +456,30 @@ class MotionPhotoProcessorFactory {
         AndroidMotionPhotoProcessor()
     ]
     
+    private static let unknownProcessor = UnknownMotionPhotoProcessor()
+    
     static func getProcessor(for xmpInfo: [String: String]) -> MotionPhotoProcessorProtocol? {
         return processors.first { $0.canProcess(xmpInfo: xmpInfo) }
     }
     
+    /// Get processor with fallback to Unknown processor for File Type Box detection
+    static func getProcessor(for xmpInfo: [String: String], data: Data) -> MotionPhotoProcessorProtocol? {
+        // First try standard processors
+        if let processor = processors.first(where: { $0.canProcess(xmpInfo: xmpInfo) }) {
+            return processor
+        }
+        
+        // If no standard processor can handle it, try Unknown processor with File Type Box detection
+        if unknownProcessor.canProcessByFileTypeBox(data: data) {
+            return unknownProcessor
+        }
+        
+        return nil
+    }
+    
     static func getAllSupportedBrands() -> [MotionPhotoBrand] {
-        return processors.map { $0.brand }
+        var brands = processors.map { $0.brand }
+        brands.append(.unknown)
+        return brands
     }
 }

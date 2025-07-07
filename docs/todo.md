@@ -4,6 +4,21 @@
 
 本文档详细列出了 Motion2Live 项目的后续开发任务，按模块和优先级进行组织，为开发团队提供清晰的工作指导。
 
+## 🎉 最新完成 (2024-12-19)
+
+### UI 优化改进
+- [x] **预览页面UI简化** - 移除预览页面右上角的照片选择按钮
+  - [x] 移除导航栏右上角的 `photo.on.rectangle` 按钮
+  - [x] 清理相关的 `isShowingPhotoPicker` 状态变量
+  - [x] 移除对应的 PhotoPicker sheet 代码
+  - [x] 简化预览页面交互逻辑，专注于核心预览功能
+
+- [x] **触感反馈功能移除** - 移除预览页面的震动反馈功能
+  - [x] 移除 `UIImpactFeedbackGenerator` 触感反馈生成器
+  - [x] 清理 `startVideoPlaybackWithFeedback` 函数中的触感反馈调用
+  - [x] 清理 `stopVideoPlaybackWithFeedback` 函数中的触感反馈调用
+  - [x] 简化用户交互体验，移除不必要的触感干扰
+
 ---
 
 ## 🎯 短期目标 (v1.3.0)
@@ -105,6 +120,21 @@
 ### 4. 多品牌支持扩展
 **优先级**：🔴 高
 **预计工期**：3-4 周
+
+#### 4.0 Unknown 类型动态照片支持 ✅
+**状态**：已完成 (2024-12-19)
+- [x] **UnknownMotionPhotoProcessor** - Unknown 类型处理器
+  - [x] File Type Box (ftyp) 检测实现
+  - [x] MP4 视频数据识别
+  - [x] 无 XMP 元数据的动态照片支持
+- [x] **工厂模式扩展**
+  - [x] 回退机制实现
+  - [x] 多层检测逻辑
+  - [x] Unknown 品牌类型添加
+- [x] **核心逻辑更新**
+  - [x] MotionPhoto 初始化逻辑优化
+  - [x] 处理器选择策略改进
+  - [x] 错误处理增强
 
 #### 4.1 华为动态照片支持
 - [ ] **HuaweiMotionPhotoProcessor** - 华为处理器

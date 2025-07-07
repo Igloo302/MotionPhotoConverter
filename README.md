@@ -16,11 +16,11 @@ Supports multiple Motion Photo formats from Xiaomi, Google Pixel, and Samsung de
 
 ### 📱 智能用户体验 / Smart User Experience
 - **首次使用引导** - 半透明提示面板，动态 Live Photo 图标指引
-- **触感反馈** - 播放开始和结束时的精准触感反馈
 - **直观操作** - 按住播放，松开停止的自然交互
 - **状态记忆** - 智能记住用户操作习惯，引导仅在首次显示
+- **简洁体验** - 专注核心功能，移除不必要的干扰
 
-Intuitive first-time user guidance with haptic feedback and natural gesture-based interactions.
+Intuitive first-time user guidance with natural gesture-based interactions and streamlined experience.
 
 ### 🎬 视频处理 / Video Processing
 - **高质量提取** - 保持原始视频质量和分辨率
@@ -61,7 +61,7 @@ Modern SwiftUI interface with dark mode support and comprehensive help system.
 ### 第二步：预览和播放
 - **按住屏幕**播放视频部分（首次使用会有引导提示）
 - 松开手指停止播放
-- 享受流畅的触感反馈体验
+- 享受流畅的视觉反馈体验
 
 ### 第三步：选择导出格式
 点击「导出」按钮，选择您需要的格式：
@@ -77,7 +77,7 @@ Modern SwiftUI interface with dark mode support and comprehensive help system.
 ### Step 2: Preview and Play
 - **Press and hold** to play video (first-time guidance included)
 - Release to stop playback
-- Enjoy smooth haptic feedback
+- Enjoy smooth visual feedback
 
 ### Step 3: Choose Export Format
 Tap "Export" and select your desired format:
@@ -132,6 +132,7 @@ Tap "Export" and select your desired format:
 | 小米 / Xiaomi | ✅ 完全支持 / Fully Supported | 新旧版本动态照片均支持 / Both new and old formats supported |
 | Google Pixel | ✅ 完全支持 / Fully Supported | 支持 GContainer 和 Directory Item 格式 / Supports GContainer and Directory Item formats |
 | 三星 / Samsung | ✅ 完全支持 / Fully Supported | 支持 Directory Item 和 GCamera 两种格式 / Supports Directory Item and GCamera formats |
+| Unknown 类型 / Unknown | ✅ 新增支持 / Newly Supported | 通过 File Type Box (ftyp) 检测 MP4 视频 / MP4 detection via File Type Box (ftyp) |
 
 ### 快速导航 / Quick Navigation
 

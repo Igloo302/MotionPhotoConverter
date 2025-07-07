@@ -18,19 +18,31 @@ struct MotionPhoto {
             return nil
         }
         
-        // Check if it's a motion photo
-        guard (xmpInfo["GCamera:MotionPhoto"] == "1" || xmpInfo["GCamera:MicroVideo"] == "1" || xmpInfo["Motion Photo"] == "1") else {
-            return nil
-        }
+        // Check if it's a motion photo using XMP data
+        let isMotionPhotoByXMP = (xmpInfo["GCamera:MotionPhoto"] == "1" || 
+                                 xmpInfo["GCamera:MicroVideo"] == "1" || 
+                                 xmpInfo["Motion Photo"] == "1")
         
         // Use processor factory to get appropriate processor
-        guard let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo) else {
-            print("Unsupported motion photo format")
+        // First try with XMP data, then fallback to File Type Box detection
+        var processor: MotionPhotoProcessorProtocol?
+        
+        if isMotionPhotoByXMP {
+            processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo)
+        }
+        
+        // If no processor found through XMP, try File Type Box detection for Unknown format
+        if processor == nil {
+            processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data)
+        }
+        
+        guard let finalProcessor = processor else {
+            print("Unsupported motion photo format - no XMP indicators and no MP4 File Type Box found")
             return nil
         }
         
         // Process motion photo data
-        let result = processor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
+        let result = finalProcessor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
         guard result.success, let motionPhotoData = result.data else {
             print("Failed to process motion photo: \(result.errorMessage ?? "Unknown error")")
             return nil

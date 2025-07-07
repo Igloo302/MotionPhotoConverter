@@ -277,7 +277,7 @@ struct MotionPhotoView: View {
     @State private var isPlayingVideo = false
     @State private var originalImageData: Data?
     @State private var videoData: Data?
-    @State private var isShowingPhotoPicker = false
+
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var isProcessing = false
@@ -296,9 +296,7 @@ struct MotionPhotoView: View {
     @State private var showPlaybackHint = false
     @State private var hasUserPlayedVideo = UserDefaults.standard.bool(forKey: "hasUserPlayedMotionPhoto")
     
-    // Haptic feedback generator
-    private let lightImpactFeedback = UIImpactFeedbackGenerator(style: .light)
-    private let softImpactFeedback = UIImpactFeedbackGenerator(style: .soft)
+    // Haptic feedback generator removed
     
     init(sourceURL: URL) {
         self.sourceURL = sourceURL
@@ -381,14 +379,6 @@ struct MotionPhotoView: View {
                     .foregroundColor(.blue)
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    isShowingPhotoPicker = true
-                }) {
-                    Image(systemName: "photo.on.rectangle")
-                        .font(.system(size: 16, weight: .medium))
-                }
-            }
         }
         .sheet(isPresented: $isExportMenuPresented) {
             ExportOptionsView(
@@ -403,23 +393,7 @@ struct MotionPhotoView: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $isShowingPhotoPicker) {
-            PhotoPicker(onImagePicked: { url, isMotionPhoto in
-                Task {
-                    if isMotionPhoto {
-                        await self.extractVideoFromMotionPhoto(url: url)
-                    } else {
-                        await MainActor.run {
-                            self.showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
-                        }
-                    }
-                }
-            }, onNonMotionPhotoSelected: {
-                self.showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
-            }, onCancelled: {
-                // User cancelled selection, no alert needed
-            })
-        }
+
         .alert(isPresented: $showAlert) {
             Alert(title: Text(Localizable.string(.tip)), message: Text(alertMessage), dismissButton: .default(Text(Localizable.string(.ok))))
         }
@@ -454,9 +428,6 @@ struct MotionPhotoView: View {
     }
     
     func startVideoPlaybackWithFeedback() {
-        // Trigger light haptic feedback
-        lightImpactFeedback.impactOccurred()
-        
         // If first playback, hide guidance hint and record state
         if showPlaybackHint {
             hidePlaybackHint()
@@ -466,9 +437,6 @@ struct MotionPhotoView: View {
     }
     
     func stopVideoPlaybackWithFeedback() {
-        // Trigger softer haptic feedback
-        softImpactFeedback.impactOccurred()
-        
         stopVideoPlayback()
     }
     
