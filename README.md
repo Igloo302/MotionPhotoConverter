@@ -10,9 +10,10 @@ Motion2Live is a powerful iOS application designed for processing and converting
 - **小米动态照片** - 完全支持新旧版本格式
 - **Google Pixel Motion Photo** - 支持 GContainer 和 Directory Item 格式
 - **三星动态照片** - 支持多种三星设备格式
-- **智能识别** - 自动检测并选择合适的处理器
+- **华为动态照片** - 新增支持基于 File Type Box 检测的华为动态照片
+- **智能识别** - 自动检测并选择合适的处理器，支持多层回退机制
 
-Supports multiple Motion Photo formats from Xiaomi, Google Pixel, and Samsung devices with intelligent format detection.
+Supports multiple Motion Photo formats from Xiaomi, Google Pixel, Samsung, and Huawei devices with intelligent format detection and fallback mechanisms.
 
 ### 📱 智能用户体验 / Smart User Experience
 - **首次使用引导** - 半透明提示面板，动态 Live Photo 图标指引
@@ -99,6 +100,8 @@ Tap "Export" and select your desired format:
 - **协议导向编程** - 可扩展的处理器架构
 - **异步处理** - Swift Concurrency (async/await)
 - **响应式设计** - SwiftUI 数据绑定
+- **Swift 6 兼容** - 完全支持 Swift 6 严格并发检查
+- **内存安全** - 安全的二进制数据处理和内存对齐
 
 ## 📋 系统要求 / System Requirements
 
@@ -132,7 +135,8 @@ Tap "Export" and select your desired format:
 | 小米 / Xiaomi | ✅ 完全支持 / Fully Supported | 新旧版本动态照片均支持 / Both new and old formats supported |
 | Google Pixel | ✅ 完全支持 / Fully Supported | 支持 GContainer 和 Directory Item 格式 / Supports GContainer and Directory Item formats |
 | 三星 / Samsung | ✅ 完全支持 / Fully Supported | 支持 Directory Item 和 GCamera 两种格式 / Supports Directory Item and GCamera formats |
-| Unknown 类型 / Unknown | ✅ 新增支持 / Newly Supported | 通过 File Type Box (ftyp) 检测 MP4 视频 / MP4 detection via File Type Box (ftyp) |
+| 华为 / Huawei | ✅ 新增支持 / Newly Supported | 基于 File Type Box (ftyp) 检测的华为动态照片 / Huawei Motion Photos via File Type Box detection |
+| Unknown 类型 / Unknown | ✅ 回退支持 / Fallback Support | 通过 File Type Box (ftyp) 检测 MP4 视频 / MP4 detection via File Type Box (ftyp) |
 
 ### 快速导航 / Quick Navigation
 
@@ -178,6 +182,6 @@ Thanks to all developers and users who contributed to this project. Special than
 
 ---
 
-**Motion2Live v1.2** © 2024 Igloo. 用❤️制作。
+**Motion2Live v1.2.1** © 2024 Igloo. 用❤️制作。
 
-**Motion2Live v1.2** © 2024 Igloo. Made with ❤️.
+**Motion2Live v1.2.1** © 2024 Igloo. Made with ❤️.

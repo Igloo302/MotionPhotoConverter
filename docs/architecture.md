@@ -12,6 +12,8 @@ Motion2Live 使用以下技术和框架开发：
 - **Photos**：访问照片库资源，使用 PHAssetResourceManager 获取完整原始数据
 - **UniformTypeIdentifiers**：处理文件类型识别
 - **ImageIO**：处理图像数据和元数据
+- **Swift 6**：完全支持 Swift 6 严格并发检查，确保线程安全
+- **内存安全**：安全的二进制数据处理和内存对齐机制
 
 ## 架构设计
 
@@ -43,6 +45,10 @@ Motion2Live 采用 MVVM (Model-View-ViewModel) 架构模式，结合基于协议
 - **XiaomiMotionPhotoProcessor** - 处理小米动态照片（已完全实现）
 - **PixelMotionPhotoProcessor** - 处理Pixel动态照片（已完全实现）
 - **SamsungMotionPhotoProcessor** - 处理三星动态照片（已完全实现）
+- **HuaweiMotionPhotoProcessor** - 处理华为动态照片（新增支持）
+  - 基于 File Type Box (ftyp) 检测的华为动态照片
+  - 支持华为特有的动态照片格式
+  - 提供完整的华为动态照片处理流程
 - **UnknownMotionPhotoProcessor** - 处理未知类型动态照片（已完全实现）
   - 通过 File Type Box (ftyp) 检测 MP4 视频
   - 支持无 XMP 元数据的动态照片
@@ -62,6 +68,7 @@ enum MotionPhotoBrand: String, CaseIterable {
     case xiaomi = "Xiaomi"
     case pixel = "Pixel"
     case samsung = "Samsung"
+    case huawei = "Huawei"
     case unknown = "Unknown"
 }
 ```
@@ -245,40 +252,47 @@ func exportAsGIF() {
 3. 实现 `canProcess` 和 `processMotionPhoto` 方法
 4. 在 `MotionPhotoProcessorFactory` 中注册新处理器
 
-### 示例：添加华为支持
+### 华为动态照片支持实现
+
+华为动态照片支持已完全实现，采用基于 File Type Box 检测的方案：
 
 ```swift
-// 1. 添加枚举值
-enum MotionPhotoBrand: String, CaseIterable {
-    // ... 现有品牌
-    case huawei = "Huawei"
-}
-
-// 2. 创建处理器
+// 华为动态照片处理器实现
 class HuaweiMotionPhotoProcessor: BaseMotionPhotoProcessor {
     init() {
         super.init(brand: .huawei)
     }
     
     override func canProcess(xmpInfo: [String: String]) -> Bool {
-        // 检测华为特有的XMP标签
-        return xmpInfo["Huawei:MotionPhoto"] != nil
+        // 华为动态照片通过 File Type Box 检测
+        return false // 不依赖 XMP 数据
     }
     
     override func processMotionPhoto(data: Data, xmpInfo: [String: String]) -> MotionPhotoProcessingResult {
         // 实现华为动态照片的处理逻辑
-        // ...
+        // 基于 File Type Box 检测和数据提取
+        return extractHuaweiMotionPhoto(from: data)
     }
 }
 
-// 3. 在工厂中注册
-class MotionPhotoProcessorFactory {
-    private static let processors: [MotionPhotoProcessorProtocol] = [
-        XiaomiMotionPhotoProcessor(),
-        PixelMotionPhotoProcessor(),
-        SamsungMotionPhotoProcessor(),
-        HuaweiMotionPhotoProcessor() // 添加新处理器
-    ]
+// 回退检测机制
+func extractVideoFromMotionPhoto(url: URL) async {
+    // 首先尝试 XMP 检测
+    if let xmpData = extractXMPData(from: data),
+       let xmpInfo = parseXMP(data: xmpData) {
+        processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo)
+    }
+    
+    // 如果 XMP 检测失败，尝试华为动态照片回退检测
+    if processor == nil {
+        if hasFileTypeBox(data: data) {
+            processor = HuaweiMotionPhotoProcessor()
+        }
+    }
+    
+    // 使用最终确定的处理器
+    let finalProcessor = processor ?? UnknownMotionPhotoProcessor()
+    // ...
 }
 ```
 
@@ -289,7 +303,8 @@ class MotionPhotoProcessorFactory {
 | 小米 | ✅ 完全支持 | 新旧版本动态照片均支持 |
 | Pixel | ✅ 完全支持 | 支持GContainer:ItemLength格式 |
 | 三星 | ✅ 完全支持 | 支持Directory Item和GCamera两种格式 |
-| Unknown | ✅ 新增支持 | 通过File Type Box (ftyp)检测MP4视频，支持无XMP元数据的动态照片 |
+| 华为 | ✅ 新增支持 | 基于File Type Box (ftyp)检测的华为动态照片，支持华为特有格式 |
+| Unknown | ✅ 回退支持 | 通过File Type Box (ftyp)检测MP4视频，支持无XMP元数据的动态照片 |
 
 ## 性能优化
 
@@ -441,11 +456,33 @@ PlayerView(player: player)
 
 应用实现了错误恢复机制，确保在出现问题时能够优雅地恢复并提供有用的反馈。
 
+## 最新技术改进 (v1.2.1)
+
+### Swift 6 兼容性
+- **严格并发检查**：完全支持 Swift 6 的严格并发检查
+- **线程安全**：所有 UI 更新确保在主线程执行
+- **异步处理优化**：使用 `MainActor.run` 确保线程安全
+
+### 内存安全改进
+- **内存对齐修复**：修复了二进制数据处理中的内存对齐问题
+- **安全数据处理**：改进了大文件处理的内存管理
+- **崩溃修复**：解决了特定情况下的内存访问崩溃
+
+### 华为动态照片支持
+- **File Type Box 检测**：实现基于 ftyp 的华为动态照片检测
+- **回退机制**：在 XMP 检测失败时自动回退到华为检测
+- **完整处理流程**：支持华为动态照片的预览和导出
+
+### 用户体验优化
+- **PHAsset 预取优化**：添加 `fetchPropertySets` 预取原始元数据
+- **错误处理改进**：更好的错误提示和恢复机制
+- **性能优化**：减少不必要的数据拷贝和内存使用
+
 ## 下一步计划
 
-1. 添加单元测试覆盖所有品牌处理器
-2. 性能优化和内存使用优化
-3. 错误处理和用户体验改进
+1. 添加单元测试覆盖所有品牌处理器（包括华为）
+2. 进一步性能优化和内存使用优化
+3. 错误处理和用户体验持续改进
 4. 支持更多设备厂商的动态照片格式
 5. 批量处理功能
 6. 模块化架构进一步优化

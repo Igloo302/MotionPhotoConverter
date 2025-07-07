@@ -64,7 +64,7 @@ class HomeViewModel: ObservableObject {
     }
     
     private func showPermissionDeniedAlert() {
-        permissionAlertMessage = "Motion2Live 需要访问您的照片库来选择动态照片。请前往设置 > Motion2Live > 照片，选择\"所有照片\"以获得最佳体验。"
+        permissionAlertMessage = L(.photoLibraryAccessPermission)
         showPermissionAlert = true
     }
     

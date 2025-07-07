@@ -11,6 +11,7 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var showPhotoAccessAlert = false
     @State private var showingLabView = false
     @State private var showingHelpSheet = false
     @State private var selectedMotionPhotoURL: URL?
@@ -39,16 +40,24 @@ struct HomeView: View {
                         .padding(.bottom, 40)
                 }
             }
-            .navigationTitle(Localizable.string(.appTitle))
+            .navigationTitle(L(.appTitle))
             .navigationBarTitleDisplayMode(.large)
             .alert(isPresented: $showAlert) {
-                Alert(title: Text(Localizable.string(.tip)), message: Text(alertMessage), dismissButton: .default(Text(Localizable.string(.ok))))
+                Alert(title: Text(L(.tip)), message: Text(alertMessage), dismissButton: .default(Text(L(.ok))))
             }
-            .alert("照片库访问权限", isPresented: $viewModel.showPermissionAlert) {
-                Button("前往设置") {
+            .alert(L(.photoAccessDenied), isPresented: $showPhotoAccessAlert) {
+                Button(L(.goToSettings)) {
                     viewModel.openAppSettings()
                 }
-                Button("取消", role: .cancel) { }
+                Button(L(.cancel), role: .cancel) { }
+            } message: {
+                Text(L(.photoNotAccessibleInLimitedMode))
+            }
+            .alert(L(.photoLibraryAccessPermission), isPresented: $viewModel.showPermissionAlert) {
+                Button(L(.goToSettings)) {
+                    viewModel.openAppSettings()
+                }
+                Button(L(.cancel), role: .cancel) { }
             } message: {
                 Text(viewModel.permissionAlertMessage)
             }
@@ -58,14 +67,14 @@ struct HomeView: View {
                         if isMotionPhoto {
                             selectedMotionPhotoURL = url
                         } else {
-                            showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+                            showAlert(message: L(.selectedPhotoIsNotMotionPhoto))
                         }
                     },
                     onNonMotionPhotoSelected: {
-                        showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+                        showAlert(message: L(.selectedPhotoIsNotMotionPhoto))
                     },
                     onPhotoAccessDenied: {
-                        showAlert(message: Localizable.string(.photoNotAccessibleInLimitedMode))
+                        showPhotoAccessAlert = true
                     },
                     onCancelled: {
                         // User cancelled selection, no prompt displayed
@@ -153,7 +162,7 @@ struct HomeView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.title2)
-                    Text(Localizable.string(.selectMotionPhoto))
+                    Text(L(.selectMotionPhoto))
                         .font(.headline)
                         .fontWeight(.semibold)
                 }
@@ -180,7 +189,7 @@ struct HomeView: View {
     // MARK: - Features Overview Section
     private var featuresOverviewView: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(Localizable.string(.mainFeatures))
+            Text(L(.mainFeatures))
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
@@ -188,22 +197,22 @@ struct HomeView: View {
             VStack(spacing: 12) {
                 FeatureRowView(
                     icon: "livephoto",
-                    title: Localizable.string(.convertToLivePhoto),
-                    description: Localizable.string(.convertToLivePhotoDescription),
+                    title: L(.convertToLivePhoto),
+                    description: L(.convertToLivePhotoDescription),
                     color: .blue
                 )
                 
                 FeatureRowView(
                     icon: "video.fill",
-                    title: Localizable.string(.extractVideo),
-                    description: Localizable.string(.extractVideoDescription),
+                    title: L(.extractVideo),
+                    description: L(.extractVideoDescription),
                     color: .green
                 )
                 
                 FeatureRowView(
                     icon: "rectangle.stack.fill",
-                    title: Localizable.string(.generateGIF),
-                    description: Localizable.string(.generateGIFDescription),
+                    title: L(.generateGIF),
+                    description: L(.generateGIFDescription),
                     color: .orange
                 )
             }
@@ -224,11 +233,11 @@ struct HomeView: View {
                     .foregroundColor(.purple)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(Localizable.string(.lab))
+                    Text(L(.lab))
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Text(Localizable.string(.exploreMoreFeatures))
+                    Text(L(.exploreMoreFeatures))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -288,10 +297,10 @@ struct HelpSheetView: View {
             VStack(spacing: 0) {
                 // Tab selector
                 Picker("Help Type", selection: $selectedTab) {
-                    Text("Quick Start").tag(0)
-                    Text("Features").tag(1)
-                    Text("FAQ").tag(2)
-                    Text("Troubleshooting").tag(3)
+                    Text(L(.quickStart)).tag(0)
+                    Text(L(.features)).tag(1)
+                    Text(L(.faq)).tag(2)
+                    Text(L(.troubleshooting)).tag(3)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 20)
@@ -316,10 +325,10 @@ struct HelpSheetView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Help")
+            .navigationTitle(L(.help))
             .toolbar {
                 ToolbarItem(placement: .automatic) {
-                    Button("Done") {
+                    Button(L(.done)) {
                         dismiss()
                     }
                 }
@@ -330,34 +339,35 @@ struct HelpSheetView: View {
     // MARK: - Quick Start Content
     private var quickStartContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HelpSectionView(title: "About Motion2Live", icon: "info.circle.fill", color: .blue) {
-                Text("Motion2Live is a professional motion photo converter that supports converting motion photos from various device brands to iOS native Live Photo format, making your memories more vivid.")
+            HelpSectionView(title: L(.aboutMotion2Live), icon: "info.circle.fill", color: .blue) {
+                Text(L(.aboutMotion2LiveDescription))
                     .font(.body)
                     .foregroundColor(.secondary)
             }
             
-            HelpSectionView(title: "System Requirements", icon: "iphone", color: .green) {
+            HelpSectionView(title: L(.systemRequirements), icon: "iphone", color: .green) {
                 VStack(alignment: .leading, spacing: 8) {
-                    HelpBulletPoint(text: "iOS 16.0 or later")
-                    HelpBulletPoint(text: "Sufficient storage space for processing photos and videos")
-                    HelpBulletPoint(text: "Photo library access permission")
+                    HelpBulletPoint(text: L(.systemRequirementsIOS))
+                    HelpBulletPoint(text: L(.systemRequirementsStorage))
+                    HelpBulletPoint(text: L(.systemRequirementsPermission))
                 }
             }
             
-            HelpSectionView(title: "Supported Motion Photo Formats", icon: "camera.fill", color: .orange) {
+            HelpSectionView(title: L(.supportedMotionPhotoFormats), icon: "camera.fill", color: .orange) {
                 VStack(alignment: .leading, spacing: 8) {
-                    HelpBulletPoint(text: "✅ Xiaomi Motion Photos (including MIUI and HyperOS versions)")
-                    HelpBulletPoint(text: "✅ Google Pixel Motion Photo")
-                    HelpBulletPoint(text: "✅ Samsung Motion Photos")
+                    HelpBulletPoint(text: L(.supportedXiaomi))
+                    HelpBulletPoint(text: L(.supportedGoogle))
+                    HelpBulletPoint(text: L(.supportedSamsung))
+                    HelpBulletPoint(text: L(.supportedHuawei))
                 }
             }
             
-            HelpSectionView(title: "Usage Steps", icon: "list.number", color: .purple) {
+            HelpSectionView(title: L(.usageSteps), icon: "list.number", color: .purple) {
                 VStack(alignment: .leading, spacing: 12) {
-                    HelpStepView(step: "1", title: "Select Motion Photo", description: "Tap the 'Select Motion Photo' button on the home page and choose the motion photo you want to convert from your album")
-                    HelpStepView(step: "2", title: "Preview and Play", description: "View the static image and press and hold the screen to play the video portion")
-                    HelpStepView(step: "3", title: "Choose Export Format", description: "Select to export as Live Photo, video, or GIF")
-                    HelpStepView(step: "4", title: "Save to Album", description: "After conversion is complete, the file will be automatically saved to your photo album")
+                    HelpStepView(step: "1", title: L(.step1Title), description: L(.step1Description))
+                    HelpStepView(step: "2", title: L(.step2Title), description: L(.step2Description))
+                    HelpStepView(step: "3", title: L(.step3Title), description: L(.step3Description))
+                    HelpStepView(step: "4", title: L(.step4Title), description: L(.step4Description))
                 }
             }
         }
@@ -366,52 +376,211 @@ struct HelpSheetView: View {
     // MARK: - Features Content
     private var featuresContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HelpSectionView(title: "Basic Features", icon: "star.fill", color: .blue) {
+            // Multi-Brand Support
+            HelpSectionView(title: L(.multiBrandSupport), icon: "iphone.and.arrow.forward", color: .blue) {
                 VStack(alignment: .leading, spacing: 12) {
+                    Text(L(.multiBrandSupportDescription))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
                     FeatureDetailView(
-                        icon: "livephoto",
-                        title: "Convert to Live Photo",
-                        description: "Convert motion photos to iOS native Live Photo format, supporting perfect playback across Apple devices",
-                        color: .blue
+                        icon: "iphone",
+                        title: L(.xiaomiSupport),
+                        description: L(.xiaomiSupportDescription),
+                        color: .orange
                     )
                     
                     FeatureDetailView(
-                        icon: "video.fill",
-                        title: "Extract Video",
-                        description: "Extract the video portion from motion photos and save as MP4 format for easy sharing and editing",
+                        icon: "camera.fill",
+                        title: L(.googlePixelSupport),
+                        description: L(.googlePixelSupportDescription),
                         color: .green
                     )
                     
                     FeatureDetailView(
-                        icon: "rectangle.stack.fill",
-                        title: "Generate GIF",
-                        description: "Convert motion photos to GIF format, supporting cross-platform sharing and social media use",
+                        icon: "camera.macro",
+                        title: L(.samsungSupport),
+                        description: L(.samsungSupportDescription),
+                        color: .blue
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "camera.aperture",
+                        title: L(.huaweiSupport),
+                        description: L(.huaweiSupportDescription),
+                        color: .red
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "brain.head.profile",
+                        title: L(.intelligentDetection),
+                        description: L(.intelligentDetectionDescription),
+                        color: .purple
+                    )
+                }
+            }
+            
+            // Smart User Experience
+            HelpSectionView(title: L(.smartUserExperience), icon: "hand.tap.fill", color: .green) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L(.smartUserExperienceDescription))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    FeatureDetailView(
+                        icon: "lightbulb.fill",
+                        title: L(.firstTimeGuidance),
+                        description: L(.firstTimeGuidanceDescription),
+                        color: .yellow
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "hand.point.up.left.fill",
+                        title: L(.intuitiveOperation),
+                        description: L(.intuitiveOperationDescription),
+                        color: .blue
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "brain.fill",
+                        title: L(.statusMemory),
+                        description: L(.statusMemoryDescription),
+                        color: .purple
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "sparkles",
+                        title: L(.streamlinedExperience),
+                        description: L(.streamlinedExperienceDescription),
+                        color: .pink
+                    )
+                }
+            }
+            
+            // Video Processing
+            HelpSectionView(title: L(.videoProcessing), icon: "video.fill", color: .orange) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L(.videoProcessingDescription))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    FeatureDetailView(
+                        icon: "4k.tv.fill",
+                        title: L(.highQualityExtraction),
+                        description: L(.highQualityExtractionDescription),
+                        color: .blue
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "play.circle.fill",
+                        title: L(.smartPlayback),
+                        description: L(.smartPlaybackDescription),
+                        color: .green
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "info.circle.fill",
+                        title: L(.metadataPreservation),
+                        description: L(.metadataPreservationDescription),
+                        color: .indigo
+                    )
+                }
+            }
+            
+            // Live Photo Conversion
+            HelpSectionView(title: L(.livePhotoConversion), icon: "livephoto", color: .purple) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L(.livePhotoConversionDescription))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    FeatureDetailView(
+                        icon: "checkmark.seal.fill",
+                        title: L(.nativeCompatibility),
+                        description: L(.nativeCompatibilityDescription),
+                        color: .green
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "clock.fill",
+                        title: L(.timeSynchronization),
+                        description: L(.timeSynchronizationDescription),
+                        color: .blue
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "slider.horizontal.3",
+                        title: L(.qualityOptimization),
+                        description: L(.qualityOptimizationDescription),
                         color: .orange
                     )
                 }
             }
             
-            HelpSectionView(title: "Lab Features", icon: "flask.fill", color: .purple) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HelpBulletPoint(text: "Custom Live Photo: Create Live Photos using static images and video files")
-                    HelpBulletPoint(text: "Batch Processing: Process multiple motion photos simultaneously")
-                    HelpBulletPoint(text: "Advanced Export Options: Customize video quality and GIF parameters")
+            // GIF Export
+            HelpSectionView(title: L(.gifExport), icon: "rectangle.stack.fill", color: .pink) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L(.gifExportDescription))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    FeatureDetailView(
+                        icon: "wand.and.stars",
+                        title: L(.highQualityConversion),
+                        description: L(.highQualityConversionDescription),
+                        color: .purple
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "gearshape.fill",
+                        title: L(.automaticOptimization),
+                        description: L(.automaticOptimizationDescription),
+                        color: .blue
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "square.and.arrow.up.fill",
+                        title: L(.socialSharing),
+                        description: L(.socialSharingDescription),
+                        color: .green
+                    )
                 }
             }
             
-            HelpSectionView(title: "File Format Description", icon: "doc.fill", color: .indigo) {
+            // Modern Interface
+            HelpSectionView(title: L(.modernInterface), icon: "paintbrush.fill", color: .indigo) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Motion Photo vs Live Photo")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text("• Motion Photo: Android device motion photo format, typically a single JPEG file containing video data")
+                    Text(L(.modernInterfaceDescription))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("• Live Photo: Apple device proprietary format, consisting of a static image and MOV video")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    FeatureDetailView(
+                        icon: "swift",
+                        title: L(.swiftUIDesign),
+                        description: L(.swiftUIDesignDescription),
+                        color: .orange
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "moon.fill",
+                        title: L(.darkModeSupport),
+                        description: L(.darkModeSupportDescription),
+                        color: .indigo
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "sparkles",
+                        title: L(.animationEffects),
+                        description: L(.animationEffectsDescription),
+                        color: .pink
+                    )
+                    
+                    FeatureDetailView(
+                        icon: "questionmark.circle.fill",
+                        title: L(.helpSystem),
+                        description: L(.helpSystemDescription),
+                        color: .blue
+                    )
                 }
             }
         }
@@ -420,63 +589,90 @@ struct HelpSheetView: View {
     // MARK: - FAQ Content
     private var faqContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HelpSectionView(title: "Identification and Selection", icon: "questionmark.circle.fill", color: .blue) {
+            HelpSectionView(title: L(.faq), icon: "questionmark.circle.fill", color: .blue) {
                 VStack(alignment: .leading, spacing: 12) {
                     FAQItemView(
-                        question: "How do I know if my photo is a Motion Photo?",
-                        answer: "In your photo album, Motion Photos usually display special icons or labels. In Motion2Live, if the selected photo is not a Motion Photo, the app will show a notification."
+                        question: L(.faqWhatIsMotionPhoto),
+                        answer: L(.faqWhatIsMotionPhotoAnswer)
                     )
                     
                     FAQItemView(
-                        question: "Why does the app say 'Not a valid Motion Photo'?",
-                        answer: "This could be due to an unsupported format variant, the file being edited or modified, or corruption during transfer. We recommend using original, unedited files."
+                        question: L(.faqWhatIsLivePhoto),
+                        answer: L(.faqWhatIsLivePhotoAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqAppMainFunction),
+                        answer: L(.faqAppMainFunctionAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqHowToSelectMotionPhoto),
+                        answer: L(.faqHowToSelectMotionPhotoAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqHowToConvertToLivePhoto),
+                        answer: L(.faqHowToConvertToLivePhotoAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqHowToConvertToGIF),
+                        answer: L(.faqHowToConvertToGIFAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqSupportedDevices),
+                        answer: L(.faqSupportedDevicesAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqGIFFileSize),
+                        answer: L(.faqGIFFileSizeAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqBatchProcessing),
+                        answer: L(.faqBatchProcessingAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqFileSaveLocation),
+                        answer: L(.faqFileSaveLocationAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqExportFailureReasons),
+                        answer: L(.faqExportFailureReasonsAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqLivePhotoCompatibility),
+                        answer: L(.faqLivePhotoCompatibilityAnswer)
+                    )
+                    
+                    FAQItemView(
+                        question: L(.faqVideoNoSound),
+                        answer: L(.faqVideoNoSoundAnswer)
                     )
                 }
             }
             
-            HelpSectionView(title: "Conversion and Export", icon: "arrow.triangle.2.circlepath", color: .green) {
+            HelpSectionView(title: L(.featureRequestsAndFeedback), icon: "envelope.fill", color: .green) {
                 VStack(alignment: .leading, spacing: 12) {
                     FAQItemView(
-                        question: "Where are the exported files saved?",
-                        answer: "All exported files (Live Photos, GIFs, and videos) are saved to your device's photo library and can be viewed in the iOS Photos app."
+                        question: L(.newFeaturePlans),
+                        answer: L(.newFeaturePlansAnswer)
                     )
                     
                     FAQItemView(
-                        question: "What is the quality of exported Live Photos?",
-                        answer: "The app tries to maintain original quality, but there may be slight quality loss due to format conversion. Quality depends on the resolution and bitrate of the original file."
+                        question: L(.howToReportBugs),
+                        answer: L(.howToReportBugsAnswer)
                     )
                     
                     FAQItemView(
-                        question: "Why do exported videos have no sound?",
-                        answer: "This is normal. Most Motion Photo formats only capture video without audio, so extracted videos typically have no sound."
-                    )
-                }
-            }
-            
-            HelpSectionView(title: "Compatibility", icon: "checkmark.shield.fill", color: .orange) {
-                VStack(alignment: .leading, spacing: 12) {
-                    FAQItemView(
-                        question: "Do Live Photos work properly on other devices?",
-                        answer: "Live Photo is Apple's proprietary format, fully supported only on iOS 9+, macOS El Capitan+, and watchOS 2+ devices."
-                    )
-                    
-                    FAQItemView(
-                        question: "Does the app support batch processing?",
-                        answer: "The current version does not support batch processing; files need to be converted individually. We plan to add batch processing functionality in future versions."
-                    )
-                }
-            }
-            
-            HelpSectionView(title: "Performance Issues", icon: "speedometer", color: .purple) {
-                VStack(alignment: .leading, spacing: 12) {
-                    FAQItemView(
-                        question: "What to do when processing large files is slow?",
-                        answer: "Large files require more processing time. We recommend keeping the app in the foreground during processing and avoiding running other resource-intensive apps simultaneously."
-                    )
-                    
-                    FAQItemView(
-                        question: "Does the app drain battery quickly?",
-                        answer: "Video processing is computationally intensive and consumes more power. We recommend performing bulk conversion operations while charging."
+                        question: L(.contactInformation),
+                        answer: L(.contactInformationAnswer)
                     )
                 }
             }
@@ -486,83 +682,17 @@ struct HelpSheetView: View {
     // MARK: - Troubleshooting Content
     private var troubleshootingContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HelpSectionView(title: "Permission Issues", icon: "lock.fill", color: .red) {
+            HelpSectionView(title: L(.troubleshooting), icon: "wrench.fill", color: .red) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("If the app cannot access photo library:")
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                    FAQItemView(
+                        question: L(.troubleshootingInvalidMotionPhoto),
+                        answer: L(.troubleshootingInvalidMotionPhotoSolution)
+                    )
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        HelpBulletPoint(text: "Open Settings > Privacy > Photos")
-                        HelpBulletPoint(text: "Find Motion2Live and set to 'All Photos'")
-                        HelpBulletPoint(text: "Restart the app or device")
-                    }
-                }
-            }
-            
-            HelpSectionView(title: "Export Failure", icon: "exclamationmark.triangle.fill", color: .orange) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Possible solutions:")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        HelpBulletPoint(text: "Check if device has sufficient storage space")
-                        HelpBulletPoint(text: "Close other apps to free up memory")
-                        HelpBulletPoint(text: "Restart the application")
-                        HelpBulletPoint(text: "Try processing smaller files")
-                    }
-                }
-            }
-            
-            HelpSectionView(title: "Performance Optimization", icon: "speedometer", color: .blue) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Suggestions to improve processing speed:")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        HelpBulletPoint(text: "Close unnecessary background apps")
-                        HelpBulletPoint(text: "Ensure device has sufficient available storage space")
-                        HelpBulletPoint(text: "Process large files when device is connected to power")
-                        HelpBulletPoint(text: "Avoid processing when battery is low")
-                    }
-                }
-            }
-            
-            HelpSectionView(title: "App Crashes", icon: "exclamationmark.octagon.fill", color: .red) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("If the app crashes while processing files:")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        HelpBulletPoint(text: "Restart the app and device")
-                        HelpBulletPoint(text: "Try processing smaller files")
-                        HelpBulletPoint(text: "Update the app to the latest version")
-                        HelpBulletPoint(text: "Contact the developer to report the issue")
-                    }
-                }
-            }
-            
-            HelpSectionView(title: "Contact Support", icon: "envelope.fill", color: .purple) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("For further assistance, please contact:")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text("📧 Developer Email: shenjy302@live.com")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Text("🔗 GitHub: Motion2Live Project Page")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Text("Motion2Live v1.2 © 2024 Igloo")
-                          .font(.caption)
-                          .foregroundColor(.secondary)
-                          .padding(.top, 8)
+                    FAQItemView(
+                        question: L(.troubleshootingPhotoLibraryAccess),
+                        answer: L(.troubleshootingPhotoLibraryAccessSolution)
+                    )
                 }
             }
         }

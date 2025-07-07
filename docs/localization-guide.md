@@ -24,6 +24,8 @@ Motion2Live 目前支持以下语言：
 6. 日语 (ja)
 7. 韩语 (ko)
 
+**最新更新 (v1.2.1)**：所有语言已更新，包含华为动态照片支持相关的本地化字符串。
+
 ## 本地化架构
 
 Motion2Live 使用自定义的本地化架构，通过 `Localizable.swift` 文件集中管理所有本地化字符串。这种方法提供了类型安全和编译时检查，避免了使用硬编码字符串可能导致的错误。
@@ -54,6 +56,10 @@ enum LocalizableKey: String {
     case successMessage
     case errorMessage
     case notMotionPhotoError
+    case huaweiMotionPhotoSupport
+    case fileTypeBoxDetection
+    case swiftSixCompatibility
+    case memoryImprovements
     // 更多键...
 }
 ```
@@ -66,12 +72,20 @@ enum LocalizableKey: String {
 private let english: [LocalizableKey: String] = [
     .welcomeMessage: "Welcome to Motion2Live",
     .selectPhoto: "Select Motion Photo",
+    .huaweiMotionPhotoSupport: "Huawei Motion Photo Support",
+    .fileTypeBoxDetection: "File Type Box Detection",
+    .swiftSixCompatibility: "Swift 6 Compatibility",
+    .memoryImprovements: "Memory Safety Improvements",
     // 更多键值对...
 ]
 
 private let simplifiedChinese: [LocalizableKey: String] = [
     .welcomeMessage: "欢迎使用动态照片转换器",
     .selectPhoto: "选择动态照片",
+    .huaweiMotionPhotoSupport: "华为动态照片支持",
+    .fileTypeBoxDetection: "文件类型盒检测",
+    .swiftSixCompatibility: "Swift 6 兼容性",
+    .memoryImprovements: "内存安全改进",
     // 更多键值对...
 ]
 
@@ -101,6 +115,8 @@ enum LocalizableKey: String {
     // 现有键...
     case newFeatureTitle
     case newFeatureDescription
+    case huaweiSupportTitle
+    case huaweiSupportDescription
 }
 ```
 
@@ -110,13 +126,17 @@ enum LocalizableKey: String {
 private let english: [LocalizableKey: String] = [
     // 现有键值对...
     .newFeatureTitle: "New Feature",
-    .newFeatureDescription: "This is a new feature description."
+    .newFeatureDescription: "This is a new feature description.",
+    .huaweiSupportTitle: "Huawei Motion Photo Support",
+    .huaweiSupportDescription: "Now supports Huawei motion photos with File Type Box detection."
 ]
 
 private let simplifiedChinese: [LocalizableKey: String] = [
     // 现有键值对...
     .newFeatureTitle: "新功能",
-    .newFeatureDescription: "这是新功能的描述。"
+    .newFeatureDescription: "这是新功能的描述。",
+    .huaweiSupportTitle: "华为动态照片支持",
+    .huaweiSupportDescription: "现在支持基于文件类型盒检测的华为动态照片。"
 ]
 
 // 更新其他语言字典...
@@ -343,6 +363,37 @@ if currentLanguage == .japanese {
 3. 提交 Pull Request，详细说明您的更改
 
 我们欢迎社区成员帮助改进应用的本地化支持！
+
+## 最新本地化更新 (v1.2.1)
+
+### 新增本地化字符串
+
+以下是 v1.2.1 版本新增的本地化字符串键：
+
+- `huaweiMotionPhotoSupport` - 华为动态照片支持
+- `fileTypeBoxDetection` - 文件类型盒检测
+- `swiftSixCompatibility` - Swift 6 兼容性
+- `memoryImprovements` - 内存安全改进
+- `photoAccessDenied` - 照片访问被拒绝
+- `photoNotAccessibleInLimitedMode` - 限制模式下照片不可访问
+
+### 更新的错误消息
+
+改进了权限相关的错误消息本地化，提供更准确的用户反馈：
+
+```swift
+// 英语
+.photoAccessDenied: "Photo access denied. Please grant permission in Settings."
+.photoNotAccessibleInLimitedMode: "This photo is not accessible in limited access mode."
+
+// 简体中文
+.photoAccessDenied: "照片访问被拒绝。请在设置中授予权限。"
+.photoNotAccessibleInLimitedMode: "在限制访问模式下无法访问此照片。"
+```
+
+### 品牌支持本地化
+
+新增了华为品牌相关的本地化支持，确保在不同语言环境下正确显示品牌信息和功能描述。
 
 ## 结语
 

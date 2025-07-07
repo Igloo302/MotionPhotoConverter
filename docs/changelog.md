@@ -2,7 +2,35 @@
 
 本文档记录了 Motion2Live 应用的重要变更。
 
-## [1.2.0] - 2024-12-19
+## [1.2.1] - 2024-12-19
+
+### 🎯 华为动态照片支持
+- **新增华为动态照片检测** - 支持基于 File Type Box (ftyp) 的华为动态照片识别
+- **HuaweiMotionPhotoProcessor** - 专门的华为动态照片处理器
+- **智能回退机制** - XMP 检测失败时自动启用 File Type Box 检测
+- **品牌兼容性扩展** - 新增 `huawei` 枚举值，完善品牌支持体系
+
+### 🐛 关键错误修复
+- **修复内存对齐崩溃** - 解决 "load from misaligned raw pointer" 致命错误
+  - 替换不安全的 `withUnsafeBytes` 内存访问方式
+  - 使用安全的字节读取算法避免内存对齐问题
+  - 添加完整的边界检查确保数据访问安全性
+- **修复 PHAsset 预取警告** - 添加适当的 `PHFetchOptions` 配置
+  - 消除 "Missing prefetched properties" 警告信息
+  - 优化照片库资源访问性能
+- **Swift 6 兼容性修复** - 解决并发安全性编译错误
+  - 修复 `AVAssetExportSession` 的 Sendable 类型错误
+  - 移除已废弃的 `PHFetchOptions.includeAllBurstPhotos` 属性
+  - 使用 `async/await` 替代回调闭包避免数据竞争
+  - 确保所有异步操作的线程安全性
+
+### 🔧 技术改进
+- **内存安全性增强** - 全面改进二进制数据处理的安全性
+- **错误处理优化** - 更好的异常捕获和用户反馈机制
+- **代码健壮性** - 增强边界条件处理和数据验证
+- **现代 Swift 语法** - 全面采用 Swift 6 推荐的并发编程模式
+
+## [1.2.0] - 2025-07-06
 
 ### 新增
 - 支持小米 HyperOS 2、Google Pixel、三星动态照片

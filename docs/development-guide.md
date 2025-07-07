@@ -16,7 +16,7 @@
 - **macOS**: 13.0 (Ventura) 或更高版本
 - **Xcode**: 15.0 或更高版本
 - **iOS 部署目标**: 15.0 或更高版本
-- **Swift**: 5.9 或更高版本
+- **Swift**: 5.9 或更高版本（完全支持 Swift 6 严格并发检查）
 
 ### 快速开始
 1. 克隆项目：`git clone <repository-url>`
@@ -64,7 +64,8 @@ Motion2Live/
 - **MotionPhotoProcessor.swift**: 基于协议的可扩展处理器架构
 - **XiaomiMotionPhotoProcessor**: 小米动态照片处理器
 - **AndroidMotionPhotoProcessor**: Android (Pixel/Samsung) 处理器
-- **MotionPhotoProcessorFactory**: 处理器工厂类
+- **HuaweiMotionPhotoProcessor**: 华为动态照片处理器（新增）
+- **MotionPhotoProcessorFactory**: 处理器工厂类，支持多层回退检测
 
 #### 用户体验组件
 - **PlaybackHintView**: 首次使用引导组件
@@ -109,6 +110,8 @@ class HomeView: View {
 - 使用 `@State` 管理本地状态
 - 使用 `@StateObject` 管理视图模型
 - 使用 `@Binding` 在视图间传递状态
+- 使用 `MainActor.run` 确保 UI 更新在主线程执行（Swift 6 兼容）
+- 遵循严格并发检查规范，避免数据竞争
 
 ### 用户体验功能开发
 
@@ -257,6 +260,58 @@ private func saveToTemporaryFile(data: Data, originalFilename: String) -> URL {
 # Motion2Live 开发指南
 ## 编码规范
 ### 照片获取与数据完整性开发
+#### 华为动态照片处理开发
+
+华为动态照片采用基于 File Type Box 检测的处理方案：
+
+```swift
+// 华为动态照片检测
+func hasFileTypeBox(data: Data) -> Bool {
+    guard data.count >= 12 else { return false }
+    
+    // 检查 File Type Box (ftyp)
+    let ftypSignature = Data([0x66, 0x74, 0x79, 0x70]) // "ftyp"
+    let range = 4..<min(data.count - 4, 100)
+    
+    return data.range(of: ftypSignature, in: range) != nil
+}
+
+// 华为动态照片处理器
+class HuaweiMotionPhotoProcessor: BaseMotionPhotoProcessor {
+    override func canProcess(xmpInfo: [String: String]) -> Bool {
+        // 华为动态照片不依赖 XMP 数据
+        return false
+    }
+    
+    override func processMotionPhoto(data: Data, xmpInfo: [String: String]) -> MotionPhotoProcessingResult {
+        // 基于 File Type Box 的处理逻辑
+        return extractHuaweiMotionPhoto(from: data)
+    }
+}
+
+// 回退检测机制
+func extractVideoFromMotionPhoto(url: URL) async {
+    // 首先尝试 XMP 检测
+    var processor: MotionPhotoProcessorProtocol?
+    
+    if let xmpData = extractXMPData(from: data),
+       let xmpInfo = parseXMP(data: xmpData) {
+        processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo)
+    }
+    
+    // 如果 XMP 检测失败，尝试华为动态照片回退检测
+    if processor == nil {
+        if hasFileTypeBox(data: data) {
+            processor = HuaweiMotionPhotoProcessor()
+        }
+    }
+    
+    // 使用最终确定的处理器
+    let finalProcessor = processor ?? UnknownMotionPhotoProcessor()
+    // 继续处理...
+}
+```
+
 #### 照片库权限管理最佳实践
 
 应用需要访问用户的照片库来选择和处理动态照片，因此需要实现完善的权限管理机制：
@@ -433,6 +488,71 @@ if isDownloading {
 }
 ```
 
+#### Swift 6 兼容性开发
+
+项目完全支持 Swift 6 严格并发检查，需要遵循以下最佳实践：
+
+```swift
+// 确保 UI 更新在主线程执行
+func showAlert(message: String) {
+    Task { @MainActor in
+        // UI 更新代码
+        self.alertMessage = message
+        self.showAlert = true
+    }
+}
+
+// 或使用 MainActor.run
+func updateUI() async {
+    await MainActor.run {
+        // UI 更新代码
+    }
+}
+
+// 异步处理中的线程安全
+func extractVideoFromMotionPhoto(url: URL) async {
+    // 后台处理
+    let result = await processInBackground()
+    
+    // 确保 UI 更新在主线程
+    await MainActor.run {
+        self.updateUIWithResult(result)
+    }
+}
+```
+
+#### 内存安全改进
+
+项目修复了内存对齐和数据处理中的安全问题：
+
+```swift
+// 安全的二进制数据处理
+func safeDataAccess(data: Data, offset: Int, length: Int) -> Data? {
+    guard offset >= 0,
+          length > 0,
+          offset + length <= data.count else {
+        return nil
+    }
+    
+    return data.subdata(in: offset..<(offset + length))
+}
+
+// 内存对齐检查
+func alignedMemoryAccess<T>(data: Data, offset: Int, type: T.Type) -> T? {
+    let size = MemoryLayout<T>.size
+    let alignment = MemoryLayout<T>.alignment
+    
+    guard offset % alignment == 0,
+          offset + size <= data.count else {
+        return nil
+    }
+    
+    return data.withUnsafeBytes { bytes in
+        bytes.load(fromByteOffset: offset, as: T.self)
+    }
+}
+```
+
 #### 性能优化建议
 
 1. **内存管理**：
@@ -444,10 +564,10 @@ if isDownloading {
 
 2. **并发处理**：
    ```swift
-   // 在后台队列处理数据
-   DispatchQueue.global(qos: .userInitiated).async {
-       let isMotion = self.isMotionPhoto(data: imageData)
-       DispatchQueue.main.async {
+   // 在后台队列处理数据（Swift 6 兼容）
+   Task {
+       let isMotion = await self.isMotionPhoto(data: imageData)
+       await MainActor.run {
            // 更新 UI
        }
    }
@@ -541,10 +661,13 @@ class MotionPhotoProcessorTests: XCTestCase {
 ```
 
 重点测试模块：
-- `MotionPhotoProcessor` 各品牌处理器
+- `MotionPhotoProcessor` 各品牌处理器（包括华为）
 - `XMPParser` 元数据解析
 - `VideoExporter` 和 `LivePhotoCreator`
 - 用户状态管理逻辑
+- 华为动态照片 File Type Box 检测
+- Swift 6 并发安全性
+- 内存对齐和安全访问
 
 #### UI 测试
 使用 XCUITest 测试用户界面：
@@ -611,9 +734,31 @@ print("[Haptic] Soft impact triggered")
 - 连接 iOS 设备进行真实环境测试
 - 测试相机和照片库集成
 - 验证真实 Motion Photo 文件处理
-- 验证不同品牌手机的兼容性（小米、Pixel、三星）
+- 验证不同品牌手机的兼容性（小米、Pixel、三星、华为）
 - 验证触感反馈在不同设备上的表现
 - 测试用户引导在不同屏幕尺寸上的显示效果
+
+### 最新开发特性 (v1.2.1)
+
+#### 华为动态照片支持
+- 实现基于 File Type Box 检测的华为动态照片处理
+- 添加回退检测机制，在 XMP 检测失败时自动尝试华为检测
+- 完整的华为动态照片预览和导出功能
+
+#### Swift 6 兼容性
+- 完全支持 Swift 6 严格并发检查
+- 所有 UI 更新确保在主线程执行
+- 使用 `MainActor.run` 和 `@MainActor` 确保线程安全
+
+#### 内存安全改进
+- 修复二进制数据处理中的内存对齐问题
+- 改进大文件处理的内存管理
+- 添加安全的数据访问检查
+
+#### 用户体验优化
+- 添加 `fetchPropertySets` 预取原始元数据，解决 PHAsset 警告
+- 改进错误处理和用户反馈
+- 优化性能，减少不必要的数据拷贝
 
 ---
 

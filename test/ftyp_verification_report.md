@@ -109,7 +109,8 @@ static func findMP4VideoByFileTypeBox(in data: Data) -> (videoData: Data, offset
 1. **Google Pixel 动态照片**: 完美识别和分离
 2. **小米动态照片**: 完美识别和分离
 3. **微信修改的动态照片**: 完美识别和分离
-4. **文件完整性**: 提取的图像和视频文件均通过 `file` 命令验证为有效格式
+4. **华为动态照片**: 完美识别和分离
+5. **文件完整性**: 提取的图像和视频文件均通过 `file` 命令验证为有效格式
 
 ### ❌ 预期失败案例
 
@@ -184,7 +185,7 @@ test_extracted_video.mp4: ISO Media, MP4 v2 [ISO 14496-14]
 
 **验证日期**: 2024年12月
 **验证工具**: Swift 脚本
-**测试文件**: Pixel.jpg, XiaomiNew.jpg, WechatModified.JPG, Unknown.jpg
+**测试文件**: Pixel.jpg, XiaomiNew.jpg, WechatModified.JPG, HUAWEI.jpeg, Unknown.jpg
 **验证状态**: ✅ 通过
 
 ## 最新测试结果
@@ -198,3 +199,20 @@ test_extracted_video.mp4: ISO Media, MP4 v2 [ISO 14496-14]
 - **验证状态**: 提取的文件均为有效的 JPEG 和 MP4 格式
 
 这进一步证明了 ftyp 检测方案的强大兼容性，即使对于经过第三方应用（如微信）处理的动态照片也能正确识别和分离。
+
+### HUAWEI.jpeg 验证成功 ✅
+
+- **文件类型**: 华为动态照片
+- **文件大小**: 17.7 MB
+- **特殊性**: 大文件动态照片，包含完整的 EXIF 信息
+- **ftyp 检测结果**: ✅ 成功在偏移 7,843,538 处找到 MP4 File Type Box
+- **提取结果**: 成功分离出 7.84 MB 图像和 9.83 MB 视频
+- **验证状态**: 提取的文件均为有效的 JPEG 和 MP4 格式
+
+```bash
+# 华为动态照片提取结果
+extracted_image.jpg: JPEG image data, Exif standard: [TIFF image data, big-endian, direntries=13, height=3072, manufacturer=HUAWEI, model=JAD-AL00, orientation=[*0*], xresolution=188, yresolution=196, resolutionunit=2, software=JAD-AL00 4.2.0.177(C00E100R4P7), datetime=2025:07:07 15:38:47, width=4096], baseline, precision 8, 3072x4096, components 3
+extracted_video.mp4: ISO Media, MP4 v2 [ISO 14496-14]
+```
+
+这证明了 ftyp 检测方案对华为设备生成的动态照片同样具有优秀的兼容性，能够处理大文件和复杂的 EXIF 元数据结构。

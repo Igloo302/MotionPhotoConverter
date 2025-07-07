@@ -43,13 +43,13 @@ struct ExportOptionsView: View {
                 VStack(spacing: 16) {
                     HStack {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("File Information")
+                            Text(L(.fileInformation))
                                 .font(.headline)
                                 .fontWeight(.semibold)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text("File Name:")
+                                    Text(L(.fileName))
                                         .foregroundColor(.secondary)
                                     Spacer()
                                     Text(fileName)
@@ -57,7 +57,7 @@ struct ExportOptionsView: View {
                                 }
                                 
                                 HStack {
-                                    Text("File Size:")
+                                    Text(L(.fileSize))
                                         .foregroundColor(.secondary)
                                     Spacer()
                                     Text(fileSizeString)
@@ -66,7 +66,7 @@ struct ExportOptionsView: View {
                                 
                                 if let date = creationDate {
                                     HStack {
-                                        Text("Creation Date:")
+                                        Text(L(.creationDate))
                                             .foregroundColor(.secondary)
                                         Spacer()
                                         Text(date, style: .date)
@@ -75,7 +75,7 @@ struct ExportOptionsView: View {
                                 }
                                 
                                 HStack {
-                                    Text("Video Duration:")
+                                    Text(L(.videoDuration))
                                         .foregroundColor(.secondary)
                                     Spacer()
                                     Text(videoDurationString)
@@ -95,7 +95,7 @@ struct ExportOptionsView: View {
                 
                 // Export options section
                 VStack(spacing: 0) {
-                    Text("Choose Export Format")
+                    Text(L(.chooseExportFormat))
                         .font(.headline)
                         .fontWeight(.semibold)
                         .padding(.bottom, 16)
@@ -103,8 +103,8 @@ struct ExportOptionsView: View {
                     VStack(spacing: 12) {
                         ExportOptionRow(
                             icon: "video.fill",
-                            title: "Save as Video",
-                            subtitle: "Export as MP4 video file",
+                            title: L(.saveAsVideo),
+                            subtitle: L(.saveAsVideoDescription),
                             action: {
                                 dismiss()
                                 onExportVideo()
@@ -113,8 +113,8 @@ struct ExportOptionsView: View {
                         
                         ExportOptionRow(
                             icon: "livephoto",
-                            title: "Save as Live Photo",
-                            subtitle: "Export as iOS Live Photo",
+                            title: L(.saveAsLivePhoto),
+                            subtitle: L(.saveAsLivePhotoDescription),
                             action: {
                                 dismiss()
                                 onExportLivePhoto()
@@ -123,8 +123,8 @@ struct ExportOptionsView: View {
                         
                         ExportOptionRow(
                             icon: "gift.fill",
-                            title: "Save as GIF",
-                            subtitle: "Export as animated GIF",
+                            title: L(.saveAsGIF),
+                            subtitle: L(.saveAsGIFDescription),
                             action: {
                                 dismiss()
                                 onExportGIF()
@@ -136,11 +136,11 @@ struct ExportOptionsView: View {
                 
                 Spacer()
             }
-            .navigationTitle("Export Options")
+            .navigationTitle(L(.exportOptions))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button(L(.cancel)) {
                         dismiss()
                     }
                 }
@@ -337,7 +337,7 @@ struct MotionPhotoView: View {
                             .onEnded { _ in stopVideoPlaybackWithFeedback() }
                     )
                 } else {
-                    Text(Localizable.string(.pleaseSelectMotionPhoto))
+                    Text(L(.pleaseSelectMotionPhoto))
                         .font(.title2)
                         .foregroundColor(.secondary)
                 }
@@ -362,7 +362,7 @@ struct MotionPhotoView: View {
                 .padding(.bottom, 34) // Adapt to bottom safe area
             }
         }
-        .navigationTitle("Preview")
+        .navigationTitle(L(.preview))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -373,7 +373,7 @@ struct MotionPhotoView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .medium))
-                        Text("Back")
+                        Text(L(.back))
                             .font(.system(size: 16))
                     }
                     .foregroundColor(.blue)
@@ -395,7 +395,7 @@ struct MotionPhotoView: View {
         }
 
         .alert(isPresented: $showAlert) {
-            Alert(title: Text(Localizable.string(.tip)), message: Text(alertMessage), dismissButton: .default(Text(Localizable.string(.ok))))
+            Alert(title: Text(L(.tip)), message: Text(alertMessage), dismissButton: .default(Text(L(.ok))))
         }
         .onAppear {
             Task {
@@ -458,7 +458,7 @@ struct MotionPhotoView: View {
         guard let data = try? Data(contentsOf: url) else {
             await MainActor.run {
                 print("Cannot read file: \(url.path)")
-                showAlert(message: Localizable.string(.cannotReadFile))
+                showAlert(message: L(.cannotReadFile))
             }
             return
         }
@@ -471,34 +471,41 @@ struct MotionPhotoView: View {
         }
         
         // Try to extract and parse XMP data
-        guard let xmpData = extractXMPData(from: data),
-              let xmpInfo = parseXMP(data: xmpData) else {
-            await MainActor.run {
-                print("Cannot extract or parse XMP data")
-                showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
-            }
-            return
+        var xmpInfo: [String: String] = [:]
+        var processor: MotionPhotoProcessorProtocol?
+        
+        if let xmpData = extractXMPData(from: data),
+           let parsedXmpInfo = parseXMP(data: xmpData) {
+            print("XMPInfo: \(parsedXmpInfo)")
+            xmpInfo = parsedXmpInfo
+            processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo)
+        } else {
+            print("Unable to extract or parse XMP data")
         }
         
-        print("XMPInfo: \(xmpInfo)")
+        // If XMP-based detection failed, try File Type Box detection for Huawei motion photos
+        if processor == nil {
+            print("Trying File Type Box detection for potential Huawei motion photo")
+            processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data)
+        }
         
-        // Use new processor architecture
-        guard let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo) else {
+        // If still no processor found, it's not a supported motion photo
+        guard let finalProcessor = processor else {
             await MainActor.run {
                 print("Unsupported motion photo format")
-                showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+                showAlert(message: L(.selectedPhotoIsNotMotionPhoto))
             }
             return
         }
         
-        print("Detected \(processor.brand.displayName) motion photo")
+        print("Detected \(finalProcessor.brand.displayName) motion photo")
         
-        let result = processor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
+        let result = finalProcessor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
         
         guard result.success, let motionPhotoData = result.data else {
             await MainActor.run {
                 print("Failed to process motion photo: \(result.errorMessage ?? "Unknown error")")
-                showAlert(message: result.errorMessage ?? Localizable.string(.selectedPhotoIsNotMotionPhoto))
+                showAlert(message: result.errorMessage ?? L(.selectedPhotoIsNotMotionPhoto))
             }
             return
         }
@@ -528,7 +535,7 @@ struct MotionPhotoView: View {
             let frameRate = try await tracks.first?.load(.nominalFrameRate) ?? 30.0
             
             // Use processor to calculate stillImageTime
-            self.stillImageTime = processor.calculateStillImageTime(
+            self.stillImageTime = finalProcessor.calculateStillImageTime(
                 videoDuration: videoDuration,
                 presentationTimestamp: motionPhotoData.presentationTimestamp,
                 frameRate: Double(frameRate)
@@ -565,7 +572,7 @@ struct MotionPhotoView: View {
                 print("Error user info: \(nsError.userInfo)")
             }
             await MainActor.run {
-                showAlert(message: Localizable.string(.errorProcessingVideoFile))
+                showAlert(message: L(.errorProcessingVideoFile))
             }
         }
         
@@ -580,7 +587,7 @@ struct MotionPhotoView: View {
     
     private func exportVideo() {
         guard let videoData = videoData else {
-            showAlert(message: Localizable.string(.cannotGetVideoData))
+            showAlert(message: L(.cannotGetVideoData))
             return
         }
         
@@ -594,7 +601,7 @@ struct MotionPhotoView: View {
             
             // Create export session
             guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
-                showAlert(message: Localizable.string(.cannotCreateExportSession))
+                showAlert(message: L(.cannotCreateExportSession))
                 isProcessing = false
                 return
             }
@@ -611,11 +618,11 @@ struct MotionPhotoView: View {
                     case .completed:
                         self.saveVideoToPhotos(outputURL)
                     case .failed:
-                        self.showAlert(message: Localizable.string(.videoExportFailed) + ": \(exportSession.error?.localizedDescription ?? Localizable.string(.unknownError))")
+                        self.showAlert(message: L(.videoExportFailed) + ": \(exportSession.error?.localizedDescription ?? L(.unknownError))")
                     case .cancelled:
-                        self.showAlert(message: Localizable.string(.videoExportCancelled))
+                        self.showAlert(message: L(.videoExportCancelled))
                     default:
-                        self.showAlert(message: Localizable.string(.videoExportUnknownError))
+                        self.showAlert(message: L(.videoExportUnknownError))
                     }
                     
                     // Clean up temporary files
@@ -624,7 +631,7 @@ struct MotionPhotoView: View {
             }
         } catch {
             isProcessing = false
-            showAlert(message: Localizable.string(.failedToProcessVideoData) + ": \(error.localizedDescription)")
+            showAlert(message: L(.failedToProcessVideoData) + ": \(error.localizedDescription)")
         }
     }
     
@@ -634,9 +641,9 @@ struct MotionPhotoView: View {
         }) { success, error in
             DispatchQueue.main.async {
                 if success {
-                    self.showAlert(message: Localizable.string(.videoSaved))
+                    self.showAlert(message: L(.videoSaved))
                 } else {
-                    self.showAlert(message: Localizable.string(.savingVideoFailed) + ": \(error?.localizedDescription ?? Localizable.string(.unknownError))")
+                    self.showAlert(message: L(.savingVideoFailed) + ": \(error?.localizedDescription ?? L(.unknownError))")
                 }
                 
                 // Clean up exported video file
@@ -648,7 +655,7 @@ struct MotionPhotoView: View {
     @MainActor
     func exportAsLivePhoto() {
         guard let imageData = originalImageData, let videoData = videoData else {
-            showAlert(message: Localizable.string(.missingData))
+            showAlert(message: L(.missingData))
             return
         }
         
@@ -693,15 +700,15 @@ struct MotionPhotoView: View {
                         self.saveLivePhoto(imageURL: jpegURL, videoURL: exportResult.outputURL, creationDate: creationDate, modificationDate: modificationDate)
                     case .failed:
                         if let error = exportResult.error {
-                            showAlert(message: Localizable.string(.videoConversionFailed) + ": \(error.localizedDescription)")
+                            showAlert(message: L(.videoConversionFailed) + ": \(error.localizedDescription)")
                             print("Error details: \(error)")
                         } else {
-                            showAlert(message: Localizable.string(.videoConversionFailedNoErrorInfo))
+                            showAlert(message: L(.videoConversionFailedNoErrorInfo))
                         }
                     case .cancelled:
-                        showAlert(message: Localizable.string(.videoConversionCancelled))
+                        showAlert(message: L(.videoConversionCancelled))
                     default:
-                        showAlert(message: Localizable.string(.videoConversionUnknownStatus) + ": \(exportResult.status.rawValue)")
+                        showAlert(message: L(.videoConversionUnknownStatus) + ": \(exportResult.status.rawValue)")
                     }
                     
                     // Clean up temporary files
@@ -709,18 +716,18 @@ struct MotionPhotoView: View {
                     try FileManager.default.removeItem(at: mp4URL)
                     print("Successfully deleted temporary files")
                 } catch {
-                    showAlert(message: Localizable.string(.errorProcessingVideoFile) + ": \(error.localizedDescription)")
+                    showAlert(message: L(.errorProcessingVideoFile) + ": \(error.localizedDescription)")
                 }
             }
         } catch {
-            showAlert(message: Localizable.string(.errorCreatingLivePhotoFile) + ": \(error.localizedDescription)")
+            showAlert(message: L(.errorCreatingLivePhotoFile) + ": \(error.localizedDescription)")
         }
     }
     
     @MainActor
     func convertVideoToMOV(asset: AVAsset, outputURL: URL) async throws -> ExportResult {
         guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetPassthrough) else {
-            throw NSError(domain: "AVAssetExportSession", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.cannotCreateExportSession)])
+            throw NSError(domain: "AVAssetExportSession", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.cannotCreateExportSession)])
         }
         
         exportSession.outputURL = outputURL
@@ -742,20 +749,20 @@ struct MotionPhotoView: View {
 
         // Process image
         guard let imageSource = CGImageSourceCreateWithURL(imageURL as CFURL, nil) else {
-            showAlert(message: Localizable.string(.cannotCreateImageSource))
+            showAlert(message: L(.cannotCreateImageSource))
             isProcessing = false
             return
         }
 
         let imageData = NSMutableData()
         guard let imageDestination = CGImageDestinationCreateWithData(imageData, UTType.jpeg.identifier as CFString, 1, nil) else {
-            showAlert(message: Localizable.string(.cannotCreateImageDestination))
+            showAlert(message: L(.cannotCreateImageDestination))
             isProcessing = false
             return
         }
 
         guard var mutableImageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any] else {
-            showAlert(message: Localizable.string(.cannotGetImageProperties))
+            showAlert(message: L(.cannotGetImageProperties))
             isProcessing = false
             return
         }
@@ -776,14 +783,15 @@ struct MotionPhotoView: View {
 
         Task {
             do {
-                let exportSession = AVAssetExportSession(asset: avAsset, presetName: AVAssetExportPresetPassthrough)
-                guard let exporter = exportSession else {
+                guard let exportSession = AVAssetExportSession(asset: avAsset, presetName: AVAssetExportPresetPassthrough) else {
                     await MainActor.run {
-                        showAlert(message: Localizable.string(.cannotCreateVideoExportSession))
+                        showAlert(message: L(.cannotCreateVideoExportSession))
                         isProcessing = false
                     }
                     return
                 }
+                
+                let exporter = exportSession
 
                 let exportURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mov")
                 exporter.outputURL = exportURL
@@ -817,13 +825,13 @@ struct MotionPhotoView: View {
                         print("Video export successful")
                         self.performLivePhotoSave(imageData: imageData as Data, videoURL: exportURL, creationDate: creationDate, modificationDate: modificationDate)
                     } else {
-                        showAlert(message: Localizable.string(.videoExportFailed) + ": \(exporter.error?.localizedDescription ?? Localizable.string(.unknownError))")
+                        showAlert(message: L(.videoExportFailed) + ": \(exporter.error?.localizedDescription ?? L(.unknownError))")
                         isProcessing = false
                     }
                 }
             } catch {
                 await MainActor.run {
-                    showAlert(message: Localizable.string(.errorProcessingVideoMetadata) + ": \(error.localizedDescription)")
+                    showAlert(message: L(.errorProcessingVideoMetadata) + ": \(error.localizedDescription)")
                     isProcessing = false
                 }
             }
@@ -849,10 +857,10 @@ struct MotionPhotoView: View {
                 self.isProcessing = false
                 if success {
                     print("Live Photo saved successfully")
-                    self.showAlert(message: Localizable.string(.livePhotoSaved))
+                    self.showAlert(message: L(.livePhotoSaved))
                 } else {
-                    print("Error saving Live Photo: \(error?.localizedDescription ?? Localizable.string(.unknownError))")
-                    self.showAlert(message: Localizable.string(.savingLivePhotoFailed))
+                    print("Error saving Live Photo: \(error?.localizedDescription ?? L(.unknownError))")
+                    self.showAlert(message: L(.savingLivePhotoFailed))
                 }
                 
                 // Clean up temporary files
@@ -880,7 +888,7 @@ struct MotionPhotoView: View {
         isProcessing = true
         
         guard let videoData = videoData else {
-            showAlert(message: Localizable.string(.cannotGetVideoData))
+            showAlert(message: L(.cannotGetVideoData))
             isProcessing = false
             return
         }
@@ -909,14 +917,14 @@ struct MotionPhotoView: View {
                     await MainActor.run {
                         isProcessing = false
                         isExportingGIF = false
-                        showAlert(message: Localizable.string(.failedToCreateGIF) + ": \(error.localizedDescription)")
+                        showAlert(message: L(.failedToCreateGIF) + ": \(error.localizedDescription)")
                     }
                 }
             }
         } catch {
             isProcessing = false
             isExportingGIF = false
-            showAlert(message: Localizable.string(.failedToProcessVideoData) + ": \(error.localizedDescription)")
+            showAlert(message: L(.failedToProcessVideoData) + ": \(error.localizedDescription)")
         }
     }
     
@@ -929,7 +937,7 @@ struct MotionPhotoView: View {
         
         let destProperties = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]]
         guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, UTType.gif.identifier as CFString, frameCount, nil) else {
-            throw NSError(domain: "GIFCreationError", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.cannotCreateGIFDestination)])
+            throw NSError(domain: "GIFCreationError", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.cannotCreateGIFDestination)])
         }
         
         CGImageDestinationSetProperties(destination, destProperties as CFDictionary)
@@ -943,7 +951,7 @@ struct MotionPhotoView: View {
         }
         
         if !CGImageDestinationFinalize(destination) {
-            throw NSError(domain: "GIFCreationError", code: 1, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.cannotFinalizeGIFCreation)])
+            throw NSError(domain: "GIFCreationError", code: 1, userInfo: [NSLocalizedDescriptionKey: L(.cannotFinalizeGIFCreation)])
         }
     }
     
@@ -954,9 +962,9 @@ struct MotionPhotoView: View {
                 let request = PHAssetCreationRequest.forAsset()
                 request.addResource(with: .photo, fileURL: gifURL, options: nil)
             }
-            showAlert(message: Localizable.string(.gifSavedToPhotos))
+            showAlert(message: L(.gifSavedToPhotos))
         } catch {
-            showAlert(message: Localizable.string(.failedToSaveGIF) + ": \(error.localizedDescription)")
+            showAlert(message: L(.failedToSaveGIF) + ": \(error.localizedDescription)")
         }
         
         // Clean up temporary files
@@ -1021,8 +1029,12 @@ struct PhotoPicker: UIViewControllerRepresentable {
         
         private func processWithAssetIdentifier(_ assetIdentifier: String) {
             
-            // 通过 assetIdentifier 获取 PHAsset
-            let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetIdentifier], options: nil)
+            // 通过 assetIdentifier 获取 PHAsset，添加预取选项
+            let fetchOptions = PHFetchOptions()
+            fetchOptions.includeHiddenAssets = false
+            // includeAllBurstPhotos 在新版本中已被移除
+            
+            let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [assetIdentifier], options: fetchOptions)
             guard let asset = fetchResult.firstObject else {
                 print("Unable to fetch PHAsset with identifier: \(assetIdentifier)")
                 // 检查是否是权限问题
@@ -1179,6 +1191,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
                 return false
             }
             
+            // 首先尝试 XMP 检测
             if let xmpData = extractXMPData(from: data),
                let xmpInfo = parseXMP(data: xmpData) {
                 print("XMP Info: \(xmpInfo)")
@@ -1191,12 +1204,57 @@ struct PhotoPicker: UIViewControllerRepresentable {
                     return true
                 } else {
                     print("XMP data does not contain required Motion Photo keys")
-                    return false
                 }
             } else {
                 print("Unable to extract or parse XMP data")
-                return false
             }
+            
+            // 如果 XMP 检测失败，尝试 File Type Box 检测（用于华为等设备）
+            print("Trying File Type Box detection for potential Huawei motion photo")
+            return hasFileTypeBox(data: data)
+        }
+        
+        // 检测 File Type Box (ftyp) 的存在
+        private func hasFileTypeBox(data: Data) -> Bool {
+            // 查找 "ftyp" 标识符
+            let ftypSignature = Data([0x66, 0x74, 0x79, 0x70]) // "ftyp" in bytes
+            
+            // 在数据中搜索 ftyp box
+            var searchRange = 0..<data.count
+            while let range = data.range(of: ftypSignature, in: searchRange) {
+                let ftypStart = range.lowerBound
+                
+                // 检查是否有足够的数据来读取 box 大小
+                guard ftypStart >= 4 else {
+                    searchRange = range.upperBound..<data.count
+                    continue
+                }
+                
+                // 安全地读取 box 大小（前4个字节，大端序）
+                let sizeStart = ftypStart - 4
+                guard sizeStart + 4 <= data.count else {
+                    searchRange = range.upperBound..<data.count
+                    continue
+                }
+                
+                // 使用安全的字节读取方式避免内存对齐问题
+                let byte0 = UInt32(data[sizeStart])
+                let byte1 = UInt32(data[sizeStart + 1])
+                let byte2 = UInt32(data[sizeStart + 2])
+                let byte3 = UInt32(data[sizeStart + 3])
+                let boxSize = (byte0 << 24) | (byte1 << 16) | (byte2 << 8) | byte3
+                
+                // 验证 box 大小的合理性
+                if boxSize >= 8 && boxSize <= data.count - sizeStart {
+                    print("Found valid File Type Box (ftyp) at offset \(sizeStart), size: \(boxSize)")
+                    return true
+                }
+                
+                searchRange = range.upperBound..<data.count
+            }
+            
+            print("No valid File Type Box found")
+            return false
         }
         
         // 保持向后兼容性的重载方法
@@ -1287,7 +1345,7 @@ func parseXMP(data: Data) -> [String: String]? {
     if parser.parse() {
         return delegate.parsedData
     } else {
-        print("XML parsing error: \(parser.parserError?.localizedDescription ?? Localizable.string(.unknownError))")
+        print("XML parsing error: \(parser.parserError?.localizedDescription ?? L(.unknownError))")
         print("Parsed XML data was: \(String(data: cleanedData, encoding: .utf8) ?? "Invalid UTF-8")") // Add debug print for cleaned data
         return nil
     }
@@ -1384,7 +1442,7 @@ class MotionPhotoProcessor {
                 let asset = AVURLAsset(url: url)
                 let videoTracks = try await asset.loadTracks(withMediaType: .video)
                 guard let videoTrack = videoTracks.first else {
-                    throw NSError(domain: "MotionPhotoProcessor", code: 1, userInfo: [NSLocalizedDescriptionKey: Localizable.string(LocalizableKey.noVideoData)])
+                    throw NSError(domain: "MotionPhotoProcessor", code: 1, userInfo: [NSLocalizedDescriptionKey: "No video data found"])
                 }
                 
                 let composition = AVMutableComposition()
@@ -1392,21 +1450,24 @@ class MotionPhotoProcessor {
                 let duration = try await asset.load(.duration)
                 try compositionTrack?.insertTimeRange(CMTimeRangeMake(start: .zero, duration: duration), of: videoTrack, at: .zero)
                 
-                let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality)
+                guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
+                    throw NSError(domain: "MotionPhotoProcessor", code: 4, userInfo: [NSLocalizedDescriptionKey: "Cannot create export session"])
+                }
+                
                 let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("mov")
                 
-                exportSession?.outputURL = outputURL
-                exportSession?.outputFileType = .mov
+                exportSession.outputURL = outputURL
+                exportSession.outputFileType = .mov
                 
-                exportSession?.exportAsynchronously {
-                    switch exportSession?.status {
-                    case .completed:
-                        completion(.success(outputURL))
-                    case .failed:
-                        completion(.failure(exportSession?.error ?? NSError(domain: "MotionPhotoProcessor", code: 2, userInfo: [NSLocalizedDescriptionKey: Localizable.string(LocalizableKey.videoExportFailed)])))
-                    default:
-                        completion(.failure(NSError(domain: "MotionPhotoProcessor", code: 3, userInfo: [NSLocalizedDescriptionKey: Localizable.string(LocalizableKey.unknownError)])))
-                    }
+                await exportSession.export()
+                
+                switch exportSession.status {
+                case .completed:
+                    completion(.success(outputURL))
+                case .failed:
+                    completion(.failure(exportSession.error ?? NSError(domain: "MotionPhotoProcessor", code: 2, userInfo: [NSLocalizedDescriptionKey: "Video export failed"])))
+                default:
+                    completion(.failure(NSError(domain: "MotionPhotoProcessor", code: 3, userInfo: [NSLocalizedDescriptionKey: "Unknown error"])))
                 }
             } catch {
                 completion(.failure(error))

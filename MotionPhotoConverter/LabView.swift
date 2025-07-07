@@ -7,15 +7,15 @@ struct LabView: View {
     var body: some View {
         NavigationView {
             List {
-                Section(header: Text(Localizable.string(.labDescription))) {
+                Section(header: Text(L(.labDescription))) {
                     NavigationLink(destination: CustomLivePhotoView()) {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "photo.on.rectangle.angled")
-                                Text(Localizable.string(.customLivePhoto))
+                                Text(L(.customLivePhoto))
                                     .font(.headline)
                             }
-                            Text(Localizable.string(.customLivePhotoDescription))
+                            Text(L(.customLivePhotoDescription))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -23,7 +23,7 @@ struct LabView: View {
                     }
                 }
             }
-            .navigationTitle(Localizable.string(.lab))
+            .navigationTitle(L(.lab))
         }
     }
 }
@@ -39,14 +39,14 @@ struct CustomLivePhotoView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Text(Localizable.string(.customLivePhotoDescription))
+            Text(L(.customLivePhotoDescription))
                 .padding()
                 .multilineTextAlignment(.center)
             
             Button(action: {
                 isShowingImagePicker = true
             }) {
-                Text(selectedImage == nil ? Localizable.string(.selectImage) : Localizable.string(.changeImage))
+                Text(selectedImage == nil ? L(.selectImage) : L(.changeImage))
                     .frame(minWidth: 200)
             }
             .buttonStyle(.bordered)
@@ -61,18 +61,18 @@ struct CustomLivePhotoView: View {
             Button(action: {
                 isShowingVideoPicker = true
             }) {
-                Text(selectedVideo == nil ? Localizable.string(.selectVideo) : Localizable.string(.changeVideo))
+                Text(selectedVideo == nil ? L(.selectVideo) : L(.changeVideo))
                     .frame(minWidth: 200)
             }
             .buttonStyle(.bordered)
             
             if selectedVideo != nil {
-                Text(Localizable.string(.videoSelected))
+                Text(L(.videoSelected))
                     .foregroundColor(.green)
             }
             
             Button(action: createLivePhoto) {
-                Text(Localizable.string(.createLivePhoto))
+                Text(L(.createLivePhoto))
                     .frame(minWidth: 200)
             }
             .buttonStyle(.borderedProminent)
@@ -84,7 +84,7 @@ struct CustomLivePhotoView: View {
             
             Spacer()
         }
-        .navigationTitle(Localizable.string(.customLivePhoto))
+        .navigationTitle(L(.customLivePhoto))
         .padding()
         .sheet(isPresented: $isShowingImagePicker) {
             ImagePicker(image: $selectedImage)
@@ -94,9 +94,9 @@ struct CustomLivePhotoView: View {
         }
         .alert(isPresented: $showAlert) {
     Alert(
-        title: Text(alertMessage.contains(Localizable.string(.livePhotoSaved)) ? Localizable.string(.success) : Localizable.string(.error)),
+        title: Text(alertMessage.contains(L(.livePhotoSaved)) ? L(.success) : L(.error)),
         message: Text(alertMessage),
-        dismissButton: .default(Text(Localizable.string(.ok)))
+        dismissButton: .default(Text(L(.ok)))
     )
 }
     }
@@ -111,7 +111,7 @@ struct CustomLivePhotoView: View {
                 isProcessing = false
                 switch result {
                 case .success:
-                    alertMessage = Localizable.string(.livePhotoSaved)
+                    alertMessage = L(.livePhotoSaved)
                     showAlert = true
                 case .failure(let error):
                     alertMessage = error.localizedDescription
@@ -208,7 +208,7 @@ class LivePhotoCreator {
         let assetIdentifier = UUID().uuidString
         
         guard let imageData = image.jpegData(compressionQuality: 1.0) else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.imageConversionFailed)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.imageConversionFailed)])))
             return
         }
         
@@ -242,7 +242,7 @@ class LivePhotoCreator {
         let asset = AVAsset(url: inputURL)
         
         guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetPassthrough) else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.exportSessionCreationFailed)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.exportSessionCreationFailed)])))
             return
         }
         
@@ -254,21 +254,21 @@ class LivePhotoCreator {
             case .completed:
                 completion(.success(()))
             case .failed, .cancelled:
-                completion(.failure(exportSession.error ?? NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.videoConversionFailed)])))
+                completion(.failure(exportSession.error ?? NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.videoConversionFailed)])))
             default:
-                completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.unknownError)])))
+                completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.unknownError)])))
             }
         }
     }
     
     private static func writeMetadataToImage(imageURL: URL, assetIdentifier: String, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let source = CGImageSourceCreateWithURL(imageURL as CFURL, nil) else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.imageSourceCreationFailed)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.imageSourceCreationFailed)])))
             return
         }
         
         guard let type = CGImageSourceGetType(source) else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.imageTypeUnavailable)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.imageTypeUnavailable)])))
             return
         }
         
@@ -278,7 +278,7 @@ class LivePhotoCreator {
         ]
         
         guard let destination = CGImageDestinationCreateWithURL(imageURL as CFURL, type, 1, nil) else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.imageDestinationCreationFailed)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.imageDestinationCreationFailed)])))
             return
         }
         
@@ -287,7 +287,7 @@ class LivePhotoCreator {
         if CGImageDestinationFinalize(destination) {
             completion(.success(()))
         } else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.metadataWriteFailed)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.metadataWriteFailed)])))
         }
     }
     
@@ -295,18 +295,18 @@ class LivePhotoCreator {
         let assetIdentifier = UUID().uuidString
         
         guard let imageSource = CGImageSourceCreateWithData(imageData as CFData, nil) else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.imageSourceCreationFailed)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.imageSourceCreationFailed)])))
             return
         }
         
         let imageData = NSMutableData()
         guard let imageDestination = CGImageDestinationCreateWithData(imageData, UTType.jpeg.identifier as CFString, 1, nil) else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.imageDestinationCreationFailed)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.imageDestinationCreationFailed)])))
             return
         }
         
         guard var mutableImageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any] else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.imagePropertiesUnavailable)])))
+            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.imagePropertiesUnavailable)])))
             return
         }
         
@@ -326,7 +326,7 @@ class LivePhotoCreator {
             do {
                 let exportSession = AVAssetExportSession(asset: avAsset, presetName: AVAssetExportPresetPassthrough)
                 guard let exporter = exportSession else {
-                    throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.exportSessionCreationFailed)])
+                    throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.exportSessionCreationFailed)])
                 }
                 
                 let exportURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mov")
@@ -368,14 +368,14 @@ class LivePhotoCreator {
                         } else if let error = error {
                             completion(.failure(error))
                         } else {
-                            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.unknownError)])))
+                            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.unknownError)])))
                         }
                         
                         // Clean up temporary files
                         try? FileManager.default.removeItem(at: exportURL)
                     }
                 } else {
-                    throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.videoExportFailed)])
+                    throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: L(.videoExportFailed)])
                 }
             } catch {
                 completion(.failure(error))
