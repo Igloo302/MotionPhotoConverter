@@ -1,8 +1,6 @@
-# MotionPhotoConverter
+# Motion2Live
 
-MotionPhotoConverter 是一个 iOS 应用程序，旨在帮助用户处理和转换 Motion Photo。Motion Photo 是一种包含静态图像和短视频的照片格式，常见于 Google 相册和某些 Android 设备。通过 MotionPhotoConverter，用户可以轻松地从 Motion Photo 中提取视频、导出为 Live Photo 或 GIF，并将其保存到相册中。
-
-MotionPhotoConverter is an iOS application designed to help users process and convert Motion Photos. Motion Photos are a type of photo format that includes a static image and a short video, commonly found in Google Photos and some Android devices. With MotionPhotoConverter, users can easily extract videos from Motion Photos, export them as Live Photos or GIFs, and save them to their photo library.
+Motion2Live is an iOS application designed to help users process and convert Motion Photos. Motion Photos are a type of photo format that includes a static image and a short video, commonly found in Google Photos and some Android devices. With Motion2Live, users can easily extract videos from Motion Photos, export them as Live Photos or GIFs, and save them to their photo library.
 
 ## 功能介绍 / Features
 
@@ -37,7 +35,7 @@ Users can play the video part of a Motion Photo within the app. The app provides
 The app provides an export menu, allowing users to choose to export Motion Photos as videos, Live Photos, or GIFs. The export process is simple and intuitive, enabling users to easily complete the conversion and save operations.
 
 ## 使用方法 / Usage
-[Motion Photo Sample](https://github.com/Igloo302/MotionPhotoConverter/blob/main/MotionPhotoSample.jpg)
+[Motion Photo Sample](https://github.com/Igloo302/Motion2Live/blob/main/MotionPhotoSample.jpg)
 
 1. 打开应用并选择一个 Motion Photo。
 2. 应用会自动提取 Motion Photo 中的视频数据，并显示静态图像和视频预览。

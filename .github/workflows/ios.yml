@@ -1,0 +1,27 @@
+name: iOS Build & Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: xcode-select -p && xcodebuild -version
+
+      - name: Run Unit Tests
+        run: |
+          DESTINATION=$(xcrun simctl list devices available iPhone | grep -m1 -oE '[0-9A-F-]{36}')
+          xcodebuild test \
+            -project Motion2Live.xcodeproj \
+            -scheme Motion2Live \
+            -destination "platform=iOS Simulator,id=${DESTINATION}" \
+            -only-testing:Motion2LiveTests \
+            CODE_SIGNING_ALLOWED=NO

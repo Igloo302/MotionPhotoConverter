@@ -1,6 +1,6 @@
-# MotionPhotoConverter 本地化指南
+# Motion2Live 本地化指南
 
-本文档提供 MotionPhotoConverter 应用的本地化（多语言支持）相关信息，包括当前支持的语言、本地化架构、添加新语言的流程以及本地化最佳实践。
+本文档提供 Motion2Live 应用的本地化（多语言支持）相关信息，包括当前支持的语言、本地化架构、添加新语言的流程以及本地化最佳实践。
 
 ## 目录
 
@@ -14,7 +14,7 @@
 
 ## 当前支持的语言
 
-MotionPhotoConverter 目前支持以下语言：
+Motion2Live 目前支持以下语言：
 
 1. 英语 (en) - 默认语言
 2. 简体中文 (zh-Hans)
@@ -26,7 +26,7 @@ MotionPhotoConverter 目前支持以下语言：
 
 ## 本地化架构
 
-MotionPhotoConverter 使用自定义的本地化架构，通过 `Localizable.swift` 文件集中管理所有本地化字符串。这种方法提供了类型安全和编译时检查，避免了使用硬编码字符串可能导致的错误。
+Motion2Live 使用自定义的本地化架构，通过 `Localizable.swift` 文件集中管理所有本地化字符串。这种方法提供了类型安全和编译时检查，避免了使用硬编码字符串可能导致的错误。
 
 ### 核心组件
 
@@ -64,7 +64,7 @@ enum LocalizableKey: String {
 
 ```swift
 private let english: [LocalizableKey: String] = [
-    .welcomeMessage: "Welcome to MotionPhotoConverter",
+    .welcomeMessage: "Welcome to Motion2Live",
     .selectPhoto: "Select Motion Photo",
     // 更多键值对...
 ]
@@ -129,7 +129,7 @@ private let simplifiedChinese: [LocalizableKey: String] = [
 ```swift
 private let english: [LocalizableKey: String] = [
     // 其他键值对...
-    .welcomeMessage: "Welcome to the new MotionPhotoConverter",  // 更新的翻译
+    .welcomeMessage: "Welcome to the new Motion2Live",  // 更新的翻译
 ]
 ```
 
@@ -141,7 +141,7 @@ private let english: [LocalizableKey: String] = [
 
 ```swift
 private let italian: [LocalizableKey: String] = [
-    .welcomeMessage: "Benvenuto a MotionPhotoConverter",
+    .welcomeMessage: "Benvenuto a Motion2Live",
     .selectPhoto: "Seleziona Motion Photo",
     // 所有其他键的翻译...
 ]
@@ -346,6 +346,6 @@ if currentLanguage == .japanese {
 
 ## 结语
 
-良好的本地化对于提高应用的可访问性和用户体验至关重要。通过遵循本指南中的最佳实践，MotionPhotoConverter 可以为全球用户提供高质量的本地化体验。
+良好的本地化对于提高应用的可访问性和用户体验至关重要。通过遵循本指南中的最佳实践，Motion2Live 可以为全球用户提供高质量的本地化体验。
 
 如果您有任何关于本地化的问题或建议，请随时联系项目维护者或在 GitHub 上创建 Issue。

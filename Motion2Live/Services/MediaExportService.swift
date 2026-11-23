@@ -1,0 +1,358 @@
+//
+//  MediaExportService.swift
+//  Motion2Live
+//
+//  Unified media export pipeline (Live Photo, Video, GIF, Custom Live Photo).
+//  Single source of truth shared by Single Inspector, Batch Converter, and Lab.
+//
+
+import Foundation
+import AVFoundation
+import Photos
+import ImageIO
+import UniformTypeIdentifiers
+import UIKit
+
+enum MediaExportError: LocalizedError {
+    case photoLibraryPermissionDenied
+    case invalidVideoDuration
+    case imageConversionFailed
+    case imageSourceCreationFailed
+    case imageDestinationCreationFailed
+    case metadataWriteFailed
+    case exportSessionCreationFailed
+    case videoExportFailed(Error?)
+    case gifDestinationCreationFailed
+    case gifFinalizationFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .photoLibraryPermissionDenied:
+            return "Photo Library add permission denied. Please enable Photos access in Settings."
+        case .invalidVideoDuration:
+            return Localizable.string(.invalidVideoData)
+        case .imageConversionFailed:
+            return Localizable.string(.imageConversionFailed)
+        case .imageSourceCreationFailed:
+            return Localizable.string(.cannotCreateImageSource)
+        case .imageDestinationCreationFailed:
+            return Localizable.string(.cannotCreateImageDestination)
+        case .metadataWriteFailed:
+            return Localizable.string(.metadataWriteFailed)
+        case .exportSessionCreationFailed:
+            return Localizable.string(.cannotCreateExportSession)
+        case .videoExportFailed(let underlying):
+            return underlying?.localizedDescription ?? Localizable.string(.videoExportFailed)
+        case .gifDestinationCreationFailed:
+            return Localizable.string(.cannotCreateGIFDestination)
+        case .gifFinalizationFailed:
+            return Localizable.string(.cannotFinalizeGIFCreation)
+        }
+    }
+}
+
+struct PreparedLivePhoto {
+    let assetIdentifier: String
+    let imageURL: URL
+    let videoURL: URL
+
+    func cleanup() {
+        try? FileManager.default.removeItem(at: imageURL)
+        try? FileManager.default.removeItem(at: videoURL)
+    }
+}
+
+enum MediaExportService {
+
+    // MARK: - Temporary File Safety Helper
+    /// 安全删除位于临时目录内的文件（防止误删外部样图或用户文件）
+    static func removeIfInTemporaryDirectory(_ url: URL?) {
+        guard let url = url else { return }
+        let tempRoot = FileManager.default.temporaryDirectory.standardizedFileURL.path
+        let targetPath = url.standardizedFileURL.path
+        guard targetPath.hasPrefix(tempRoot) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    // MARK: - Photo Library Authorization
+    static func ensurePhotoLibraryAddAuthorization() async throws {
+        let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        switch status {
+        case .authorized, .limited:
+            return
+        case .notDetermined:
+            let newStatus = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+            guard newStatus == .authorized || newStatus == .limited else {
+                throw MediaExportError.photoLibraryPermissionDenied
+            }
+        case .denied, .restricted:
+            throw MediaExportError.photoLibraryPermissionDenied
+        @unknown default:
+            throw MediaExportError.photoLibraryPermissionDenied
+        }
+    }
+
+    // MARK: - Date Resolution
+    static func resolveCreationDate(originalData: Data?, fallbackURL: URL?, preferredDate: Date? = nil) -> Date? {
+        if let preferredDate = preferredDate {
+            return preferredDate
+        }
+        if let originalData = originalData,
+           let exifDate = ISOBMFFHelper.extractExifCreationDate(from: originalData) {
+            return exifDate
+        }
+        if let fallbackURL = fallbackURL,
+           let attrs = try? FileManager.default.attributesOfItem(atPath: fallbackURL.path) {
+            return (attrs[.creationDate] as? Date) ?? (attrs[.modificationDate] as? Date)
+        }
+        return nil
+    }
+
+    // MARK: - Prepare Live Photo Artifacts (Testable without PHPhotoLibrary)
+    static func prepareLivePhotoFiles(
+        imageData: Data,
+        videoURL sourceVideoURL: URL,
+        stillImageTime: Int = 0
+    ) async throws -> PreparedLivePhoto {
+        let assetIdentifier = UUID().uuidString
+        let tempDir = FileManager.default.temporaryDirectory
+        let tempImageURL = tempDir.appendingPathComponent("\(assetIdentifier).jpg")
+        let tempMOVURL = tempDir.appendingPathComponent("\(assetIdentifier).mov")
+
+        do {
+            // 1. 写入带 Apple Maker Metadata ("17": assetIdentifier) 的静态图
+            guard let imageSource = CGImageSourceCreateWithData(imageData as CFData, nil),
+                  let imageType = CGImageSourceGetType(imageSource) else {
+                throw MediaExportError.imageSourceCreationFailed
+            }
+
+            guard let imageDestination = CGImageDestinationCreateWithURL(tempImageURL as CFURL, imageType, 1, nil) else {
+                throw MediaExportError.imageDestinationCreationFailed
+            }
+
+            var mutableProperties = (CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any]) ?? [:]
+            if var makerAppleDict = mutableProperties[kCGImagePropertyMakerAppleDictionary as String] as? [String: Any] {
+                makerAppleDict["17"] = assetIdentifier
+                mutableProperties[kCGImagePropertyMakerAppleDictionary as String] = makerAppleDict
+            } else {
+                mutableProperties[kCGImagePropertyMakerAppleDictionary as String] = ["17": assetIdentifier]
+            }
+
+            CGImageDestinationAddImageFromSource(imageDestination, imageSource, 0, mutableProperties as CFDictionary)
+            guard CGImageDestinationFinalize(imageDestination) else {
+                throw MediaExportError.metadataWriteFailed
+            }
+
+            // 2. 封装 MOV 并写入 QuickTime Content Identifier & still-image-time
+            let asset = AVAsset(url: sourceVideoURL)
+            guard let exportSession = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetPassthrough) else {
+                throw MediaExportError.exportSessionCreationFailed
+            }
+
+            exportSession.outputURL = tempMOVURL
+            exportSession.outputFileType = .mov
+
+            let originalMetadata = (try? await asset.load(.metadata)) ?? []
+            let clampedStillTime = max(0, min(127, stillImageTime))
+            let livePhotoMetadata: [AVMetadataItem] = [
+                {
+                    let item = AVMutableMetadataItem()
+                    item.key = "com.apple.quicktime.content.identifier" as NSString
+                    item.keySpace = .quickTimeMetadata
+                    item.value = assetIdentifier as NSString
+                    item.dataType = "com.apple.metadata.datatype.UTF-8"
+                    return item
+                }(),
+                {
+                    let item = AVMutableMetadataItem()
+                    item.key = "com.apple.quicktime.still-image-time" as NSString
+                    item.keySpace = AVMetadataKeySpace(rawValue: "mdta")
+                    item.value = clampedStillTime as NSNumber
+                    item.dataType = "com.apple.metadata.datatype.int8"
+                    return item
+                }()
+            ]
+            exportSession.metadata = originalMetadata + livePhotoMetadata
+
+            await exportSession.export()
+            guard exportSession.status == .completed else {
+                throw MediaExportError.videoExportFailed(exportSession.error)
+            }
+
+            return PreparedLivePhoto(assetIdentifier: assetIdentifier, imageURL: tempImageURL, videoURL: tempMOVURL)
+        } catch {
+            try? FileManager.default.removeItem(at: tempImageURL)
+            try? FileManager.default.removeItem(at: tempMOVURL)
+            throw error
+        }
+    }
+
+    // MARK: - Export Live Photo from MotionPhotoData
+    static func exportLivePhoto(
+        motionPhotoData: MotionPhotoData,
+        originalData: Data? = nil,
+        fallbackURL: URL? = nil,
+        preferredDate: Date? = nil,
+        stillImageTime: Int? = nil,
+        processor: MotionPhotoProcessorProtocol? = nil
+    ) async throws {
+        try await ensurePhotoLibraryAddAuthorization()
+
+        let tempMP4URL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+        defer { try? FileManager.default.removeItem(at: tempMP4URL) }
+
+        try motionPhotoData.videoData.write(to: tempMP4URL)
+
+        let resolvedStillTime: Int
+        if let explicitStillTime = stillImageTime {
+            resolvedStillTime = explicitStillTime
+        } else if let processor = processor {
+            let asset = AVAsset(url: tempMP4URL)
+            let duration = (try? await asset.load(.duration)).map(CMTimeGetSeconds) ?? 0
+            let tracks = (try? await asset.loadTracks(withMediaType: .video)) ?? []
+            let frameRate = (try? await tracks.first?.load(.nominalFrameRate)) ?? 30.0
+            resolvedStillTime = processor.calculateStillImageTime(
+                videoDuration: duration,
+                presentationTimestamp: motionPhotoData.presentationTimestamp,
+                frameRate: Double(frameRate)
+            )
+        } else {
+            resolvedStillTime = motionPhotoData.stillImageTime
+        }
+
+        let prepared = try await prepareLivePhotoFiles(
+            imageData: motionPhotoData.imageData,
+            videoURL: tempMP4URL,
+            stillImageTime: resolvedStillTime
+        )
+        defer { prepared.cleanup() }
+
+        let finalDate = resolveCreationDate(originalData: originalData, fallbackURL: fallbackURL, preferredDate: preferredDate)
+        let processedImageData = try Data(contentsOf: prepared.imageURL)
+
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            request.addResource(with: .photo, data: processedImageData, options: nil)
+            request.addResource(with: .pairedVideo, fileURL: prepared.videoURL, options: nil)
+            if let finalDate = finalDate {
+                request.creationDate = finalDate
+            }
+        }
+    }
+
+    // MARK: - Export Custom Live Photo (Lab)
+    static func exportCustomLivePhoto(
+        imageData: Data,
+        videoURL: URL,
+        creationDate: Date = Date()
+    ) async throws {
+        try await ensurePhotoLibraryAddAuthorization()
+
+        let prepared = try await prepareLivePhotoFiles(
+            imageData: imageData,
+            videoURL: videoURL,
+            stillImageTime: 0
+        )
+        defer { prepared.cleanup() }
+
+        let processedImageData = try Data(contentsOf: prepared.imageURL)
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            request.addResource(with: .photo, data: processedImageData, options: nil)
+            request.addResource(with: .pairedVideo, fileURL: prepared.videoURL, options: nil)
+            request.creationDate = creationDate
+        }
+    }
+
+    // MARK: - Export Standalone Video
+    static func exportVideo(
+        videoData: Data,
+        originalData: Data? = nil,
+        fallbackURL: URL? = nil,
+        preferredDate: Date? = nil
+    ) async throws {
+        try await ensurePhotoLibraryAddAuthorization()
+
+        let tempVideoURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+        defer { try? FileManager.default.removeItem(at: tempVideoURL) }
+
+        try videoData.write(to: tempVideoURL)
+        let finalDate = resolveCreationDate(originalData: originalData, fallbackURL: fallbackURL, preferredDate: preferredDate)
+
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: tempVideoURL)
+            if let finalDate = finalDate {
+                request?.creationDate = finalDate
+            }
+        }
+    }
+
+    // MARK: - Generate GIF File (Testable without PHPhotoLibrary)
+    static func createGIFFile(
+        from asset: AVAsset,
+        outputURL: URL,
+        frameCount: Int = 30,
+        maxDimension: CGFloat = 720
+    ) async throws {
+        let duration = try await asset.load(.duration)
+        let durationSeconds = CMTimeGetSeconds(duration)
+        guard durationSeconds.isFinite, durationSeconds > 0, frameCount > 0 else {
+            throw MediaExportError.invalidVideoDuration
+        }
+
+        let frameInterval = durationSeconds / Double(frameCount)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: maxDimension, height: maxDimension)
+        generator.requestedTimeToleranceBefore = CMTime(seconds: frameInterval / 2.0, preferredTimescale: 600)
+        generator.requestedTimeToleranceAfter = CMTime(seconds: frameInterval / 2.0, preferredTimescale: 600)
+
+        let destProperties = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]]
+        guard let destination = CGImageDestinationCreateWithURL(
+            outputURL as CFURL,
+            UTType.gif.identifier as CFString,
+            frameCount,
+            nil
+        ) else {
+            throw MediaExportError.gifDestinationCreationFailed
+        }
+
+        CGImageDestinationSetProperties(destination, destProperties as CFDictionary)
+
+        for index in 0..<frameCount {
+            let time = CMTime(seconds: Double(index) * frameInterval, preferredTimescale: 600)
+            let cgImage = try await generator.image(at: time).image
+            let frameProperties = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFDelayTime: frameInterval]]
+            CGImageDestinationAddImage(destination, cgImage, frameProperties as CFDictionary)
+        }
+
+        guard CGImageDestinationFinalize(destination) else {
+            throw MediaExportError.gifFinalizationFailed
+        }
+    }
+
+    // MARK: - Export GIF to Photos
+    static func exportGIF(
+        videoData: Data,
+        frameCount: Int = 30,
+        maxDimension: CGFloat = 720
+    ) async throws {
+        try await ensurePhotoLibraryAddAuthorization()
+
+        let tempMP4URL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+        let tempGIFURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).gif")
+        defer {
+            try? FileManager.default.removeItem(at: tempMP4URL)
+            try? FileManager.default.removeItem(at: tempGIFURL)
+        }
+
+        try videoData.write(to: tempMP4URL)
+        let asset = AVAsset(url: tempMP4URL)
+        try await createGIFFile(from: asset, outputURL: tempGIFURL, frameCount: frameCount, maxDimension: maxDimension)
+
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            request.addResource(with: .photo, fileURL: tempGIFURL, options: nil)
+        }
+    }
+}
