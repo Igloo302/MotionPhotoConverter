@@ -39,7 +39,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
         config.filter = .images
-        config.selectionLimit = 0 // 0 表示允许多选（无数量限制）
+        config.selectionLimit = (onBatchPicked != nil) ? 0 : 1
 
         let picker = PHPickerViewController(configuration: config)
         picker.delegate = context.coordinator
@@ -64,27 +64,37 @@ struct PhotoPicker: UIViewControllerRepresentable {
 
             guard !results.isEmpty else { return }
 
+            let totalCount = results.count
+            let providers = results.map(\.itemProvider)
+
             Task {
                 var validURLs: [URL] = []
                 var ignoredCount = 0
-                let totalCount = results.count
 
-                for (index, result) in results.enumerated() {
+                for (index, provider) in providers.enumerated() {
                     await MainActor.run {
                         self.parent.onAnalyzingProgress?(index + 1, totalCount)
                     }
 
-                    let loadedURL = await self.loadFile(from: result.itemProvider)
-                    if let url = loadedURL, self.isMotionPhoto(url: url) {
-                        validURLs.append(url)
+                    let loadedURL = await Self.loadFile(from: provider)
+                    if let url = loadedURL {
+                        let isMotion = await Task.detached(priority: .userInitiated) {
+                            Self.isMotionPhoto(url: url)
+                        }.value
+
+                        if isMotion {
+                            validURLs.append(url)
+                        } else {
+                            ignoredCount += 1
+                            MediaExportService.removeIfInTemporaryDirectory(url)
+                        }
                     } else {
                         ignoredCount += 1
-                        MediaExportService.removeIfInTemporaryDirectory(loadedURL)
                     }
                 }
 
                 await MainActor.run {
-                    self.parent.onAnalyzingProgress?(totalCount, totalCount)
+                    self.parent.onAnalyzingProgress?(0, 0)
 
                     if totalCount == 1 {
                         if let singleURL = validURLs.first {
@@ -119,6 +129,9 @@ struct PhotoPicker: UIViewControllerRepresentable {
                         if let onBatch = self.parent.onBatchPicked {
                             onBatch(validURLs, ignoredCount)
                         } else if let firstURL = validURLs.first, let onLegacy = self.parent.onImagePicked {
+                            for extraURL in validURLs.dropFirst() {
+                                MediaExportService.removeIfInTemporaryDirectory(extraURL)
+                            }
                             onLegacy(firstURL, true)
                         }
                     }
@@ -126,8 +139,13 @@ struct PhotoPicker: UIViewControllerRepresentable {
             }
         }
 
-        private func loadFile(from provider: NSItemProvider) async -> URL? {
-            let supportedTypes = [UTType.jpeg.identifier, UTType.heic.identifier]
+        private static func loadFile(from provider: NSItemProvider) async -> URL? {
+            let supportedTypes = [
+                UTType.jpeg.identifier,
+                UTType.heic.identifier,
+                "public.avif",
+                UTType.image.identifier
+            ]
             for type in supportedTypes where provider.hasItemConformingToTypeIdentifier(type) {
                 return await withCheckedContinuation { continuation in
                     provider.loadFileRepresentation(forTypeIdentifier: type) { url, error in
@@ -154,7 +172,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
             return nil
         }
 
-        func isMotionPhoto(url: URL) -> Bool {
+        private nonisolated static func isMotionPhoto(url: URL) -> Bool {
             let supportedExtensions = ["jpg", "jpeg", "heic", "avif"]
             guard supportedExtensions.contains(url.pathExtension.lowercased()),
                   let data = try? Data(contentsOf: url, options: .mappedIfSafe) else {

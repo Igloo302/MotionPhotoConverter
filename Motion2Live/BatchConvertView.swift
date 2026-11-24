@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 import Photos
 import AVFoundation
 import ImageIO
@@ -83,23 +84,23 @@ struct BatchPhotoItem: Identifiable {
     let id = UUID()
     let url: URL
     let fileName: String
-    let fileSize: Int64
-    let thumbnail: UIImage?
+    var fileSize: Int64 = 0
+    var thumbnail: UIImage? = nil
     var status: BatchItemStatus = .pending
     var errorMessage: String? = nil
-    
+
     init(url: URL) {
         self.url = url
         self.fileName = url.lastPathComponent
-        
-        // 获取文件大小
-        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
-        self.fileSize = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
-        
-        // 快速生成低内存缩略图
-        self.thumbnail = BatchPhotoItem.createThumbnail(from: url)
     }
-    
+
+    static func loadMetadata(from url: URL) -> (fileSize: Int64, thumbnail: UIImage?) {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+        let size = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+        let thumb = createThumbnail(from: url)
+        return (size, thumb)
+    }
+
     private static func createThumbnail(from url: URL) -> UIImage? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         let options: [CFString: Any] = [
@@ -113,7 +114,7 @@ struct BatchPhotoItem: Identifiable {
 }
 
 // MARK: - Batch Conversion Service
-class MotionPhotoBatchService {
+enum MotionPhotoBatchService {
     static func processSingleItem(url: URL, format: BatchExportFormat) async throws {
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
         let xmpInfo = XMPParser.extractAndParse(from: data)
@@ -141,13 +142,18 @@ class MotionPhotoBatchService {
                 processor: processor
             )
         case .gif:
-            try await MediaExportService.exportGIF(videoData: motionPhotoData.videoData)
+            try await MediaExportService.exportGIF(
+                videoData: motionPhotoData.videoData,
+                originalData: data,
+                fallbackURL: url
+            )
         }
     }
 }
 
 // MARK: - Batch Convert View Model
-class BatchConvertViewModel: ObservableObject {
+@MainActor
+final class BatchConvertViewModel: ObservableObject {
     @Published var items: [BatchPhotoItem] = []
     @Published var selectedFormat: BatchExportFormat = .livePhoto
     @Published var isProcessing = false
@@ -157,72 +163,95 @@ class BatchConvertViewModel: ObservableObject {
     @Published var successCount = 0
     @Published var failureCount = 0
     @Published var selectedErrorItem: BatchPhotoItem? = nil
-    
+
     let ignoredCount: Int
     private var conversionTask: Task<Void, Never>? = nil
-    
+    private var isTaskRunning = false
+    private var shouldCleanupOnFinish = false
+
     init(urls: [URL], ignoredCount: Int) {
         self.ignoredCount = ignoredCount
         self.items = urls.map { BatchPhotoItem(url: $0) }
     }
-    
+
     var progress: Double {
         guard !items.isEmpty else { return 0.0 }
         return Double(currentIndex) / Double(items.count)
     }
-    
-    @MainActor
+
+    func loadThumbnails() async {
+        let targets = items.map { ($0.id, $0.url) }
+        for (id, url) in targets {
+            if Task.isCancelled { break }
+            let metadata = await Task.detached(priority: .userInitiated) {
+                BatchPhotoItem.loadMetadata(from: url)
+            }.value
+            if let idx = items.firstIndex(where: { $0.id == id }) {
+                items[idx].fileSize = metadata.fileSize
+                items[idx].thumbnail = metadata.thumbnail
+            }
+        }
+    }
+
     func startBatchConversion() {
-        guard !isProcessing else { return }
+        guard !isProcessing && !isTaskRunning else { return }
         isProcessing = true
+        isTaskRunning = true
         isCancelled = false
         isFinished = false
+        shouldCleanupOnFinish = false
         currentIndex = 0
         successCount = 0
         failureCount = 0
-        
+
         // 批量转换期间保持屏幕常亮
         UIApplication.shared.isIdleTimerDisabled = true
-        
+
         // 重置所有项目状态为待处理
         for i in 0..<items.count {
             items[i].status = .pending
             items[i].errorMessage = nil
         }
-        
+
+        let format = selectedFormat
         conversionTask = Task {
             for index in 0..<self.items.count {
                 if Task.isCancelled || self.isCancelled {
                     break
                 }
-                
-                await MainActor.run {
-                    self.currentIndex = index + 1
-                    self.items[index].status = .processing
-                }
-                
-                let item = self.items[index]
+
+                self.currentIndex = index + 1
+                self.items[index].status = .processing
+
+                let itemURL = self.items[index].url
                 do {
-                    try await MotionPhotoBatchService.processSingleItem(url: item.url, format: self.selectedFormat)
-                    await MainActor.run {
-                        self.items[index].status = .success
-                        self.successCount += 1
-                    }
+                    try await MotionPhotoBatchService.processSingleItem(url: itemURL, format: format)
+                    self.items[index].status = .success
+                    self.successCount += 1
+                } catch is CancellationError {
+                    self.items[index].status = .pending
+                    self.isCancelled = true
+                    break
                 } catch {
-                    await MainActor.run {
-                        self.items[index].status = .failed(error.localizedDescription)
-                        self.items[index].errorMessage = error.localizedDescription
-                        self.failureCount += 1
+                    if Task.isCancelled || self.isCancelled {
+                        self.items[index].status = .pending
+                        break
                     }
+                    self.items[index].status = .failed(error.localizedDescription)
+                    self.items[index].errorMessage = error.localizedDescription
+                    self.failureCount += 1
                 }
             }
-            
-            await MainActor.run {
-                self.isProcessing = false
-                self.isFinished = true
-                UIApplication.shared.isIdleTimerDisabled = false
-                
-                // 触感反馈
+
+            self.isTaskRunning = false
+            self.isProcessing = false
+            self.isFinished = true
+            UIApplication.shared.isIdleTimerDisabled = false
+
+            if self.shouldCleanupOnFinish {
+                self.performTempFileCleanup()
+            } else if !self.isCancelled {
+                // 仅在正常完成时触发触感反馈
                 if self.failureCount == 0 {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 } else {
@@ -231,15 +260,24 @@ class BatchConvertViewModel: ObservableObject {
             }
         }
     }
-    
+
     func cancelConversion() {
         isCancelled = true
         conversionTask?.cancel()
         isProcessing = false
         UIApplication.shared.isIdleTimerDisabled = false
     }
-    
+
     func cleanupTempFiles() {
+        if isTaskRunning {
+            shouldCleanupOnFinish = true
+        } else {
+            performTempFileCleanup()
+        }
+    }
+
+    private func performTempFileCleanup() {
+        shouldCleanupOnFinish = false
         for item in items {
             MediaExportService.removeIfInTemporaryDirectory(item.url)
         }
@@ -295,10 +333,11 @@ struct BatchConvertView: View {
                 }
             }
             .interactiveDismissDisabled(viewModel.isProcessing)
+            .task {
+                await viewModel.loadThumbnails()
+            }
             .onDisappear {
-                if !viewModel.isProcessing {
-                    viewModel.cleanupTempFiles()
-                }
+                viewModel.cleanupTempFiles()
             }
             .alert(item: $viewModel.selectedErrorItem) { item in
                 Alert(
@@ -539,9 +578,18 @@ struct BatchConvertView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 8)
             } else if viewModel.isFinished {
-                // 处理完成状态
+                // 处理完成或已取消状态
                 VStack(spacing: 10) {
-                    if viewModel.failureCount == 0 {
+                    if viewModel.isCancelled {
+                        HStack(spacing: 6) {
+                            Image(systemName: "stop.circle.fill")
+                                .foregroundColor(.orange)
+                            Text(Localizable.string(.batchCancelledSummary, viewModel.successCount))
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    } else if viewModel.failureCount == 0 {
                         HStack(spacing: 6) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)

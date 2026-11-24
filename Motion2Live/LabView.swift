@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import ImageIO
 import UniformTypeIdentifiers
 
 struct LabView: View {
@@ -45,6 +46,7 @@ struct CustomLivePhotoView: View {
     @State private var isShowingImagePicker = false
     @State private var isShowingVideoPicker = false
     @State private var isProcessing = false
+    @State private var hasDisappeared = false
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var alertIsSuccess = false
@@ -99,10 +101,25 @@ struct CustomLivePhotoView: View {
         .navigationTitle(Localizable.string(.customLivePhoto))
         .padding()
         .sheet(isPresented: $isShowingImagePicker) {
-            ImagePicker(image: $selectedImage, imageData: $selectedImageData)
+            ImagePicker(
+                image: $selectedImage,
+                imageData: $selectedImageData,
+                onError: { message in
+                    alertIsSuccess = false
+                    alertMessage = message
+                    showAlert = true
+                }
+            )
         }
         .sheet(isPresented: $isShowingVideoPicker) {
-            VideoPicker(videoURL: $selectedVideo)
+            VideoPicker(
+                videoURL: $selectedVideo,
+                onError: { message in
+                    alertIsSuccess = false
+                    alertMessage = message
+                    showAlert = true
+                }
+            )
         }
         .alert(isPresented: $showAlert) {
             Alert(
@@ -112,7 +129,10 @@ struct CustomLivePhotoView: View {
             )
         }
         .onDisappear {
-            MediaExportService.removeIfInTemporaryDirectory(selectedVideo)
+            hasDisappeared = true
+            if !isProcessing {
+                MediaExportService.removeIfInTemporaryDirectory(selectedVideo)
+            }
         }
     }
 
@@ -123,7 +143,12 @@ struct CustomLivePhotoView: View {
 
         isProcessing = true
         Task {
-            defer { isProcessing = false }
+            defer {
+                isProcessing = false
+                if hasDisappeared {
+                    MediaExportService.removeIfInTemporaryDirectory(videoURL)
+                }
+            }
             do {
                 try await MediaExportService.exportCustomLivePhoto(imageData: imageData, videoURL: videoURL)
                 alertIsSuccess = true
@@ -141,11 +166,13 @@ struct CustomLivePhotoView: View {
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Binding var imageData: Data?
+    var onError: ((String) -> Void)?
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
         config.filter = .images
+        config.selectionLimit = 1
         let picker = PHPickerViewController(configuration: config)
         picker.delegate = context.coordinator
         return picker
@@ -170,29 +197,54 @@ struct ImagePicker: UIViewControllerRepresentable {
             guard let provider = results.first?.itemProvider else { return }
 
             if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
-                    guard let data = data else { return }
-                    let uiImage = UIImage(data: data)
-                    DispatchQueue.main.async {
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, error in
+                    guard let data = data, error == nil else {
+                        AppLogger.picker.error("Failed to load lab image: \(error?.localizedDescription ?? "unknown", privacy: .public)")
+                        Task { @MainActor in
+                            self.parent.onError?(Localizable.string(.imageLoadFailed))
+                        }
+                        return
+                    }
+                    let previewImage = Self.makePreviewThumbnail(from: data) ?? UIImage(data: data)
+                    Task { @MainActor in
                         self.parent.imageData = data
-                        self.parent.image = uiImage
+                        self.parent.image = previewImage
                     }
                 }
             } else if provider.canLoadObject(ofClass: UIImage.self) {
-                provider.loadObject(ofClass: UIImage.self) { image, _ in
-                    DispatchQueue.main.async {
-                        let loaded = image as? UIImage
+                provider.loadObject(ofClass: UIImage.self) { image, error in
+                    guard let loaded = image as? UIImage, error == nil else {
+                        AppLogger.picker.error("Failed to load lab UIImage: \(error?.localizedDescription ?? "unknown", privacy: .public)")
+                        Task { @MainActor in
+                            self.parent.onError?(Localizable.string(.imageLoadFailed))
+                        }
+                        return
+                    }
+                    let jpegData = loaded.jpegData(compressionQuality: 1.0)
+                    Task { @MainActor in
                         self.parent.image = loaded
-                        self.parent.imageData = loaded?.jpegData(compressionQuality: 1.0)
+                        self.parent.imageData = jpegData
                     }
                 }
             }
+        }
+
+        private static func makePreviewThumbnail(from data: Data) -> UIImage? {
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 600
+            ]
+            guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+            return UIImage(cgImage: cgImage)
         }
     }
 }
 
 struct VideoPicker: UIViewControllerRepresentable {
     @Binding var videoURL: URL?
+    var onError: ((String) -> Void)?
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
@@ -226,27 +278,34 @@ struct VideoPicker: UIViewControllerRepresentable {
             }
 
             provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, error in
-                guard let url = url, error == nil else { return }
+                guard let url = url, error == nil else {
+                    AppLogger.picker.error("Failed to load lab video: \(error?.localizedDescription ?? "unknown", privacy: .public)")
+                    Task { @MainActor in
+                        self.parent.onError?(Localizable.string(.videoLoadFailed))
+                    }
+                    return
+                }
                 let ext = url.pathExtension.isEmpty ? "mov" : url.pathExtension
                 let tempURL = FileManager.default.temporaryDirectory
                     .appendingPathComponent("lab_video_\(UUID().uuidString).\(ext)")
                 do {
                     try FileManager.default.copyItem(at: url, to: tempURL)
-                    DispatchQueue.main.async {
+                    Task { @MainActor in
                         let oldURL = self.parent.videoURL
                         self.parent.videoURL = tempURL
                         MediaExportService.removeIfInTemporaryDirectory(oldURL)
                     }
                 } catch {
                     AppLogger.picker.error("Failed to copy lab video: \(error.localizedDescription, privacy: .public)")
+                    Task { @MainActor in
+                        self.parent.onError?(Localizable.string(.videoLoadFailed))
+                    }
                 }
             }
         }
     }
 }
 
-struct LabView_Previews: PreviewProvider {
-    static var previews: some View {
-        LabView()
-    }
+#Preview {
+    LabView()
 }

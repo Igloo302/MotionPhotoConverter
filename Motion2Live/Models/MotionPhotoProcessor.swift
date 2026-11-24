@@ -7,27 +7,35 @@
 //
 
 import Foundation
-import UIKit
 import ImageIO
 
 // MARK: - Motion Photo Brand Enum
-enum MotionPhotoBrand: String, CaseIterable {
+enum MotionPhotoBrand: String, CaseIterable, Sendable {
     case xiaomi = "Xiaomi"
     case pixel = "Pixel"
     case samsung = "Samsung"
-    case huawei = "华为 / 荣耀"
-    case oppo = "OPPO / 一加"
+    case huawei = "Huawei / Honor"
+    case oppo = "OPPO / OnePlus"
     case vivo = "vivo / iQOO"
-    case universal = "通用动态照片"
-    case unknown = "未知格式"
+    case universal = "Universal"
+    case unknown = "Unknown"
 
     var displayName: String {
-        return self.rawValue
+        switch self {
+        case .xiaomi: return "Xiaomi"
+        case .pixel: return "Pixel"
+        case .samsung: return "Samsung"
+        case .huawei: return Localizable.string(.brandHuawei)
+        case .oppo: return Localizable.string(.brandOppo)
+        case .vivo: return "vivo / iQOO"
+        case .universal: return Localizable.string(.brandUniversal)
+        case .unknown: return Localizable.string(.brandUnknown)
+        }
     }
 }
 
 // MARK: - Motion Photo Data Structure
-struct MotionPhotoData {
+struct MotionPhotoData: Sendable {
     let imageData: Data
     let videoData: Data
     let stillImageTime: Int
@@ -100,7 +108,7 @@ final class MotionPhotoProbeContext {
 }
 
 // MARK: - Motion Photo Processor Protocol
-protocol MotionPhotoProcessorProtocol {
+protocol MotionPhotoProcessorProtocol: Sendable {
     var brand: MotionPhotoBrand { get }
 
     /// 检测是否为该品牌的动态照片 (兼顾仅传 XMP 的旧签名)
@@ -153,17 +161,19 @@ struct ISOBMFFHelper {
         let totalCount = data.count
         guard totalCount > 10240 else { return nil }
 
+        let baseIndex = data.startIndex
         // 从文件前 5% 或 16KB 开始搜索，避开图片头部 EXIF/XMP 区域
-        let startSearch = min(16384, totalCount / 20)
-        var searchRange = startSearch..<totalCount
+        let startSearch = baseIndex + min(16384, totalCount / 20)
+        var searchRange = startSearch..<data.endIndex
         var candidateOffsets: [Int] = []
 
         data.withUnsafeBytes { rawBuffer in
             while let range = data.range(of: ftypSignature, in: searchRange) {
-                let boxStart = range.lowerBound - 4
+                let relativeFtypStart = range.lowerBound - baseIndex
+                let boxStart = relativeFtypStart - 4
                 if boxStart >= 0 && boxStart + 12 <= totalCount {
                     let boxSize = rawBuffer.loadUnaligned(fromByteOffset: boxStart, as: UInt32.self).bigEndian
-                    let brandStart = range.upperBound
+                    let brandStart = range.upperBound - baseIndex
                     var isPrintableBrand = true
                     for offset in 0..<4 {
                         let byte = rawBuffer[brandStart + offset]
@@ -182,8 +192,8 @@ struct ISOBMFFHelper {
                 }
 
                 let nextSearchStart = range.upperBound
-                if nextSearchStart >= totalCount { break }
-                searchRange = nextSearchStart..<totalCount
+                if nextSearchStart >= data.endIndex { break }
+                searchRange = nextSearchStart..<data.endIndex
             }
         }
 
@@ -191,15 +201,23 @@ struct ISOBMFFHelper {
         return candidateOffsets.last
     }
 
-    /// 从图片数据中提取 EXIF 设备制造厂商与机型 (TIFF Make & Model)
+    /// 从图片数据中提取 EXIF 设备制造厂商与机型 (TIFF Make/Model，回退至 EXIF LensMake/LensModel)
     static func extractExifMakeAndModel(from data: Data) -> (make: String, model: String) {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else {
             return ("", "")
         }
         let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any]
-        let make = (tiff?[kCGImagePropertyTIFFMake as String] as? String)?.lowercased() ?? ""
-        let model = (tiff?[kCGImagePropertyTIFFModel as String] as? String)?.lowercased() ?? ""
+        let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any]
+
+        let tiffMake = (tiff?[kCGImagePropertyTIFFMake as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let lensMake = (exif?[kCGImagePropertyExifLensMake as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let make = (tiffMake.isEmpty ? lensMake : tiffMake).lowercased()
+
+        let tiffModel = (tiff?[kCGImagePropertyTIFFModel as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let lensModel = (exif?[kCGImagePropertyExifLensModel as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let model = (tiffModel.isEmpty ? lensModel : tiffModel).lowercased()
+
         return (make, model)
     }
 
@@ -278,7 +296,7 @@ struct ISOBMFFHelper {
 }
 
 // MARK: - Base Motion Photo Processor
-class BaseMotionPhotoProcessor: MotionPhotoProcessorProtocol {
+class BaseMotionPhotoProcessor: MotionPhotoProcessorProtocol, @unchecked Sendable {
     let brand: MotionPhotoBrand
 
     init(brand: MotionPhotoBrand) {
@@ -298,7 +316,7 @@ class BaseMotionPhotoProcessor: MotionPhotoProcessorProtocol {
     }
 
     func processMotionPhoto(data: Data, xmpInfo: [String: String]) -> MotionPhotoProcessingResult {
-        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "Not implemented")
+        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.invalidMotionPhotoOrUnsupportedFormat))
     }
 
     func calculateStillImageTime(videoDuration: Double, presentationTimestamp: Double?, frameRate: Double) -> Int {
@@ -321,14 +339,15 @@ class BaseMotionPhotoProcessor: MotionPhotoProcessorProtocol {
     /// 统一构建切分好的数据包
     func createResult(data: Data, videoStartOffset: Int, presentationTimestamp: Double?) -> MotionPhotoProcessingResult {
         guard videoStartOffset > 0 && videoStartOffset < data.count else {
-            return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "无效的视频起始偏移量")
+            return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.invalidVideoOffset))
         }
-        let imageData = data.prefix(videoStartOffset)
+        let imageData = Data(data.prefix(videoStartOffset))
         let pureLength = ISOBMFFHelper.measurePureMP4Length(in: data, startingAt: videoStartOffset) ?? (data.count - videoStartOffset)
-        let videoData = data.subdata(in: videoStartOffset..<(videoStartOffset + pureLength))
+        let startIndex = data.startIndex + videoStartOffset
+        let videoData = data.subdata(in: startIndex..<(startIndex + pureLength))
 
         guard videoData.count >= 10000 else {
-            return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "提取的视频数据长度不足")
+            return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.insufficientVideoData))
         }
 
         let motionPhotoData = MotionPhotoData(
@@ -344,15 +363,28 @@ class BaseMotionPhotoProcessor: MotionPhotoProcessorProtocol {
 }
 
 // MARK: - Xiaomi Motion Photo Processor
-class XiaomiMotionPhotoProcessor: BaseMotionPhotoProcessor {
+final class XiaomiMotionPhotoProcessor: BaseMotionPhotoProcessor, @unchecked Sendable {
     init() { super.init(brand: .xiaomi) }
 
     override func canProcess(context: MotionPhotoProbeContext) -> Bool {
-        if context.xmpInfo["GCamera:MicroVideoOffset"] != nil || context.xmpInfo["GCamera:MicroVideo"] == "1" {
-            return true
+        if context.hasSamsungSEFMarker {
+            return false
         }
+
         let make = context.exifMake
-        if (make.contains("xiaomi") || make.contains("redmi") || make.contains("poco")) && context.mp4Offset != nil {
+        let otherKnownBrands = ["google", "samsung", "sec", "oppo", "oneplus", "realme", "huawei", "honor", "vivo", "iqoo"]
+        if otherKnownBrands.contains(where: { make.contains($0) }) {
+            return false
+        }
+
+        if make.contains("xiaomi") || make.contains("redmi") || make.contains("poco") {
+            return context.xmpInfo["GCamera:MicroVideoOffset"] != nil
+                || context.xmpInfo["GCamera:MicroVideo"] == "1"
+                || context.mp4Offset != nil
+        }
+
+        // 无 EXIF 厂商标识（如部分裁剪/旧版小米样图）时按 MicroVideo XMP 兜底
+        if make.isEmpty && (context.xmpInfo["GCamera:MicroVideoOffset"] != nil || context.xmpInfo["GCamera:MicroVideo"] == "1") {
             return true
         }
         return false
@@ -376,12 +408,12 @@ class XiaomiMotionPhotoProcessor: BaseMotionPhotoProcessor {
             return createResult(data: data, videoStartOffset: videoStart, presentationTimestamp: presentationTimestamp)
         }
 
-        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "无法解析小米动态照片的视频偏移量")
+        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.noEmbeddedVideoFound))
     }
 }
 
 // MARK: - Samsung Motion Photo Processor
-class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor {
+final class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor, @unchecked Sendable {
     init() { super.init(brand: .samsung) }
 
     override func canProcess(context: MotionPhotoProbeContext) -> Bool {
@@ -435,12 +467,12 @@ class SamsungMotionPhotoProcessor: BaseMotionPhotoProcessor {
             return createResult(data: data, videoStartOffset: videoStart, presentationTimestamp: presentationTimestamp)
         }
 
-        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "无法在三星动态照片中找到视频数据")
+        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.noEmbeddedVideoFound))
     }
 }
 
 // MARK: - Pixel Motion Photo Processor
-class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor {
+final class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor, @unchecked Sendable {
     init() { super.init(brand: .pixel) }
 
     override func canProcess(context: MotionPhotoProbeContext) -> Bool {
@@ -505,12 +537,12 @@ class PixelMotionPhotoProcessor: BaseMotionPhotoProcessor {
             return createResult(data: data, videoStartOffset: videoStart, presentationTimestamp: presentationTimestamp)
         }
 
-        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "无法解析 Pixel 动态照片的视频数据")
+        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.noEmbeddedVideoFound))
     }
 }
 
 // MARK: - Huawei / Honor Motion Photo Processor
-class HuaweiMotionPhotoProcessor: BaseMotionPhotoProcessor {
+final class HuaweiMotionPhotoProcessor: BaseMotionPhotoProcessor, @unchecked Sendable {
     init() { super.init(brand: .huawei) }
 
     override func canProcess(context: MotionPhotoProbeContext) -> Bool {
@@ -529,12 +561,12 @@ class HuaweiMotionPhotoProcessor: BaseMotionPhotoProcessor {
         if let videoStart = ISOBMFFHelper.findMP4Offset(in: data) {
             return createResult(data: data, videoStartOffset: videoStart, presentationTimestamp: nil)
         }
-        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "无法提取华为/荣耀实况照片中的视频流")
+        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.noEmbeddedVideoFound))
     }
 }
 
 // MARK: - OPPO / OnePlus / Realme Motion Photo Processor
-class OppoMotionPhotoProcessor: BaseMotionPhotoProcessor {
+final class OppoMotionPhotoProcessor: BaseMotionPhotoProcessor, @unchecked Sendable {
     init() { super.init(brand: .oppo) }
 
     override func canProcess(context: MotionPhotoProbeContext) -> Bool {
@@ -572,12 +604,12 @@ class OppoMotionPhotoProcessor: BaseMotionPhotoProcessor {
         if let videoStart = ISOBMFFHelper.findMP4Offset(in: data) {
             return createResult(data: data, videoStartOffset: videoStart, presentationTimestamp: presentationTimestamp)
         }
-        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "无法提取 OPPO/一加实况照片中的视频流")
+        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.noEmbeddedVideoFound))
     }
 }
 
 // MARK: - vivo / iQOO Motion Photo Processor
-class VivoMotionPhotoProcessor: BaseMotionPhotoProcessor {
+final class VivoMotionPhotoProcessor: BaseMotionPhotoProcessor, @unchecked Sendable {
     init() { super.init(brand: .vivo) }
 
     override func canProcess(context: MotionPhotoProbeContext) -> Bool {
@@ -598,12 +630,12 @@ class VivoMotionPhotoProcessor: BaseMotionPhotoProcessor {
         if let videoStart = ISOBMFFHelper.findMP4Offset(in: data) {
             return createResult(data: data, videoStartOffset: videoStart, presentationTimestamp: presentationTimestamp)
         }
-        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "无法提取 vivo/iQOO 实况照片中的视频流")
+        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.noEmbeddedVideoFound))
     }
 }
 
 // MARK: - Universal Android Motion Photo Processor (Fallback)
-class UniversalMotionPhotoProcessor: BaseMotionPhotoProcessor {
+final class UniversalMotionPhotoProcessor: BaseMotionPhotoProcessor, @unchecked Sendable {
     init() { super.init(brand: .universal) }
 
     override func canProcess(context: MotionPhotoProbeContext) -> Bool {
@@ -617,7 +649,7 @@ class UniversalMotionPhotoProcessor: BaseMotionPhotoProcessor {
         if let videoStart = ISOBMFFHelper.findMP4Offset(in: data) {
             return createResult(data: data, videoStartOffset: videoStart, presentationTimestamp: presentationTimestamp)
         }
-        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: "未能在照片数据中定位内嵌视频")
+        return MotionPhotoProcessingResult(success: false, data: nil, errorMessage: Localizable.string(.noEmbeddedVideoFound))
     }
 }
 

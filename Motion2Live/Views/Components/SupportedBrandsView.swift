@@ -12,7 +12,7 @@ struct SupportedBrandsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("支持的动态照片格式")
+            Text(Localizable.string(.supportedBrandsTitle))
                 .font(.headline)
                 .foregroundColor(.primary)
             

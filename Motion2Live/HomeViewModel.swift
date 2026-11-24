@@ -1,6 +1,8 @@
 import SwiftUI
+import Combine
 
-class HomeViewModel: ObservableObject {
+@MainActor
+final class HomeViewModel: ObservableObject {
     @Published var selectedImageURL: URL?
     @Published var isShowingPhotoPicker = false
     
@@ -16,5 +18,11 @@ class HomeViewModel: ObservableObject {
     
     func selectPhoto() {
         isShowingPhotoPicker = true
+    }
+
+    func resetBatchState() {
+        isShowingBatchView = false
+        batchURLs = []
+        ignoredCount = 0
     }
 }

@@ -11,19 +11,17 @@ import AVKit
 @MainActor
 struct MotionPhotoView: View {
     @Environment(\.dismiss) private var dismiss
-    @State var sourceURL: URL
+    @State private var sourceURL: URL
 
     @State private var selectedImage: UIImage?
     @State private var videoPlayer: AVPlayer?
     @State private var isPlayingVideo = false
     @State private var motionPhotoData: MotionPhotoData?
-    @State private var originalFileData: Data?
     @State private var isShowingPhotoPicker = false
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var isProcessing = false
     @State private var stillImageTime: Int = 0
-    @State private var isExportingGIF = false
     @State private var isExportMenuPresented = false
     @State private var creationDate: Date?
 
@@ -47,8 +45,6 @@ struct MotionPhotoView: View {
 
     init(sourceURL: URL) {
         _sourceURL = State(initialValue: sourceURL)
-        let attrs = try? FileManager.default.attributesOfItem(atPath: sourceURL.path)
-        _creationDate = State(initialValue: attrs?[.creationDate] as? Date)
     }
 
     var body: some View {
@@ -212,50 +208,102 @@ struct MotionPhotoView: View {
         previewVideoURL = nil
     }
 
-    func extractVideoFromMotionPhoto(url: URL) async {
-        cleanupPlaybackResources()
-        AppLogger.parser.info("Loading motion photo: \(url.lastPathComponent, privacy: .public)")
+    private struct LoadedMotionPhoto: Sendable {
+        let extracted: MotionPhotoData
+        let processor: MotionPhotoProcessorProtocol
+        let previewImage: UIImage?
+        let tempVideoURL: URL
+        let creationDate: Date?
+    }
 
+    private enum LoadError: Error {
+        case unreadableFile
+        case notMotionPhoto
+        case processingFailed(String?)
+        case videoWriteFailed(Error)
+    }
+
+    private nonisolated static func loadMotionPhotoOffMainThread(url: URL) throws -> LoadedMotionPhoto {
         guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else {
-            showAlert(message: Localizable.string(.cannotReadFile))
-            return
+            throw LoadError.unreadableFile
         }
 
         let xmpInfo = XMPParser.extractAndParse(from: data)
         guard let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data) else {
-            showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
-            return
+            throw LoadError.notMotionPhoto
         }
 
         let result = processor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
         guard result.success, let extracted = result.data else {
-            showAlert(message: result.errorMessage ?? Localizable.string(.selectedPhotoIsNotMotionPhoto))
-            return
+            throw LoadError.processingFailed(result.errorMessage)
         }
 
-        self.originalFileData = data
-        self.motionPhotoData = extracted
-        self.selectedImage = UIImage(data: extracted.imageData)
+        let previewImage = UIImage(data: extracted.imageData)
+        let creationDate = MediaExportService.resolveCreationDate(originalData: data, fallbackURL: url)
 
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("preview_\(UUID().uuidString).mp4")
         do {
             try extracted.videoData.write(to: tempURL)
-            self.previewVideoURL = tempURL
+        } catch {
+            MediaExportService.removeIfInTemporaryDirectory(tempURL)
+            throw LoadError.videoWriteFailed(error)
+        }
 
-            let asset = AVAsset(url: tempURL)
+        return LoadedMotionPhoto(
+            extracted: extracted,
+            processor: processor,
+            previewImage: previewImage,
+            tempVideoURL: tempURL,
+            creationDate: creationDate
+        )
+    }
+
+    func extractVideoFromMotionPhoto(url: URL) async {
+        cleanupPlaybackResources()
+        AppLogger.parser.info("Loading motion photo: \(url.lastPathComponent, privacy: .public)")
+
+        let loaded: LoadedMotionPhoto
+        do {
+            loaded = try await Task.detached(priority: .userInitiated) {
+                try Self.loadMotionPhotoOffMainThread(url: url)
+            }.value
+        } catch LoadError.unreadableFile {
+            showAlert(message: Localizable.string(.cannotReadFile))
+            return
+        } catch LoadError.notMotionPhoto {
+            showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+            return
+        } catch LoadError.processingFailed(let message) {
+            showAlert(message: message ?? Localizable.string(.selectedPhotoIsNotMotionPhoto))
+            return
+        } catch {
+            AppLogger.parser.error("Failed to prepare preview video: \(error.localizedDescription, privacy: .public)")
+            showAlert(message: Localizable.string(.errorProcessingVideoFile))
+            return
+        }
+
+        self.motionPhotoData = loaded.extracted
+        self.selectedImage = loaded.previewImage
+        self.previewVideoURL = loaded.tempVideoURL
+        if let resolvedDate = loaded.creationDate {
+            self.creationDate = resolvedDate
+        }
+
+        do {
+            let asset = AVAsset(url: loaded.tempVideoURL)
             let duration = try await asset.load(.duration)
             let videoDuration = CMTimeGetSeconds(duration)
             let tracks = try await asset.loadTracks(withMediaType: .video)
             let frameRate = try await tracks.first?.load(.nominalFrameRate) ?? 30.0
 
-            self.stillImageTime = processor.calculateStillImageTime(
+            self.stillImageTime = loaded.processor.calculateStillImageTime(
                 videoDuration: videoDuration,
-                presentationTimestamp: extracted.presentationTimestamp,
+                presentationTimestamp: loaded.extracted.presentationTimestamp,
                 frameRate: Double(frameRate)
             )
 
-            let player = AVPlayer(url: tempURL)
+            let player = AVPlayer(url: loaded.tempVideoURL)
             player.actionAtItemEnd = .none
             self.videoPlayer = player
 
@@ -263,19 +311,16 @@ struct MotionPhotoView: View {
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: player.currentItem,
                 queue: .main
-            ) { _ in
+            ) { [weak player] _ in
+                guard let player, player.rate > 0 else { return }
                 player.seek(to: .zero)
                 player.play()
             }
         } catch {
             AppLogger.parser.error("Failed to prepare preview video: \(error.localizedDescription, privacy: .public)")
-            MediaExportService.removeIfInTemporaryDirectory(tempURL)
+            MediaExportService.removeIfInTemporaryDirectory(loaded.tempVideoURL)
             self.previewVideoURL = nil
             showAlert(message: Localizable.string(.errorProcessingVideoFile))
-        }
-
-        if let resolvedDate = MediaExportService.resolveCreationDate(originalData: data, fallbackURL: url) {
-            self.creationDate = resolvedDate
         }
     }
 
@@ -291,7 +336,6 @@ struct MotionPhotoView: View {
             do {
                 try await MediaExportService.exportVideo(
                     videoData: extracted.videoData,
-                    originalData: originalFileData,
                     fallbackURL: sourceURL,
                     preferredDate: creationDate
                 )
@@ -314,7 +358,6 @@ struct MotionPhotoView: View {
             do {
                 try await MediaExportService.exportLivePhoto(
                     motionPhotoData: extracted,
-                    originalData: originalFileData,
                     fallbackURL: sourceURL,
                     preferredDate: creationDate,
                     stillImageTime: stillImageTime
@@ -332,15 +375,15 @@ struct MotionPhotoView: View {
             return
         }
 
-        isExportingGIF = true
         isProcessing = true
         Task {
-            defer {
-                isProcessing = false
-                isExportingGIF = false
-            }
+            defer { isProcessing = false }
             do {
-                try await MediaExportService.exportGIF(videoData: extracted.videoData)
+                try await MediaExportService.exportGIF(
+                    videoData: extracted.videoData,
+                    fallbackURL: sourceURL,
+                    preferredDate: creationDate
+                )
                 showAlert(message: Localizable.string(.gifSavedToPhotos))
             } catch {
                 showAlert(message: Localizable.string(.failedToCreateGIF) + ": \(error.localizedDescription)")

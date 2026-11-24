@@ -20,16 +20,47 @@ enum AppLogger {
 
 // MARK: - XMP Parser
 enum XMPParser {
+    private static let xmpMetaStart = Data("<x:xmpmeta".utf8)
+    private static let xmpMetaEnd = Data("</x:xmpmeta>".utf8)
+    private static let xpacketBegin = Data("<?xpacket begin=".utf8)
+    private static let xpacketEnd = Data("<?xpacket end=".utf8)
+    private static let processingInstructionEnd = Data("?>".utf8)
+    private static let headerScanLimit = 512 * 1024
+
     static func extract(from data: Data) -> Data? {
-        if let xmpStartRange = data.range(of: Data("<x:xmpmeta".utf8)),
-           let xmpEndRange = data.range(of: Data("</x:xmpmeta>".utf8), in: xmpStartRange.lowerBound..<data.count) {
-            return data[xmpStartRange.lowerBound..<xmpEndRange.upperBound]
+        guard !data.isEmpty else { return nil }
+
+        let headEnd = min(data.endIndex, data.startIndex + headerScanLimit)
+        if let foundInHead = extractSlice(from: data, in: data.startIndex..<headEnd) {
+            return foundInHead
         }
 
-        // Fallback: 尝试查找 <?xpacket ... ?> 标签
-        if let xpacketStartRange = data.range(of: Data("<?xpacket begin=".utf8)),
-           let xpacketEndRange = data.range(of: Data("<?xpacket end=".utf8), in: xpacketStartRange.lowerBound..<data.count) {
-            return data[xpacketStartRange.lowerBound..<xpacketEndRange.upperBound]
+        // JPEG 的 XMP 始终位于头部 APP1 段，无需扫描后续图像与视频主体
+        let isJPEG = data.count >= 2 &&
+            data[data.startIndex] == 0xFF &&
+            data[data.index(after: data.startIndex)] == 0xD8
+        if isJPEG || data.count <= headerScanLimit {
+            return nil
+        }
+
+        // HEIC/AVIF 等容器的 meta box 可能位于文件尾部
+        let tailStart = max(headEnd, data.endIndex - headerScanLimit)
+        return extractSlice(from: data, in: tailStart..<data.endIndex)
+    }
+
+    private static func extractSlice(from data: Data, in searchRange: Range<Data.Index>) -> Data? {
+        if let xmpStartRange = data.range(of: xmpMetaStart, in: searchRange),
+           let xmpEndRange = data.range(of: xmpMetaEnd, in: xmpStartRange.lowerBound..<searchRange.upperBound) {
+            return Data(data[xmpStartRange.lowerBound..<xmpEndRange.upperBound])
+        }
+
+        // Fallback: 尝试查找 <?xpacket ... ?> 标签，并完整保留结束的 "?>"
+        if let xpacketStartRange = data.range(of: xpacketBegin, in: searchRange),
+           let xpacketEndRange = data.range(of: xpacketEnd, in: xpacketStartRange.lowerBound..<searchRange.upperBound) {
+            if let closingRange = data.range(of: processingInstructionEnd, in: xpacketEndRange.upperBound..<searchRange.upperBound) {
+                return Data(data[xpacketStartRange.lowerBound..<closingRange.upperBound])
+            }
+            return Data(data[xpacketStartRange.lowerBound..<xpacketEndRange.lowerBound])
         }
         return nil
     }
@@ -68,6 +99,8 @@ enum XMPParser {
 final class XMPParserDelegate: NSObject, XMLParserDelegate {
     var parsedData = [String: String]()
     private var currentElement = ""
+    private var currentText = ""
+    private var hasVideoItemLength = false
 
     func parser(
         _ parser: XMLParser,
@@ -77,16 +110,48 @@ final class XMPParserDelegate: NSObject, XMLParserDelegate {
         attributes attributeDict: [String: String] = [:]
     ) {
         currentElement = elementName
+        currentText = ""
+
+        let isVideoItem = attributeDict["Item:Semantic"] == "MotionPhoto" ||
+            (attributeDict["Item:Mime"]?.lowercased().hasPrefix("video/") == true)
+
         for (key, value) in attributeDict {
+            if key == "Item:Padding",
+               value == "0",
+               let existing = parsedData[key],
+               existing != "0" {
+                continue
+            }
+
+            if (key == "Item:Length" || key == "GContainer:ItemLength"),
+               hasVideoItemLength,
+               !isVideoItem {
+                continue
+            }
+
             parsedData[key] = value
+        }
+
+        if isVideoItem && (attributeDict["Item:Length"] != nil || attributeDict["GContainer:ItemLength"] != nil) {
+            hasVideoItemLength = true
         }
     }
 
     func parser(_ parser: XMLParser, foundCharacters string: String) {
-        let trimmedString = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        currentText += string
+    }
+
+    func parser(
+        _ parser: XMLParser,
+        didEndElement elementName: String,
+        namespaceURI: String?,
+        qualifiedName qName: String?
+    ) {
+        let trimmedString = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedString.isEmpty {
-            parsedData[currentElement] = trimmedString
+            parsedData[elementName] = trimmedString
         }
+        currentText = ""
     }
 }
 

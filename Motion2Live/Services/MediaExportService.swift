@@ -28,7 +28,7 @@ enum MediaExportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .photoLibraryPermissionDenied:
-            return "Photo Library add permission denied. Please enable Photos access in Settings."
+            return Localizable.string(.photoLibraryPermissionDenied)
         case .invalidVideoDuration:
             return Localizable.string(.invalidVideoData)
         case .imageConversionFailed:
@@ -116,16 +116,18 @@ enum MediaExportService {
     ) async throws -> PreparedLivePhoto {
         let assetIdentifier = UUID().uuidString
         let tempDir = FileManager.default.temporaryDirectory
-        let tempImageURL = tempDir.appendingPathComponent("\(assetIdentifier).jpg")
         let tempMOVURL = tempDir.appendingPathComponent("\(assetIdentifier).mov")
+
+        guard let imageSource = CGImageSourceCreateWithData(imageData as CFData, nil),
+              let imageType = CGImageSourceGetType(imageSource) else {
+            throw MediaExportError.imageSourceCreationFailed
+        }
+
+        let imageExt = UTType(imageType as String)?.preferredFilenameExtension ?? "jpg"
+        let tempImageURL = tempDir.appendingPathComponent("\(assetIdentifier).\(imageExt)")
 
         do {
             // 1. 写入带 Apple Maker Metadata ("17": assetIdentifier) 的静态图
-            guard let imageSource = CGImageSourceCreateWithData(imageData as CFData, nil),
-                  let imageType = CGImageSourceGetType(imageSource) else {
-                throw MediaExportError.imageSourceCreationFailed
-            }
-
             guard let imageDestination = CGImageDestinationCreateWithURL(tempImageURL as CFURL, imageType, 1, nil) else {
                 throw MediaExportError.imageDestinationCreationFailed
             }
@@ -228,11 +230,10 @@ enum MediaExportService {
         defer { prepared.cleanup() }
 
         let finalDate = resolveCreationDate(originalData: originalData, fallbackURL: fallbackURL, preferredDate: preferredDate)
-        let processedImageData = try Data(contentsOf: prepared.imageURL)
 
         try await PHPhotoLibrary.shared().performChanges {
             let request = PHAssetCreationRequest.forAsset()
-            request.addResource(with: .photo, data: processedImageData, options: nil)
+            request.addResource(with: .photo, fileURL: prepared.imageURL, options: nil)
             request.addResource(with: .pairedVideo, fileURL: prepared.videoURL, options: nil)
             if let finalDate = finalDate {
                 request.creationDate = finalDate
@@ -255,10 +256,9 @@ enum MediaExportService {
         )
         defer { prepared.cleanup() }
 
-        let processedImageData = try Data(contentsOf: prepared.imageURL)
         try await PHPhotoLibrary.shared().performChanges {
             let request = PHAssetCreationRequest.forAsset()
-            request.addResource(with: .photo, data: processedImageData, options: nil)
+            request.addResource(with: .photo, fileURL: prepared.imageURL, options: nil)
             request.addResource(with: .pairedVideo, fileURL: prepared.videoURL, options: nil)
             request.creationDate = creationDate
         }
@@ -320,6 +320,7 @@ enum MediaExportService {
         CGImageDestinationSetProperties(destination, destProperties as CFDictionary)
 
         for index in 0..<frameCount {
+            try Task.checkCancellation()
             let time = CMTime(seconds: Double(index) * frameInterval, preferredTimescale: 600)
             let cgImage = try await generator.image(at: time).image
             let frameProperties = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFDelayTime: frameInterval]]
@@ -334,6 +335,9 @@ enum MediaExportService {
     // MARK: - Export GIF to Photos
     static func exportGIF(
         videoData: Data,
+        originalData: Data? = nil,
+        fallbackURL: URL? = nil,
+        preferredDate: Date? = nil,
         frameCount: Int = 30,
         maxDimension: CGFloat = 720
     ) async throws {
@@ -350,9 +354,14 @@ enum MediaExportService {
         let asset = AVAsset(url: tempMP4URL)
         try await createGIFFile(from: asset, outputURL: tempGIFURL, frameCount: frameCount, maxDimension: maxDimension)
 
+        let finalDate = resolveCreationDate(originalData: originalData, fallbackURL: fallbackURL, preferredDate: preferredDate)
+
         try await PHPhotoLibrary.shared().performChanges {
             let request = PHAssetCreationRequest.forAsset()
             request.addResource(with: .photo, fileURL: tempGIFURL, options: nil)
+            if let finalDate = finalDate {
+                request.creationDate = finalDate
+            }
         }
     }
 }

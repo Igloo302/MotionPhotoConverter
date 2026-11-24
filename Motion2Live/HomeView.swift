@@ -40,29 +40,27 @@ struct HomeView: View {
                         viewModel.isShowingBatchView = true
                     },
                     onNoneValidSelected: { totalCount in
-                        DispatchQueue.main.async {
-                            if totalCount <= 1 {
-                                self.showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
-                            } else {
-                                self.showAlert(message: Localizable.string(.noValidMotionPhotosInBatch, totalCount))
-                            }
+                        if totalCount <= 1 {
+                            self.showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
+                        } else {
+                            self.showAlert(message: Localizable.string(.noValidMotionPhotosInBatch, totalCount))
                         }
                     },
                     onAnalyzingProgress: { current, total in
                         viewModel.analyzingCurrent = current
                         viewModel.analyzingTotal = total
-                        viewModel.isAnalyzingPhotos = (current < total)
+                        viewModel.isAnalyzingPhotos = (total > 0)
                     }
                 )
             }
-            .sheet(isPresented: $viewModel.isShowingBatchView) {
+            .sheet(isPresented: $viewModel.isShowingBatchView, onDismiss: {
+                viewModel.resetBatchState()
+            }) {
                 BatchConvertView(
                     motionPhotoURLs: viewModel.batchURLs,
                     ignoredCount: viewModel.ignoredCount,
                     onDismiss: {
-                        viewModel.isShowingBatchView = false
-                        viewModel.batchURLs = []
-                        viewModel.ignoredCount = 0
+                        viewModel.resetBatchState()
                     }
                 )
             }

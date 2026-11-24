@@ -6,6 +6,7 @@
 import XCTest
 import AVFoundation
 import ImageIO
+import UIKit
 @testable import Motion2Live
 
 final class Motion2LiveTests: XCTestCase {
@@ -188,5 +189,88 @@ final class Motion2LiveTests: XCTestCase {
         } catch {
             XCTAssertTrue(true)
         }
+    }
+
+    // MARK: - Regression Tests
+    func testXMPXPacketFallbackPreservesClosingTag() throws {
+        let xml = """
+        <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+        <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description GCamera:MicroVideo="1" GCamera:MicroVideoOffset="123456"/>
+        </rdf:RDF>
+        <?xpacket end="w"?>
+        """
+        let payload = Data([0xFF, 0xD8, 0xFF, 0xE1]) + Data(xml.utf8) + Data(repeating: 0x00, count: 64)
+        let extracted = try XCTUnwrap(XMPParser.extract(from: payload))
+        let parsed = try XCTUnwrap(XMPParser.parse(data: extracted))
+        XCTAssertEqual(parsed["GCamera:MicroVideo"], "1")
+        XCTAssertEqual(parsed["GCamera:MicroVideoOffset"], "123456")
+    }
+
+    func testXMPContainerPreservesVideoLengthAndNonZeroPadding() throws {
+        let xml = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/">
+          <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+            <rdf:Description>
+              <Container:Directory>
+                <rdf:Seq>
+                  <rdf:li><Container:Item Item:Mime="image/jpeg" Item:Semantic="Primary" Item:Padding="138"/></rdf:li>
+                  <rdf:li><Container:Item Item:Mime="video/mp4" Item:Semantic="MotionPhoto" Item:Length="5421673" Item:Padding="0"/></rdf:li>
+                  <rdf:li><Container:Item Item:Mime="image/jpeg" Item:Semantic="GainMap" Item:Length="50000" Item:Padding="0"/></rdf:li>
+                </rdf:Seq>
+              </Container:Directory>
+            </rdf:Description>
+          </rdf:RDF>
+        </x:xmpmeta>
+        """
+        let parsed = try XCTUnwrap(XMPParser.parse(data: Data(xml.utf8)))
+        XCTAssertEqual(parsed["Item:Padding"], "138")
+        XCTAssertEqual(parsed["Item:Length"], "5421673")
+    }
+
+    func testPixelV1MicroVideoNotStolenByXiaomi() throws {
+        // Pixel.jpg 带有 Google EXIF Make；即使传入 Pixel v1 的 MicroVideoOffset，也不应被小米处理器抢占
+        let pixelData = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let v1XMP: [String: String] = [
+            "GCamera:MicroVideo": "1",
+            "GCamera:MicroVideoOffset": "1619843"
+        ]
+        let processor = MotionPhotoProcessorFactory.getProcessor(for: v1XMP, data: pixelData)
+        XCTAssertEqual(processor?.brand, .pixel)
+    }
+
+    func testFindMP4OffsetWorksOnDataSlice() throws {
+        let data = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let expectedOffset = try XCTUnwrap(ISOBMFFHelper.findMP4Offset(in: data))
+
+        let padded = Data(repeating: 0xAA, count: 128) + data
+        let slice = padded.dropFirst(128) // startIndex == 128
+        XCTAssertEqual(slice.startIndex, 128)
+        XCTAssertEqual(ISOBMFFHelper.findMP4Offset(in: slice), expectedOffset)
+    }
+
+    func testPrepareLivePhotoFilesUsesMatchingExtensionForNonJPEG() async throws {
+        let data = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let xmpInfo = XMPParser.extractAndParse(from: data)
+        let processor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data))
+        let extracted = try XCTUnwrap(processor.processMotionPhoto(data: data, xmpInfo: xmpInfo).data)
+
+        // 将静态图重编码为 PNG，验证临时文件不再硬编码为 .jpg
+        let uiImage = try XCTUnwrap(UIImage(data: extracted.imageData))
+        let pngData = try XCTUnwrap(uiImage.pngData())
+
+        let tempMP4 = FileManager.default.temporaryDirectory.appendingPathComponent("test_png_\(UUID().uuidString).mp4")
+        try extracted.videoData.write(to: tempMP4)
+        defer { try? FileManager.default.removeItem(at: tempMP4) }
+
+        let prepared = try await MediaExportService.prepareLivePhotoFiles(
+            imageData: pngData,
+            videoURL: tempMP4,
+            stillImageTime: 0
+        )
+        defer { prepared.cleanup() }
+
+        XCTAssertEqual(prepared.imageURL.pathExtension.lowercased(), "png")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: prepared.imageURL.path))
     }
 }
