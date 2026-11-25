@@ -441,4 +441,75 @@ enum MediaExportService {
 
         await RecentConversionStore.shared.recordConversion(videoURL: tempMP4URL)
     }
+
+    // MARK: - Export Motion Photo (.jpg) from Live Photo or Still+Video Pair (Lab)
+    static func exportMotionPhoto(
+        imageURL: URL,
+        videoURL: URL,
+        targetBrand: MotionPhotoBrand,
+        creationDate: Date? = nil
+    ) async throws -> URL {
+        let encodedData = try await MotionPhotoEncoder.encode(
+            imageURL: imageURL,
+            videoURL: videoURL,
+            targetBrand: targetBrand,
+            creationDate: creationDate
+        )
+        return try writeMotionPhotoToTempFile(
+            encodedData,
+            targetBrand: targetBrand,
+            creationDate: creationDate
+        )
+    }
+
+    static func exportMotionPhoto(
+        imageData: Data,
+        videoURL: URL,
+        targetBrand: MotionPhotoBrand,
+        creationDate: Date? = nil
+    ) async throws -> URL {
+        let encodedData = try await MotionPhotoEncoder.encode(
+            imageData: imageData,
+            videoURL: videoURL,
+            targetBrand: targetBrand,
+            creationDate: creationDate
+        )
+        return try writeMotionPhotoToTempFile(
+            encodedData,
+            targetBrand: targetBrand,
+            creationDate: creationDate
+        )
+    }
+
+    private static func writeMotionPhotoToTempFile(
+        _ encodedData: Data,
+        targetBrand: MotionPhotoBrand,
+        creationDate: Date? = nil
+    ) throws -> URL {
+        let brandSlug = targetBrand.rawValue
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "__", with: "_")
+        let shortToken = UUID().uuidString.prefix(8)
+        let outputURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MotionPhoto_\(brandSlug)_\(shortToken).jpg")
+
+        removeIfInTemporaryDirectory(outputURL)
+        try encodedData.write(to: outputURL, options: .atomic)
+
+        // 仅依据显式 creationDate 或编码后 JPEG 内嵌 EXIF 同步文件时间戳（不回退临时源图文件时间）
+        if let resolvedDate = resolveCreationDate(
+            originalData: encodedData,
+            fallbackURL: nil,
+            preferredDate: creationDate
+        ) {
+            try? FileManager.default.setAttributes(
+                [.creationDate: resolvedDate, .modificationDate: resolvedDate],
+                ofItemAtPath: outputURL.path
+            )
+        }
+
+        return outputURL
+    }
 }

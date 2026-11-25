@@ -23,6 +23,10 @@ struct PhotoPicker: UIViewControllerRepresentable {
     var onImagePicked: ((URL, Bool) -> Void)?
     var onNonMotionPhotoSelected: (() -> Void)?
 
+    // Live Photo 逆向转换选择器回调
+    var onLivePhotoPicked: ((ExtractedLivePhoto) -> Void)?
+    var onLivePhotoPickFailed: ((String) -> Void)?
+
     init(onImagePicked: @escaping (URL, Bool) -> Void, onNonMotionPhotoSelected: @escaping () -> Void) {
         self.onImagePicked = onImagePicked
         self.onNonMotionPhotoSelected = onNonMotionPhotoSelected
@@ -40,12 +44,22 @@ struct PhotoPicker: UIViewControllerRepresentable {
         self.onAnalyzingProgress = onAnalyzingProgress
     }
 
+    init(
+        onLivePhotoPicked: @escaping (ExtractedLivePhoto) -> Void,
+        onLivePhotoPickFailed: @escaping (String) -> Void,
+        onAnalyzingProgress: ((Int, Int) -> Void)? = nil
+    ) {
+        self.onLivePhotoPicked = onLivePhotoPicked
+        self.onLivePhotoPickFailed = onLivePhotoPickFailed
+        self.onAnalyzingProgress = onAnalyzingProgress
+    }
+
     func makeUIViewController(context: Context) -> PHPickerViewController {
         // Attach the photo library so results carry an assetIdentifier; the original
         // asset resource is required to recover motion data that third-party apps
         // (e.g. WeChat) rewrite when saving back to the library.
         var config = PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())
-        config.filter = .images
+        config.filter = (onLivePhotoPicked != nil) ? .livePhotos : .images
         config.selectionLimit = (onBatchPicked != nil) ? Self.batchSelectionLimit : 1
         config.preferredAssetRepresentationMode = .current
 
@@ -71,6 +85,28 @@ struct PhotoPicker: UIViewControllerRepresentable {
             picker.dismiss(animated: true)
 
             guard !results.isEmpty else { return }
+
+            if parent.onLivePhotoPicked != nil {
+                guard let result = results.first else { return }
+                Task {
+                    await MainActor.run {
+                        self.parent.onAnalyzingProgress?(1, 1)
+                    }
+                    do {
+                        let extracted = try await LivePhotoExtractor.extract(from: result)
+                        await MainActor.run {
+                            self.parent.onAnalyzingProgress?(0, 0)
+                            self.parent.onLivePhotoPicked?(extracted)
+                        }
+                    } catch {
+                        await MainActor.run {
+                            self.parent.onAnalyzingProgress?(0, 0)
+                            self.parent.onLivePhotoPickFailed?(error.localizedDescription)
+                        }
+                    }
+                }
+                return
+            }
 
             let totalCount = results.count
 

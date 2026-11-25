@@ -189,6 +189,25 @@ enum LocalizableKey {
     case homeShowRecentConversions
     case homeResetDemoDeck
     case homeNoRecentConversionsHint
+    case liveToMotionTitle
+    case liveToMotionDescription
+    case liveToMotionSelect
+    case liveToMotionChange
+    case liveToMotionBrandTitle
+    case liveToMotionExportNotice
+    case liveToMotionShare
+    case liveToMotionSaveToFiles
+    case liveToMotionSavedToFiles
+    case liveToMotionNotLivePhoto
+    case liveToMotionResourceMissing
+    case liveToMotionVerificationFailed
+    case liveToMotionPreviewPlay
+    case liveToMotionPreviewPause
+    case customPairTargetTitle
+    case customPairTargetLivePhoto
+    case customPairTargetMotionPhoto
+    case customPairTargetLiveDesc
+    case customPairTargetMotionDesc
     
     var english: String {
         switch self {
@@ -251,7 +270,7 @@ enum LocalizableKey {
         case .labTitle: return "Experimental Lab"
         case .labDescription: return "This is an experimental area for future features. Stay tuned!"
         case .customLivePhoto: return "Custom Live Photo"
-        case .customLivePhotoDescription: return "Create a custom Live Photo by selecting a still image and a video."
+        case .customLivePhotoDescription: return "Combine a still image and video into an Apple Live Photo or Android Motion Photo (.jpg)."
         case .selectImage: return "Select Image"
         case .selectVideo: return "Select Video"
         case .createLivePhoto: return "Create Live Photo"
@@ -338,6 +357,25 @@ enum LocalizableKey {
         case .homeShowRecentConversions: return "Show Recent Conversions"
         case .homeResetDemoDeck: return "Restore Demo Photos"
         case .homeNoRecentConversionsHint: return "No recent conversions yet (updates after saving)"
+        case .liveToMotionTitle: return "Live Photo → Motion Photo"
+        case .liveToMotionDescription: return "Convert an Apple Live Photo into a single-file Android Motion Photo (.jpg) for 7 brands."
+        case .liveToMotionSelect: return "Select Live Photo"
+        case .liveToMotionChange: return "Change Live Photo"
+        case .liveToMotionBrandTitle: return "Target Brand Format"
+        case .liveToMotionExportNotice: return "Exports raw .jpg bytes via Share or Files so social apps or Photos won't recompress and strip the embedded video."
+        case .liveToMotionShare: return "Share .jpg"
+        case .liveToMotionSaveToFiles: return "Save to Files"
+        case .liveToMotionSavedToFiles: return "Motion Photo saved to Files"
+        case .liveToMotionNotLivePhoto: return "The selected item is not a Live Photo."
+        case .liveToMotionResourceMissing: return "Could not read paired image or video resources from this Live Photo."
+        case .liveToMotionVerificationFailed: return "Generated Motion Photo failed self-verification."
+        case .liveToMotionPreviewPlay: return "Play Motion"
+        case .liveToMotionPreviewPause: return "Show Still"
+        case .customPairTargetTitle: return "Export Target"
+        case .customPairTargetLivePhoto: return "Apple Live Photo"
+        case .customPairTargetMotionPhoto: return "Android Motion Photo (.jpg)"
+        case .customPairTargetLiveDesc: return "Save directly to your iOS Photos library as a native Live Photo."
+        case .customPairTargetMotionDesc: return "Mux into a single-file 7-brand Motion Photo (.jpg) for Share or Files."
         }
     }
     
@@ -402,7 +440,7 @@ enum LocalizableKey {
         case .labTitle: return "实验室"
         case .labDescription: return "这是未来功能的实验区域。敬请期待！"
         case .customLivePhoto: return "自定义实况照片"
-        case .customLivePhotoDescription: return "通过选择静态图像和视频来创建自定义实况照片。"
+        case .customLivePhotoDescription: return "选择静态图片与视频，双向合成为 Apple 实况照片或安卓动态照片 (.jpg)。"
         case .selectImage: return "选择图片"
         case .selectVideo: return "选择视频"
         case .createLivePhoto: return "创建实况照片"
@@ -489,6 +527,25 @@ enum LocalizableKey {
         case .homeShowRecentConversions: return "首页展示最近转换"
         case .homeResetDemoDeck: return "恢复默认示范图"
         case .homeNoRecentConversionsHint: return "暂无最近转换（导出保存后自动展示）"
+        case .liveToMotionTitle: return "Live Photo → 动态照片"
+        case .liveToMotionDescription: return "将 Apple 实况照片封装为兼容 7 类安卓品牌的单文件 Motion Photo (.jpg)。"
+        case .liveToMotionSelect: return "选择 Live Photo"
+        case .liveToMotionChange: return "更换 Live Photo"
+        case .liveToMotionBrandTitle: return "目标品牌格式"
+        case .liveToMotionExportNotice: return "通过系统分享或「文件」导出原始 .jpg 字节，避免写入相册或转发时被重压缩导致视频流丢失。"
+        case .liveToMotionShare: return "系统分享 .jpg"
+        case .liveToMotionSaveToFiles: return "存到文件"
+        case .liveToMotionSavedToFiles: return "动态照片已保存至文件"
+        case .liveToMotionNotLivePhoto: return "所选项目不是有效的 Live Photo。"
+        case .liveToMotionResourceMissing: return "无法读取该 Live Photo 的静态图或配对视频资源。"
+        case .liveToMotionVerificationFailed: return "生成的 Motion Photo 未通过自校验。"
+        case .liveToMotionPreviewPlay: return "播放动态"
+        case .liveToMotionPreviewPause: return "查看静图"
+        case .customPairTargetTitle: return "导出目标"
+        case .customPairTargetLivePhoto: return "Apple 实况照片"
+        case .customPairTargetMotionPhoto: return "安卓动态照片 (.jpg)"
+        case .customPairTargetLiveDesc: return "直接封装为原生 iOS 实况照片并保存至系统相册。"
+        case .customPairTargetMotionDesc: return "无损封装为兼容 7 类安卓品牌的单文件 Motion Photo (.jpg)，通过分享或文件导出。"
         }
     }
     
@@ -553,7 +610,7 @@ enum LocalizableKey {
         case .labTitle: return "Laboratoire expérimental"
         case .labDescription: return "C'est une zone expérimentale pour les fonctionnalités futures. À suivre !"
         case .customLivePhoto: return "Photo Live personnalisée"
-        case .customLivePhotoDescription: return "Créez une Photo Live personnalisée en sélectionnant une image fixe et une vidéo."
+        case .customLivePhotoDescription: return "Combinez une image fixe et une vidéo en Apple Live Photo ou Motion Photo Android (.jpg)."
         case .selectImage: return "Sélectionner une image"
         case .selectVideo: return "Sélectionner une vidéo"
         case .createLivePhoto: return "Créer une Photo Live"
@@ -640,6 +697,25 @@ enum LocalizableKey {
         case .homeShowRecentConversions: return "Afficher les conversions récentes"
         case .homeResetDemoDeck: return "Rétablir les photos démo"
         case .homeNoRecentConversionsHint: return "Aucune conversion récente (mise à jour après enregistrement)"
+        case .liveToMotionTitle: return "Live Photo → Motion Photo"
+        case .liveToMotionDescription: return "Convertissez une Live Photo Apple en Motion Photo (.jpg) compatible avec 7 marques."
+        case .liveToMotionSelect: return "Choisir une Live Photo"
+        case .liveToMotionChange: return "Changer de Live Photo"
+        case .liveToMotionBrandTitle: return "Format de marque cible"
+        case .liveToMotionExportNotice: return "Exporte les octets .jpg bruts via Partager ou Fichiers pour éviter toute recompression."
+        case .liveToMotionShare: return "Partager .jpg"
+        case .liveToMotionSaveToFiles: return "Enregistrer dans Fichiers"
+        case .liveToMotionSavedToFiles: return "Motion Photo enregistrée dans Fichiers"
+        case .liveToMotionNotLivePhoto: return "L'élément sélectionné n'est pas une Live Photo."
+        case .liveToMotionResourceMissing: return "Impossible de lire les ressources image ou vidéo de cette Live Photo."
+        case .liveToMotionVerificationFailed: return "La Motion Photo générée a échoué à l'auto-vérification."
+        case .liveToMotionPreviewPlay: return "Lire le mouvement"
+        case .liveToMotionPreviewPause: return "Image fixe"
+        case .customPairTargetTitle: return "Cible d'exportation"
+        case .customPairTargetLivePhoto: return "Apple Live Photo"
+        case .customPairTargetMotionPhoto: return "Motion Photo Android (.jpg)"
+        case .customPairTargetLiveDesc: return "Enregistrez directement dans Photos en tant que Live Photo iOS native."
+        case .customPairTargetMotionDesc: return "Assemblez en Motion Photo (.jpg) compatible 7 marques via Partager ou Fichiers."
         }
     }
     
@@ -704,7 +780,7 @@ enum LocalizableKey {
         case .labTitle: return "Experimentelles Labor"
         case .labDescription: return "Dies ist ein experimenteller Bereich für zukünftige Funktionen. Bleiben Sie dran!"
         case .customLivePhoto: return "Benutzerdefiniertes Live-Foto"
-        case .customLivePhotoDescription: return "Erstellen Sie ein benutzerdefiniertes Live-Foto, indem Sie ein stilles Bild und eine Videoaufnahme auswählen."
+        case .customLivePhotoDescription: return "Kombinieren Sie ein Standbild und ein Video zu einem Apple Live Photo oder Android Motion Photo (.jpg)."
         case .selectImage: return "Bild auswählen"
         case .selectVideo: return "Video auswählen"
         case .createLivePhoto: return "Live-Foto erstellen"
@@ -791,6 +867,25 @@ enum LocalizableKey {
         case .homeShowRecentConversions: return "Letzte Konvertierungen anzeigen"
         case .homeResetDemoDeck: return "Demo-Fotos wiederherstellen"
         case .homeNoRecentConversionsHint: return "Noch keine Konvertierungen (wird nach dem Speichern aktualisiert)"
+        case .liveToMotionTitle: return "Live Photo → Motion Photo"
+        case .liveToMotionDescription: return "Apple Live Photo in eine Motion Photo (.jpg) für 7 Android-Marken umwandeln."
+        case .liveToMotionSelect: return "Live Photo auswählen"
+        case .liveToMotionChange: return "Live Photo ändern"
+        case .liveToMotionBrandTitle: return "Ziel-Markenformat"
+        case .liveToMotionExportNotice: return "Exportiert unveränderte .jpg-Bytes über Teilen oder Dateien, damit das eingebettete Video nicht neu komprimiert wird."
+        case .liveToMotionShare: return ".jpg teilen"
+        case .liveToMotionSaveToFiles: return "In Dateien sichern"
+        case .liveToMotionSavedToFiles: return "Motion Photo in Dateien gesichert"
+        case .liveToMotionNotLivePhoto: return "Das ausgewählte Objekt ist kein Live Photo."
+        case .liveToMotionResourceMissing: return "Bild- oder Videodaten dieses Live Photos konnten nicht gelesen werden."
+        case .liveToMotionVerificationFailed: return "Das erzeugte Motion Photo hat die Selbstprüfung nicht bestanden."
+        case .liveToMotionPreviewPlay: return "Bewegung abspielen"
+        case .liveToMotionPreviewPause: return "Standbild"
+        case .customPairTargetTitle: return "Exportziel"
+        case .customPairTargetLivePhoto: return "Apple Live Photo"
+        case .customPairTargetMotionPhoto: return "Android Motion Photo (.jpg)"
+        case .customPairTargetLiveDesc: return "Direkt als natives iOS Live Photo in der Fotomediathek sichern."
+        case .customPairTargetMotionDesc: return "Verlustfrei als Motion Photo (.jpg) für 7 Android-Marken über Teilen oder Dateien exportieren."
         }
     }
     
@@ -855,7 +950,7 @@ enum LocalizableKey {
         case .labTitle: return "Laboratorio Experimental"
         case .labDescription: return "Esta es una zona experimental para futuras características. ¡Manténgase atento!"
         case .customLivePhoto: return "Foto en vivo personalizada"
-        case .customLivePhotoDescription: return "Crea una Foto en vivo personalizada seleccionando una imagen estática y un video."
+        case .customLivePhotoDescription: return "Combina una imagen fija y un vídeo en una Apple Live Photo o Motion Photo Android (.jpg)."
         case .selectImage: return "Seleccionar imagen"
         case .selectVideo: return "Seleccionar video"
         case .createLivePhoto: return "Crear Foto en vivo"
@@ -942,6 +1037,25 @@ enum LocalizableKey {
         case .homeShowRecentConversions: return "Mostrar conversiones recientes"
         case .homeResetDemoDeck: return "Restaurar fotos de demo"
         case .homeNoRecentConversionsHint: return "Sin conversiones recientes (se actualiza al guardar)"
+        case .liveToMotionTitle: return "Live Photo → Motion Photo"
+        case .liveToMotionDescription: return "Convierte una Live Photo de Apple en Motion Photo (.jpg) compatible con 7 marcas."
+        case .liveToMotionSelect: return "Seleccionar Live Photo"
+        case .liveToMotionChange: return "Cambiar Live Photo"
+        case .liveToMotionBrandTitle: return "Formato de marca"
+        case .liveToMotionExportNotice: return "Exporta los bytes .jpg originales mediante Compartir o Archivos para evitar que se pierda el vídeo."
+        case .liveToMotionShare: return "Compartir .jpg"
+        case .liveToMotionSaveToFiles: return "Guardar en Archivos"
+        case .liveToMotionSavedToFiles: return "Motion Photo guardada en Archivos"
+        case .liveToMotionNotLivePhoto: return "El elemento seleccionado no es una Live Photo."
+        case .liveToMotionResourceMissing: return "No se pudieron leer los recursos de imagen o vídeo de esta Live Photo."
+        case .liveToMotionVerificationFailed: return "La Motion Photo generada no superó la autoverificación."
+        case .liveToMotionPreviewPlay: return "Reproducir"
+        case .liveToMotionPreviewPause: return "Imagen fija"
+        case .customPairTargetTitle: return "Destino de exportación"
+        case .customPairTargetLivePhoto: return "Apple Live Photo"
+        case .customPairTargetMotionPhoto: return "Motion Photo Android (.jpg)"
+        case .customPairTargetLiveDesc: return "Guarda directamente en Fotos como una Live Photo nativa de iOS."
+        case .customPairTargetMotionDesc: return "Empaqueta en una Motion Photo (.jpg) para 7 marcas vía Compartir o Archivos."
         }
     }
     
@@ -1006,7 +1120,7 @@ enum LocalizableKey {
         case .labTitle: return "実験室"
         case .labDescription: return "これは将来の機能の実験エリアです。今後のアップデートをお楽しみに！"
         case .customLivePhoto: return "カスタムライブフォト"
-        case .customLivePhotoDescription: return "静止画とビデオを選択してカスタムライブフォトを作成します。"
+        case .customLivePhotoDescription: return "静止画と動画から Apple Live Photo または Android モーションフォト (.jpg) を作成します。"
         case .selectImage: return "画像を選択"
         case .selectVideo: return "ビデオを選択"
         case .createLivePhoto: return "ライブフォトを作成"
@@ -1093,6 +1207,25 @@ enum LocalizableKey {
         case .homeShowRecentConversions: return "最近の変換を表示"
         case .homeResetDemoDeck: return "デモ写真に戻す"
         case .homeNoRecentConversionsHint: return "最近の変換履歴はありません（保存後に自動更新）"
+        case .liveToMotionTitle: return "Live Photo → モーションフォト"
+        case .liveToMotionDescription: return "Apple Live Photo を 7 ブランド対応の単一ファイル Motion Photo (.jpg) に変換します。"
+        case .liveToMotionSelect: return "Live Photo を選択"
+        case .liveToMotionChange: return "Live Photo を変更"
+        case .liveToMotionBrandTitle: return "出力ブランド形式"
+        case .liveToMotionExportNotice: return "再圧縮による動画欠落を防ぐため、共有または「ファイル」から元の .jpg バイトを書き出します。"
+        case .liveToMotionShare: return ".jpg を共有"
+        case .liveToMotionSaveToFiles: return "ファイルに保存"
+        case .liveToMotionSavedToFiles: return "モーションフォトをファイルに保存しました"
+        case .liveToMotionNotLivePhoto: return "選択した項目は Live Photo ではありません。"
+        case .liveToMotionResourceMissing: return "この Live Photo の静止画または動画リソースを読み込めません。"
+        case .liveToMotionVerificationFailed: return "生成された Motion Photo の自己検証に失敗しました。"
+        case .liveToMotionPreviewPlay: return "モーション再生"
+        case .liveToMotionPreviewPause: return "静止画を表示"
+        case .customPairTargetTitle: return "出力形式"
+        case .customPairTargetLivePhoto: return "Apple Live Photo"
+        case .customPairTargetMotionPhoto: return "Android モーションフォト (.jpg)"
+        case .customPairTargetLiveDesc: return "ネイティブの iOS Live Photo として写真ライブラリに直接保存します。"
+        case .customPairTargetMotionDesc: return "7 ブランド対応の単一 Motion Photo (.jpg) に変換し、共有またはファイルに書き出します。"
         }
     }
     
@@ -1157,7 +1290,7 @@ enum LocalizableKey {
         case .labTitle: return "실험실"
         case .labDescription: return "이 곳은 미래 기능을 위한 실험 영역입니다. 곧 공개될 예정입니다!"
         case .customLivePhoto: return "커스텀 라이브 포토"
-        case .customLivePhotoDescription: return "정지 이미지와 비디오를 선택하여 커스텀 라이브 포토를 만듭니다."
+        case .customLivePhotoDescription: return "정지 이미지와 비디오를 Apple Live Photo 또는 Android 모션 포토(.jpg)로 합성합니다."
         case .selectImage: return "이미지 선택"
         case .selectVideo: return "비디오 선택"
         case .createLivePhoto: return "라이브 포토 만들기"
@@ -1244,6 +1377,25 @@ enum LocalizableKey {
         case .homeShowRecentConversions: return "최근 변환 표시"
         case .homeResetDemoDeck: return "데모 사진 복원"
         case .homeNoRecentConversionsHint: return "최근 변환 기록 없음 (저장 후 자동 반영)"
+        case .liveToMotionTitle: return "Live Photo → 모션 포토"
+        case .liveToMotionDescription: return "Apple Live Photo를 7개 안드로이드 브랜드 호환 단일 파일 Motion Photo(.jpg)로 변환합니다."
+        case .liveToMotionSelect: return "Live Photo 선택"
+        case .liveToMotionChange: return "Live Photo 변경"
+        case .liveToMotionBrandTitle: return "대상 브랜드 형식"
+        case .liveToMotionExportNotice: return "재압축으로 인한 비디오 손실을 방지하기 위해 공유 또는 파일 앱으로 원본 .jpg 바이트를 내보냅니다."
+        case .liveToMotionShare: return ".jpg 공유"
+        case .liveToMotionSaveToFiles: return "파일에 저장"
+        case .liveToMotionSavedToFiles: return "모션 포토가 파일에 저장되었습니다"
+        case .liveToMotionNotLivePhoto: return "선택한 항목은 Live Photo가 아닙니다."
+        case .liveToMotionResourceMissing: return "이 Live Photo의 이미지 또는 비디오 리소스를 읽을 수 없습니다."
+        case .liveToMotionVerificationFailed: return "생성된 Motion Photo가 자체 검증에 실패했습니다."
+        case .liveToMotionPreviewPlay: return "모션 재생"
+        case .liveToMotionPreviewPause: return "정지 이미지"
+        case .customPairTargetTitle: return "내보내기 대상"
+        case .customPairTargetLivePhoto: return "Apple Live Photo"
+        case .customPairTargetMotionPhoto: return "Android 모션 포토 (.jpg)"
+        case .customPairTargetLiveDesc: return "기본 iOS Live Photo로 사진 보관함에 직접 저장합니다."
+        case .customPairTargetMotionDesc: return "7개 브랜드 호환 단일 Motion Photo(.jpg)로 패키징하여 공유하거나 파일로 내보냅니다."
         }
     }
 }

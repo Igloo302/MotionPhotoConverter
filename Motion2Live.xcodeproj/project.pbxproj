@@ -28,6 +28,10 @@
 		A10000312E20000100000001 /* ObsidianTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000302E20000100000001 /* ObsidianTheme.swift */; };
 		A10000332E20000100000001 /* KeyframePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000322E20000100000001 /* KeyframePickerSheet.swift */; };
 		A10000352E20000100000001 /* RecentConversionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000362E20000100000001 /* RecentConversionStore.swift */; };
+		A10000512E20000100000001 /* LivePhotoExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000502E20000100000001 /* LivePhotoExtractor.swift */; };
+		A10000532E20000100000001 /* MotionPhotoEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000522E20000100000001 /* MotionPhotoEncoder.swift */; };
+		A10000552E20000100000001 /* LiveToMotionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000542E20000100000001 /* LiveToMotionView.swift */; };
+		A10000572E20000100000001 /* MotionPhotoExportComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000562E20000100000001 /* MotionPhotoExportComponents.swift */; };
 		A10000212E20000100000001 /* Pixel.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A10000202E20000100000001 /* Pixel.jpg */; };
 		A10000232E20000100000001 /* Samsung.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A10000222E20000100000001 /* Samsung.jpg */; };
 		A10000252E20000100000001 /* XiaomiNew.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A10000242E20000100000001 /* XiaomiNew.jpg */; };
@@ -80,6 +84,10 @@
 		A10000302E20000100000001 /* ObsidianTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianTheme.swift; sourceTree = "<group>"; };
 		A10000322E20000100000001 /* KeyframePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyframePickerSheet.swift; sourceTree = "<group>"; };
 		A10000362E20000100000001 /* RecentConversionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentConversionStore.swift; sourceTree = "<group>"; };
+		A10000502E20000100000001 /* LivePhotoExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePhotoExtractor.swift; sourceTree = "<group>"; };
+		A10000522E20000100000001 /* MotionPhotoEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPhotoEncoder.swift; sourceTree = "<group>"; };
+		A10000542E20000100000001 /* LiveToMotionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveToMotionView.swift; sourceTree = "<group>"; };
+		A10000562E20000100000001 /* MotionPhotoExportComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPhotoExportComponents.swift; sourceTree = "<group>"; };
 		A10000202E20000100000001 /* Pixel.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = Pixel.jpg; path = samples/Pixel.jpg; sourceTree = SOURCE_ROOT; };
 		A10000222E20000100000001 /* Samsung.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = Samsung.jpg; path = samples/Samsung.jpg; sourceTree = SOURCE_ROOT; };
 		A10000242E20000100000001 /* XiaomiNew.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = XiaomiNew.jpg; path = samples/XiaomiNew.jpg; sourceTree = SOURCE_ROOT; };
@@ -196,6 +204,7 @@
 			isa = PBXGroup;
 			children = (
 				6196846D2E17C5D50025BE5D /* MotionPhotoProcessor.swift */,
+				A10000522E20000100000001 /* MotionPhotoEncoder.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -204,6 +213,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000052E20000100000001 /* MotionPhotoView.swift */,
+				A10000542E20000100000001 /* LiveToMotionView.swift */,
 				61A0CA602C95A0040080EF64 /* Components */,
 			);
 			path = Views;
@@ -216,6 +226,7 @@
 				A10000072E20000100000001 /* PhotoPicker.swift */,
 				A10000092E20000100000001 /* PlayerView.swift */,
 				A10000322E20000100000001 /* KeyframePickerSheet.swift */,
+				A10000562E20000100000001 /* MotionPhotoExportComponents.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -233,6 +244,7 @@
 			children = (
 				A10000032E20000100000001 /* MediaExportService.swift */,
 				A10000362E20000100000001 /* RecentConversionStore.swift */,
+				A10000502E20000100000001 /* LivePhotoExtractor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -403,6 +415,10 @@
 				A10000312E20000100000001 /* ObsidianTheme.swift in Sources */,
 				A10000332E20000100000001 /* KeyframePickerSheet.swift in Sources */,
 				A10000352E20000100000001 /* RecentConversionStore.swift in Sources */,
+				A10000512E20000100000001 /* LivePhotoExtractor.swift in Sources */,
+				A10000532E20000100000001 /* MotionPhotoEncoder.swift in Sources */,
+				A10000552E20000100000001 /* LiveToMotionView.swift in Sources */,
+				A10000572E20000100000001 /* MotionPhotoExportComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -53,47 +53,19 @@ struct LabView: View {
 
                                 // Standard Content-Layer Feature Card (surface0, r=24, no glass per HIG)
                                 NavigationLink(destination: CustomLivePhotoView()) {
-                                    HStack(spacing: 14) {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                                .fill(AppTheme.accent.opacity(0.16))
-                                                .frame(width: 48, height: 48)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                                        .strokeBorder(AppTheme.accent.opacity(0.35), lineWidth: 0.8)
-                                                )
+                                    labFeatureCard(
+                                        icon: "livephoto",
+                                        title: Localizable.string(.customLivePhoto),
+                                        description: Localizable.string(.customLivePhotoDescription)
+                                    )
+                                }
+                                .buttonStyle(.plain)
 
-                                            Image(systemName: "livephoto")
-                                                .font(.system(size: 22, weight: .medium))
-                                                .foregroundColor(AppTheme.accent)
-                                        }
-
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(Localizable.string(.customLivePhoto))
-                                                .font(.system(size: 16, weight: .semibold))
-                                                .foregroundColor(AppTheme.textPrimary)
-                                            Text(Localizable.string(.customLivePhotoDescription))
-                                                .font(.system(size: 12, weight: .regular))
-                                                .foregroundColor(AppTheme.textSecondary)
-                                                .lineSpacing(2)
-                                                .multilineTextAlignment(.leading)
-                                        }
-
-                                        Spacer()
-
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundColor(AppTheme.textTertiary)
-                                    }
-                                    .padding(.vertical, 18)
-                                    .padding(.horizontal, 16)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
-                                            .fill(AppTheme.surface0)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
-                                                    .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
-                                            )
+                                NavigationLink(destination: LiveToMotionView()) {
+                                    labFeatureCard(
+                                        icon: "arrow.triangle.2.circlepath",
+                                        title: Localizable.string(.liveToMotionTitle),
+                                        description: Localizable.string(.liveToMotionDescription)
                                     )
                                 }
                                 .buttonStyle(.plain)
@@ -110,18 +82,97 @@ struct LabView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
     }
+
+    private func labFeatureCard(icon: String, title: String, description: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(AppTheme.accent.opacity(0.16))
+                    .frame(width: 48, height: 48)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .strokeBorder(AppTheme.accent.opacity(0.35), lineWidth: 0.8)
+                    )
+
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundColor(AppTheme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppTheme.textPrimary)
+                Text(description)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .lineSpacing(2)
+                    .multilineTextAlignment(.leading)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(AppTheme.textTertiary)
+        }
+        .padding(.vertical, 18)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                .fill(AppTheme.surface0)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                        .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
+                )
+        )
+    }
+}
+
+enum CustomPairExportTarget: String, CaseIterable, Identifiable {
+    case livePhoto
+    case motionPhoto
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .livePhoto: return Localizable.string(.customPairTargetLivePhoto)
+        case .motionPhoto: return Localizable.string(.customPairTargetMotionPhoto)
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .livePhoto: return "livephoto"
+        case .motionPhoto: return "arrow.triangle.2.circlepath"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .livePhoto: return Localizable.string(.customPairTargetLiveDesc)
+        case .motionPhoto: return Localizable.string(.customPairTargetMotionDesc)
+        }
+    }
 }
 
 struct CustomLivePhotoView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.colorScheme) private var colorScheme
+    @Namespace private var targetAnimation
 
     @State private var selectedImage: UIImage?
     @State private var selectedImageData: Data?
     @State private var selectedImagePixelSize: CGSize?
     @State private var selectedVideo: URL?
     @State private var selectedVideoDuration: Double?
+    @State private var exportTarget: CustomPairExportTarget = .livePhoto
+    @State private var selectedBrand: MotionPhotoBrand = .pixel
+    @StateObject private var motionExport = MotionPhotoExportCoordinator()
+
     @State private var isShowingImagePicker = false
     @State private var isShowingVideoPicker = false
     @State private var isProcessing = false
@@ -132,6 +183,10 @@ struct CustomLivePhotoView: View {
 
     private var canCreate: Bool {
         (selectedImageData != nil || selectedImage != nil) && selectedVideo != nil && !isProcessing
+    }
+
+    private var resolvedImageData: Data? {
+        selectedImageData ?? selectedImage?.jpegData(compressionQuality: 1.0)
     }
 
     var body: some View {
@@ -181,19 +236,39 @@ struct CustomLivePhotoView: View {
                     .padding(.horizontal, metrics.horizontalPadding)
                     .padding(.top, 4)
 
-                    // Scrollable Step Cards (2-column on wide iPad/Duo, 1-column on compact)
+                    // Scrollable Step Cards & Bidirectional Export Config
                     ScrollView(showsIndicators: false) {
                         Group {
                             if metrics.isWideSplit {
                                 HStack(alignment: .top, spacing: max(16, metrics.hingeAvoidanceGap)) {
-                                    stepOneImageCard
-                                    stepTwoVideoCard
+                                    VStack(spacing: 16) {
+                                        stepOneImageCard
+                                        stepTwoVideoCard
+                                    }
+                                    VStack(spacing: 16) {
+                                        exportTargetCard
+                                        if exportTarget == .motionPhoto {
+                                            MotionPhotoBrandPickerCard(
+                                                selectedBrand: $selectedBrand,
+                                                isDisabled: isProcessing
+                                            )
+                                            MotionPhotoExportNoticeBanner()
+                                        }
+                                    }
                                 }
                                 .frame(maxWidth: 840)
                             } else {
                                 VStack(spacing: 16) {
                                     stepOneImageCard
                                     stepTwoVideoCard
+                                    exportTargetCard
+                                    if exportTarget == .motionPhoto {
+                                        MotionPhotoBrandPickerCard(
+                                            selectedBrand: $selectedBrand,
+                                            isDisabled: isProcessing
+                                        )
+                                        MotionPhotoExportNoticeBanner()
+                                    }
                                 }
                                 .frame(maxWidth: metrics.readableContentMaxWidth)
                             }
@@ -204,22 +279,31 @@ struct CustomLivePhotoView: View {
                         .frame(maxWidth: .infinity)
                     }
 
-                    // Bottom Prominent Liquid Glass CTA
+                    // Bottom Prominent Liquid Glass CTA / Motion Photo Export Actions
                     VStack(spacing: 0) {
-                        Button(action: createLivePhoto) {
-                            HStack(spacing: 9) {
-                                if isProcessing {
-                                    ProgressView()
-                                        .tint(.white)
-                                } else {
-                                    Image(systemName: "livephoto")
-                                        .font(.system(size: 18, weight: .semibold))
+                        if exportTarget == .livePhoto {
+                            Button(action: createLivePhoto) {
+                                HStack(spacing: 9) {
+                                    if isProcessing {
+                                        ProgressView()
+                                            .tint(.white)
+                                    } else {
+                                        Image(systemName: "livephoto")
+                                            .font(.system(size: 18, weight: .semibold))
+                                    }
+                                    Text(Localizable.string(.createLivePhoto))
                                 }
-                                Text(Localizable.string(.createLivePhoto))
                             }
+                            .buttonStyle(StudioPrimaryButtonStyle(isDisabled: !canCreate, height: 54))
+                            .disabled(!canCreate)
+                        } else {
+                            MotionPhotoExportActionBar(
+                                canExport: canCreate,
+                                isProcessing: isProcessing,
+                                onShare: { exportMotionPhoto(destination: .share) },
+                                onSaveToFiles: { exportMotionPhoto(destination: .files) }
+                            )
                         }
-                        .buttonStyle(StudioPrimaryButtonStyle(isDisabled: !canCreate, height: 54))
-                        .disabled(!canCreate)
                     }
                     .frame(maxWidth: metrics.floatingDockMaxWidth)
                     .padding(.horizontal, metrics.horizontalPadding)
@@ -253,6 +337,19 @@ struct CustomLivePhotoView: View {
                 }
             )
         }
+        .motionPhotoExportSheets(
+            coordinator: motionExport,
+            onSavedToFiles: {
+                alertIsSuccess = true
+                alertMessage = Localizable.string(.liveToMotionSavedToFiles)
+                showAlert = true
+            },
+            onError: { message in
+                alertIsSuccess = false
+                alertMessage = message
+                showAlert = true
+            }
+        )
         .alert(isPresented: $showAlert) {
             Alert(
                 title: Text(alertIsSuccess ? Localizable.string(.success) : Localizable.string(.error)),
@@ -264,6 +361,9 @@ struct CustomLivePhotoView: View {
             hasDisappeared = true
             if !isProcessing {
                 MediaExportService.removeIfInTemporaryDirectory(selectedVideo)
+                if !motionExport.isPresentingExportUI {
+                    motionExport.cleanup()
+                }
             }
         }
     }
@@ -313,6 +413,7 @@ struct CustomLivePhotoView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+            .disabled(isProcessing)
         }
         .padding(.top, 14)
         .padding(.bottom, 16)
@@ -367,6 +468,85 @@ struct CustomLivePhotoView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+            .disabled(isProcessing)
+        }
+        .padding(.top, 14)
+        .padding(.bottom, 16)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                .fill(AppTheme.surface0)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                        .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
+                )
+        )
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Step 03: Export Target Switcher
+
+    private var exportTargetCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(Localizable.string(.customPairTargetTitle))
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(AppTheme.textSecondary)
+
+            HStack(spacing: 0) {
+                ForEach(CustomPairExportTarget.allCases) { target in
+                    let isSelected = (exportTarget == target)
+                    Button {
+                        AppHaptics.selection()
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                            exportTarget = target
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: target.icon)
+                                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                            Text(target.displayName)
+                                .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.78)
+                        }
+                        .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 38)
+                        .padding(.horizontal, 8)
+                        .contentShape(Capsule())
+                        .background {
+                            if isSelected {
+                                Capsule(style: .continuous)
+                                    .fill(AppTheme.surface0)
+                                    .overlay(
+                                        Capsule(style: .continuous)
+                                            .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.6)
+                                    )
+                                    .shadow(
+                                        color: Color.black.opacity(colorScheme == .light ? 0.06 : 0),
+                                        radius: 3,
+                                        y: 1
+                                    )
+                                    .matchedGeometryEffect(id: "customPairTargetHighlight", in: targetAnimation)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isProcessing)
+                }
+            }
+            .padding(3)
+            .frame(height: 44)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(AppTheme.surface1)
+            )
+
+            Text(exportTarget.description)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundColor(AppTheme.textSecondary)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 14)
         .padding(.bottom, 16)
@@ -383,9 +563,7 @@ struct CustomLivePhotoView: View {
     }
 
     private func createLivePhoto() {
-        guard let videoURL = selectedVideo else { return }
-        let rawData = selectedImageData ?? selectedImage?.jpegData(compressionQuality: 1.0)
-        guard let imageData = rawData else { return }
+        guard let videoURL = selectedVideo, let imageData = resolvedImageData else { return }
 
         AppHaptics.mediumImpact()
         isProcessing = true
@@ -397,11 +575,55 @@ struct CustomLivePhotoView: View {
                 }
             }
             do {
-                try await MediaExportService.exportCustomLivePhoto(imageData: imageData, videoURL: videoURL)
+                let creationDate = ISOBMFFHelper.extractExifCreationDate(from: imageData) ?? Date()
+                try await MediaExportService.exportCustomLivePhoto(
+                    imageData: imageData,
+                    videoURL: videoURL,
+                    creationDate: creationDate
+                )
                 AppHaptics.success()
                 alertIsSuccess = true
                 alertMessage = Localizable.string(.livePhotoSaved)
                 showAlert = true
+            } catch {
+                AppHaptics.error()
+                alertIsSuccess = false
+                alertMessage = error.localizedDescription
+                showAlert = true
+            }
+        }
+    }
+
+    private func exportMotionPhoto(destination: MotionPhotoExportDestination) {
+        guard let videoURL = selectedVideo, let imageData = resolvedImageData else { return }
+
+        AppHaptics.mediumImpact()
+        isProcessing = true
+        motionExport.cleanup()
+
+        Task {
+            defer {
+                isProcessing = false
+                if hasDisappeared {
+                    MediaExportService.removeIfInTemporaryDirectory(videoURL)
+                }
+            }
+            do {
+                let creationDate = ISOBMFFHelper.extractExifCreationDate(from: imageData)
+                let outputURL = try await MediaExportService.exportMotionPhoto(
+                    imageData: imageData,
+                    videoURL: videoURL,
+                    targetBrand: selectedBrand,
+                    creationDate: creationDate
+                )
+
+                if hasDisappeared {
+                    MediaExportService.removeIfInTemporaryDirectory(outputURL)
+                    return
+                }
+
+                AppHaptics.success()
+                motionExport.present(url: outputURL, destination: destination)
             } catch {
                 AppHaptics.error()
                 alertIsSuccess = false
