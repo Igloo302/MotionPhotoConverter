@@ -1,12 +1,12 @@
-# MotionPhotoConverter 文档中心
+# Motion2Live 文档中心
 
-欢迎来到 MotionPhotoConverter 文档中心！本文档提供了项目的全面信息，包括概述、功能、架构、用户指南和开发者资源。
+欢迎来到 Motion2Live 文档中心！本文档提供了项目的全面信息，包括概述、功能、架构、用户指南和开发者资源。
 
 ## 文档目录
 
 ### 用户文档
 
-- [项目概述](overview.md) - MotionPhotoConverter 的背景、目标和主要特点
+- [项目概述](overview.md) - Motion2Live 的背景、目标和主要特点
 - [功能介绍](features.md) - 详细的功能说明和使用方法
 - [用户指南](user-guide.md) - 完整的用户操作指南和常见问题解答
 - [常见问题解答 (FAQ)](faq.md) - 用户常见问题和解答
@@ -18,7 +18,8 @@
 - [开发指南](development-guide.md) - 参与项目开发的完整指南
 - [贡献指南](contributing.md) - 如何为项目做出贡献
 - [本地化指南](localization-guide.md) - 多语言支持和本地化流程
-- [安全与隐私](security-privacy.md) - 安全措施和隐私保护政策
+- [安全与隐私](security-privacy.md) - 安全措施、隐私清单与合规说明
+- [在线隐私政策](privacy-policy.html) - 面向 App Store 的网页版隐私政策
 
 ### 项目管理
 
@@ -26,9 +27,9 @@
 
 ## 快速链接
 
-- [GitHub 仓库](https://github.com/Igloo302/MotionPhotoConverter)
-- [问题追踪](https://github.com/Igloo302/MotionPhotoConverter/issues)
-- [项目看板](https://github.com/Igloo302/MotionPhotoConverter/projects)
+- [GitHub 仓库](https://github.com/Igloo302/Motion2Live)
+- [问题追踪](https://github.com/Igloo302/Motion2Live/issues)
+- [项目看板](https://github.com/Igloo302/Motion2Live/projects)
 
 ## 文档更新
 
@@ -39,8 +40,7 @@
 如有任何问题或需要帮助，请通过以下方式联系我们：
 
 - GitHub: [Igloo302](https://github.com/Igloo302)
-- 电子邮件: [开发者邮箱]
 
 ---
 
-感谢您使用 MotionPhotoConverter！
+感谢您使用 Motion2Live！

@@ -13,43 +13,52 @@
 ## 开发环境设置
 
 ### 系统要求
-- **macOS**: 13.0 (Ventura) 或更高版本
-- **Xcode**: 15.0 或更高版本
-- **iOS 部署目标**: 15.0 或更高版本
-- **Swift**: 5.9 或更高版本
+- **macOS**: 14.0 (Sonoma) 或更高版本
+- **Xcode**: 16.0 或更高版本
+- **iOS 部署目标**: 16.0 或更高版本
+- **Swift**: 5.0+
 
 ### 快速开始
 1. 克隆项目：`git clone <repository-url>`
-2. 打开 `MotionPhotoConverter.xcodeproj`
+2. 打开 `Motion2Live.xcodeproj`（主工程与 Target 均为 `Motion2Live`）
 3. 配置开发者账户和 Bundle Identifier
-4. 选择目标设备并运行
+4. 选择目标设备并运行单元测试：`Motion2LiveTests`（共 19 项单元测试）
 
 ### 推荐测试设备
-- iPhone 16 Pro (iOS 18.0)
-- iPad Air (第5代) (iPadOS 18.0)
+- iPhone（如 iPhone 17 / 18 Pro）
+- iPhone Duo（紧凑双屏/折叠布局适配验证）
+- iPad（如 iPad Pro 13-inch / iPad Air）
 
 ## 项目结构
 
 ```
 Motion2Live/
-├── MotionPhotoConverterApp.swift  # 应用入口和主要视图
-├── HomeView.swift                 # 主界面
-├── HomeViewModel.swift            # 主页视图模型
-├── Models/                        # 数据模型
-│   ├── MotionPhoto.swift         # 动态照片数据模型
-│   └── MotionPhotoProcessor.swift # 多品牌处理器架构
-├── Components/                    # UI 组件
-│   ├── PlaybackHintView          # 播放引导组件
-│   ├── ExportOptionsView         # 导出选项组件
-│   └── SupportedBrandsView       # 支持品牌展示组件
-├── Utils/                         # 工具类
-│   ├── XMPParser.swift           # XMP 元数据解析
-│   ├── VideoExporter.swift       # 视频导出
-│   └── LivePhotoCreator.swift    # Live Photo 创建
-├── Resources/
-│   ├── Localizable.swift         # 本地化字符串
-│   └── Assets.xcassets           # 图片资源
-└── Info.plist                    # 应用配置
+├── Motion2LiveApp.swift              # 应用入口与深色模式全局配置
+├── HomeView.swift                    # 首页（精选示范/最近转换卡组、单张入口）
+├── HomeViewModel.swift               # 首页状态与照片选择逻辑
+├── BatchConvertView.swift            # 批量转换视图（串行低内存管线）
+├── LabView.swift                     # 实验室（自定义图+视频合成 Live Photo）
+├── Localizable.swift                 # 7 语言本地化映射表
+├── Info.plist                        # 应用配置（仅声明 .addOnly 写入描述）
+├── PrivacyInfo.xcprivacy             # Apple 隐私清单（CA92.1, C617.1）
+├── *.lproj/InfoPlist.strings         # 7 语言系统相册写入权限本地化文案
+├── DesignSystem/
+│   └── ObsidianTheme.swift           # Obsidian 暗夜玻璃设计系统与自适应 Token
+├── Models/
+│   └── MotionPhotoProcessor.swift    # 多品牌处理器协议与工厂（小米/Pixel/三星/OPPO/通用）
+├── Services/
+│   ├── MediaExportService.swift      # Live Photo / MOV / GIF / 封面帧导出与临时文件清理
+│   └── RecentConversionStore.swift   # 最近转换 1–3 张缩略图本地缓存
+├── Utils/
+│   └── XMPParser.swift               # XMP 元数据提取与解析
+├── Views/
+│   ├── MotionPhotoView.swift         # 单张动态照片预览与导出页
+│   └── Components/
+│       ├── KeyframePickerSheet.swift # 关键帧封面选择器
+│       ├── PhotoPicker.swift         # PHPickerViewController 封装
+│       ├── PlayerView.swift          # 视频播放器组件
+│       └── SupportedBrandsView.swift   # 支持品牌展示组件
+└── Assets.xcassets/                  # AppIcon (1024x1024 无 Alpha PNG) 与 HeroDemo 示范图
 ```
 
 ### 核心组件

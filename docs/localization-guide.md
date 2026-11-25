@@ -26,7 +26,9 @@ Motion2Live 目前支持以下语言：
 
 ## 本地化架构
 
-Motion2Live 使用自定义的本地化架构，通过 `Localizable.swift` 文件集中管理所有本地化字符串。这种方法提供了类型安全和编译时检查，避免了使用硬编码字符串可能导致的错误。
+Motion2Live 采用双层本地化机制：
+1. **应用内文案（`Localizable.swift`）**：通过枚举 `LocalizableKey` 集中管理所有界面文案，提供编译时检查与类型安全。
+2. **系统权限弹窗文案（`*.lproj/InfoPlist.strings`）**：为上述全部 7 种语言提供对应的 `InfoPlist.strings`（`en`、`zh-Hans`、`fr`、`de`、`es`、`ja`、`ko`），并在 `project.pbxproj` 的 `knownRegions` 中声明，确保系统级相册写入权限弹窗（`NSPhotoLibraryAddUsageDescription`）随系统语言自动切换。
 
 ### 核心组件
 

@@ -1,6 +1,6 @@
-# MotionPhotoConverter 安全与隐私
+# Motion2Live 安全与隐私
 
-本文档概述了 MotionPhotoConverter 应用的安全措施和隐私保护政策，旨在确保用户数据的安全和隐私。
+本文档概述了 Motion2Live 应用的安全措施和隐私保护政策，旨在确保用户数据的安全和隐私。
 
 ## 目录
 
@@ -9,96 +9,48 @@
 - [数据存储](#数据存储)
 - [网络通信](#网络通信)
 - [第三方服务](#第三方服务)
+- [隐私清单 (PrivacyInfo.xcprivacy)](#隐私清单-privacyinfoxcprivacy)
 - [安全措施](#安全措施)
-- [隐私政策](#隐私政策)
-- [合规性](#合规性)
-- [安全最佳实践](#安全最佳实践)
-- [报告安全问题](#报告安全问题)
 
 ## 数据处理原则
 
-MotionPhotoConverter 遵循以下数据处理原则：
+Motion2Live 遵循以下数据处理原则：
 
-1. **最小数据收集**：仅收集应用功能所必需的数据
-2. **本地处理**：所有数据处理在用户设备上完成，不传输到外部服务器
-3. **透明度**：清晰说明应用如何使用和处理数据
-4. **用户控制**：用户可以完全控制其数据的使用
-5. **安全性**：采取适当措施保护用户数据
+1. **最小权限原则**：选图使用系统 `PHPickerViewController`（无需全相册读权限），保存仅请求 `.addOnly` 写入权限。
+2. **完全本地处理**：所有解析、转码与导出均在设备本地完成，不上传任何照片或视频。
+3. **零数据收集**：不集成任何分析、广告或崩溃追踪 SDK。
 
 ## 权限使用
 
-MotionPhotoConverter 需要以下权限才能正常工作：
+### 照片库写入权限（`NSPhotoLibraryAddUsageDescription`）
 
-### 照片库访问权限
-
-**用途**：访问用户的照片库以选择 Motion Photo 并保存转换后的媒体文件。
-
-**请求时机**：首次尝试选择照片或保存文件时。
-
-**限制**：用户可以选择仅授予对特定照片的访问权限，而不是整个照片库。
-
-**数据使用**：选择的照片仅在应用内处理，不会上传到任何服务器或与第三方共享。
-
-### 相机访问权限（可选）
-
-**用途**：允许用户直接拍摄照片用于处理（未来版本可能添加）。
-
-**请求时机**：首次尝试使用相机功能时。
-
-**数据使用**：拍摄的照片仅在应用内处理，不会上传到任何服务器或与第三方共享。
+- **用途**：仅用于在用户主动点击保存时，将转换后的 Live Photo、视频或 GIF 写入系统相册。
+- **多语言支持**：已通过 `en`、`zh-Hans`、`fr`、`de`、`es`、`ja`、`ko` 7 个 `.lproj/InfoPlist.strings` 本地化。
+- **不请求读权限**：已移除未使用的 `NSPhotoLibraryUsageDescription`，选图完全通过系统隐私选择器 `PHPickerViewController` 完成。
 
 ## 数据存储
 
 ### 临时文件
 
-在处理 Motion Photo 时，应用会创建以下类型的临时文件：
+在处理 Motion Photo 时，应用会在 `NSTemporaryDirectory` 中创建临时图像、MOV/MP4 与 GIF 文件，并在写入 `PHPhotoLibrary` 或清理回调后**立即删除**，不长期滞留。
 
-- 提取的视频文件
-- 处理后的图像文件
-- 创建的 GIF 文件
-- 导出前的 Live Photo 组件
+### 最近转换缩略图缓存（`RecentConversionStore`）
 
-**存储位置**：这些文件存储在应用的临时目录中。
+- **存储内容**：仅缓存最近 1–3 次成功转换生成的低分辨率 JPEG 缩略图及元数据，用于首页卡组展示。
+- **存储位置**：`Caches/RecentConversions/` 目录与 `UserDefaults`（`homeShowRecentConversions` 开关）。
+- **用户控制**：用户可随时在应用内关闭展示或清空历史记录。
 
-**生命周期**：临时文件在以下情况下会被删除：
-- 处理完成后立即删除
-- 应用退出时
-- 系统在低存储空间情况下清理临时文件
+## 网络通信与第三方服务
 
-**安全措施**：临时文件不会被其他应用访问，并且不会在设备备份中包含。
+Motion2Live 是一个完全离线的纯原生应用，不包含任何网络请求或第三方 SDK，仅依赖 Apple 系统框架（SwiftUI、AVFoundation、Photos、PhotosUI、ImageIO）。
 
-### 用户偏好设置
+## 隐私清单 (PrivacyInfo.xcprivacy)
 
-应用存储少量用户偏好设置，如：
-
-- 上次使用的导出格式
-- 界面设置
-
-**存储位置**：这些设置存储在 iOS 的 UserDefaults 系统中。
-
-**数据类型**：仅存储应用功能相关的设置，不包含个人身份信息或敏感数据。
-
-## 网络通信
-
-MotionPhotoConverter 是一个完全离线的应用，不需要互联网连接即可运行。应用不会：
-
-- 发送或接收任何网络数据
-- 连接到远程服务器
-- 使用分析或跟踪服务
-- 发送崩溃报告或使用统计信息
-
-这确保了用户数据完全保留在设备上，不会通过网络暴露。
-
-## 第三方服务
-
-MotionPhotoConverter 不使用任何第三方服务、库或 SDK 来处理用户数据。应用仅使用 Apple 提供的系统框架，包括：
-
-- SwiftUI：用于用户界面
-- AVFoundation：用于媒体处理
-- PhotosUI：用于照片库访问
-- CoreImage：用于图像处理
-
-这些框架遵循 Apple 的隐私和安全准则，不会将数据发送到 Apple 或任何第三方。
+应用内置 `Motion2Live/PrivacyInfo.xcprivacy`，符合 Apple App Store 隐私规范：
+- `NSPrivacyTracking` = `false`
+- `NSPrivacyCollectedDataTypes` = `[]`
+- `NSPrivacyAccessedAPICategoryUserDefaults`：声明原因 `CA92.1`（用于应用内偏好与首页最近转换展示开关）
+- `NSPrivacyAccessedAPICategoryFileTimestamp`：声明原因 `C617.1`（用于读取用户导入/导出媒体文件的创建与修改时间）
 
 ## 安全措施
 

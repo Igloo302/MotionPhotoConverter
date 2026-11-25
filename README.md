@@ -1,58 +1,42 @@
 # Motion2Live
 
-Motion2Live is an iOS application designed to help users process and convert Motion Photos. Motion Photos are a type of photo format that includes a static image and a short video, commonly found in Google Photos and some Android devices. With Motion2Live, users can easily extract videos from Motion Photos, export them as Live Photos or GIFs, and save them to their photo library.
+Motion2Live is an iOS application (iOS 16.0+) designed to help users process and convert Motion Photos (Xiaomi, Google Pixel, Samsung, OPPO/OnePlus, Huawei/Universal) into native Apple Live Photos, standalone videos, or animated GIFs—100% offline on-device.
 
 ## 功能介绍 / Features
 
-### 1. 提取视频 / Extract Video
-用户可以从 Motion Photo 中提取视频，并将其保存为独立的视频文件。应用会自动识别 Motion Photo 并提取其中的视频数据。
+### 1. 提取视频与导出 Live Photo / GIF
+- **导出为 Live Photo**：将动态照片无损封装为 iOS 原生 Live Photo（支持自定义关键帧封面），并保留拍摄时间等 EXIF 元数据。
+- **提取视频 / 导出为 GIF**：一键提取内嵌 MP4 视频或转换为高质量 GIF 动图，支持保存到系统相册或通过系统分享面板导出。
 
-Users can extract videos from Motion Photos and save them as standalone video files. The app automatically recognizes Motion Photos and extracts the video data.
+### 2. 批量转换 / Batch Conversion
+- 支持一次选择多张动态照片，采用可控的串行导出管线降低内存峰值，批量保存为 Live Photo 或 GIF。
 
-### 2. 导出为 Live Photo / Export as Live Photo
-用户可以将 Motion Photo 转换为 Live Photo，并将其保存到相册中。Live Photo 是一种包含短视频的照片格式，常见于 iOS 设备。
+### 3. 关键帧封面选择 / Keyframe Cover Picker
+- 内置 `KeyframePickerSheet`，支持从内嵌视频流中浏览并选取任意时刻作为 Live Photo 静态封面帧。
 
-Users can convert Motion Photos to Live Photos and save them to their photo library. Live Photos are a type of photo format that includes a short video, commonly found on iOS devices.
+### 4. 零权限首页示范与最近转换卡组
+- 首次启动内置 3 张精选示范图（`HeroDemoCenter` / `HeroDemoLeft` / `HeroDemoRight`），无需申请相册权限即可完整预览。
+- 转换完成后自动在本地缓存最近 1–3 张输出缩略图（不申请全相册读取权限），动态更新首页卡组；支持随时关闭或清空历史。
 
-### 3. 导出为 GIF / Export as GIF
-用户可以将 Motion Photo 中的视频部分导出为 GIF 动图，并将其保存到相册中。GIF 动图是一种广泛使用的动画图片格式，适用于社交媒体分享。
+### 5. Obsidian 暗夜玻璃设计与多端适配
+- 基于 `ObsidianTheme` 统一设计系统，针对 iPhone、iPhone Duo 与 iPad 多种尺寸进行自适应布局。
 
-Users can export the video part of a Motion Photo as a GIF animation and save it to their photo library. GIF animations are a widely used format for animated images, suitable for sharing on social media.
-
-### 4. 照片选择器 / Photo Picker
-应用内置了照片选择器，用户可以从相册中选择 Motion Photo 进行处理。照片选择器会自动过滤非 Motion Photo，并提示用户选择有效的 Motion Photo。
-
-The app includes a photo picker that allows users to select Motion Photos from their photo library for processing. The photo picker automatically filters out non-Motion Photos and prompts users to select valid Motion Photos.
-
-### 5. 视频播放 / Video Playback
-用户可以在应用中播放 Motion Photo 中的视频部分。应用提供了视频播放控件，用户可以通过手势控制视频的播放和暂停。
-
-Users can play the video part of a Motion Photo within the app. The app provides video playback controls, allowing users to control video playback and pause with gestures.
-
-### 6. 导出菜单 / Export Menu
-应用提供了导出菜单，用户可以选择将 Motion Photo 导出为视频、Live Photo 或 GIF。导出过程简单直观，用户可以轻松完成转换和保存操作。
-
-The app provides an export menu, allowing users to choose to export Motion Photos as videos, Live Photos, or GIFs. The export process is simple and intuitive, enabling users to easily complete the conversion and save operations.
+### 6. 7 种语言完整本地化与隐私合规
+- 支持英语、简体中文、法语、德语、西班牙语、日语、韩语，并同步本地化 `InfoPlist.strings` 相册保存权限弹窗文案。
+- 仅使用系统 `PHPickerViewController` 与 `.addOnly` 写入权限，内置 `PrivacyInfo.xcprivacy` 隐私清单。
 
 ## 使用方法 / Usage
-[Motion Photo Sample](https://github.com/Igloo302/Motion2Live/blob/main/MotionPhotoSample.jpg)
 
-1. 打开应用并选择一个 Motion Photo。
-2. 应用会自动提取 Motion Photo 中的视频数据，并显示静态图像和视频预览。
-3. 用户可以通过导出菜单选择导出为视频、Live Photo 或 GIF。
-4. 导出完成后，用户可以将转换后的文件保存到相册中。
-
-1. Open the app and select a Motion Photo.
-2. The app will automatically extract the video data from the Motion Photo and display the static image and video preview.
-3. Users can choose to export as a video, Live Photo, or GIF through the export menu.
-4. After the export is complete, users can save the converted file to their photo library.
+1. 打开 `Motion2Live.xcodeproj`（iOS 16.0+），在首页点击选择动态照片，或进入「批量转换」与「实验室」。
+2. 应用自动识别厂商格式（Xiaomi / Pixel / Samsung / OPPO / Huawei 等）并解析内嵌视频流。
+3. 长按预览动态效果，按需通过关键帧选择器更换封面，然后导出为 Live Photo、视频或 GIF。
 
 ## 依赖库 / Dependencies
 
 - SwiftUI
-- AVKit
-- PhotosUI
-- UniformTypeIdentifiers
+- AVFoundation / AVKit
+- Photos / PhotosUI
+- ImageIO / UniformTypeIdentifiers
 
 ## 开发者 / Developer
 
