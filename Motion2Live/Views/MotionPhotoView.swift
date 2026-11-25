@@ -2,7 +2,8 @@
 //  MotionPhotoView.swift
 //  Motion2Live
 //
-//  Single Motion Photo Inspector & Export View.
+//  Full-Bleed Immersive Motion Photo Inspector with Apple HIG Liquid Glass floating controls.
+//  Adaptive across iPhone, iPhone Duo, and iPad.
 //
 
 import SwiftUI
@@ -11,35 +12,43 @@ import AVKit
 @MainActor
 struct MotionPhotoView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
     @State private var sourceURL: URL
 
     @State private var selectedImage: UIImage?
+    @State private var originalPreviewImage: UIImage?
+    @State private var customCoverImageData: Data?
     @State private var videoPlayer: AVPlayer?
     @State private var isPlayingVideo = false
     @State private var motionPhotoData: MotionPhotoData?
+    @State private var detectedBrand: MotionPhotoBrand = .unknown
+
+    @State private var videoDuration: Double = 0
+    @State private var videoFrameRate: Double = 30.0
+    @State private var stillImageTime: Int = 0
+    @State private var defaultStillImageTime: Int = 0
+    @State private var selectedCoverSeconds: Double = 0
+
+    @State private var selectedExportFormat: BatchExportFormat = .livePhoto
     @State private var isShowingPhotoPicker = false
+    @State private var isShowingKeyframePicker = false
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var isPermissionDeniedAlert = false
     @State private var isProcessing = false
-    @State private var stillImageTime: Int = 0
-    @State private var isExportMenuPresented = false
     @State private var creationDate: Date?
+
+    @Namespace private var formatNamespace
 
     // 资源生命周期追踪
     @State private var previewVideoURL: URL?
     @State private var playerEndObserver: NSObjectProtocol?
 
-    private static let dateFormatter: DateFormatter = {
+    private static let timestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter
-    }()
-
-    private static let timeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
+        formatter.setLocalizedDateFormatFromTemplate("MMMd HHmm")
         return formatter
     }()
 
@@ -48,109 +57,70 @@ struct MotionPhotoView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
+        GeometryReader { proxy in
+            let metrics = AdaptiveLayoutMetrics(
+                containerSize: proxy.size,
+                horizontalSizeClass: horizontalSizeClass,
+                verticalSizeClass: verticalSizeClass
+            )
 
-            VStack(spacing: 0) {
-                if let image = selectedImage {
-                    ZStack {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: .infinity)
-                            .edgesIgnoringSafeArea(.horizontal)
+            ZStack {
+                // 1. 100% 全屏出血沉浸式取景舞台
+                fullBleedPhotoStage(size: proxy.size)
 
-                        if let player = videoPlayer {
-                            PlayerView(player: player)
-                                .aspectRatio(contentMode: .fill)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .edgesIgnoringSafeArea(.horizontal)
-                                .opacity(isPlayingVideo ? 1 : 0)
-                                .animation(.easeInOut(duration: 0.2), value: isPlayingVideo)
-                                .clipped()
-                        }
-                    }
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { _ in startVideoPlayback() }
-                            .onEnded { _ in stopVideoPlayback() }
+                // 2. 上下光学渐变护航层（保证白色文字与悬浮控件在任何照片上清晰可读）
+                VStack(spacing: 0) {
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.020, green: 0.031, blue: 0.051).opacity(0.56),
+                            Color.clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-                } else {
-                    Text(Localizable.string(.pleaseSelectMotionPhoto))
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                }
+                    .frame(height: 170)
 
-                Spacer()
+                    Spacer()
 
-                // 导出按钮
-                Button(action: { isExportMenuPresented = true }) {
-                    HStack(spacing: 8) {
-                        if isProcessing {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.headline)
-                        }
-                        Text(Localizable.string(.export))
-                            .font(.headline)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(selectedImage == nil || isProcessing ? Color.gray : Color.blue)
-                    .cornerRadius(12)
+                    LinearGradient(
+                        colors: [
+                            Color.clear,
+                            Color(red: 0.031, green: 0.039, blue: 0.051).opacity(0.78)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 250)
                 }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 40)
-                .disabled(selectedImage == nil || isProcessing)
-                .confirmationDialog(Localizable.string(.export), isPresented: $isExportMenuPresented, titleVisibility: .visible) {
-                    Button(Localizable.string(.livePhoto)) {
-                        exportAsLivePhoto()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
+                // 3. 悬浮导航栏 + 静默元数据 + 底部悬浮液态玻璃操作台
+                VStack(spacing: 0) {
+                    floatingTopBar(metrics: metrics)
+
+                    quietMetadataRow(metrics: metrics)
+                        .padding(.top, 8)
+
+                    Spacer()
+
+                    if !isPlayingVideo && videoPlayer != nil {
+                        Text(Localizable.string(.holdToPlayHint))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white.opacity(0.92))
+                            .padding(.horizontal, 12)
+                            .frame(height: 28)
+                            .quietPhotoBadge(cornerRadius: 14)
+                            .padding(.bottom, 12)
+                            .transition(.opacity)
                     }
-                    Button(Localizable.string(.video)) {
-                        exportVideo()
-                    }
-                    Button(Localizable.string(.gif)) {
-                        exportAsGIF()
-                    }
-                    Button(Localizable.string(.cancel), role: .cancel) {}
+
+                    floatingBottomDock(metrics: metrics)
                 }
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                if let date = creationDate {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(Self.dateFormatter.string(from: date))
-                            .font(.system(size: 15, weight: .bold))
-                            .lineLimit(1)
-                        Text(Self.timeFormatter.string(from: date))
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack {
-                    Button(action: {
-                        isShowingPhotoPicker = true
-                    }) {
-                        Image(systemName: "photo.on.rectangle")
-                    }
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "xmark")
-                    }
-                }
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
+        .preferredColorScheme(.dark)
         .sheet(isPresented: $isShowingPhotoPicker) {
             PhotoPicker(onImagePicked: { url, isMotionPhoto in
                 Task {
@@ -168,12 +138,22 @@ struct MotionPhotoView: View {
                 showAlert(message: Localizable.string(.selectedPhotoIsNotMotionPhoto))
             })
         }
-        .alert(isPresented: $showAlert) {
-            Alert(
-                title: Text(Localizable.string(.tip)),
-                message: Text(alertMessage),
-                dismissButton: .default(Text(Localizable.string(.ok)))
-            )
+        .sheet(isPresented: $isShowingKeyframePicker) {
+            if let videoURL = previewVideoURL, videoDuration > 0 {
+                keyframeSheet(videoURL: videoURL)
+            }
+        }
+        .alert(Localizable.string(.tip), isPresented: $showAlert) {
+            if isPermissionDeniedAlert {
+                Button(Localizable.string(.openSettings)) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            }
+            Button(Localizable.string(.ok), role: .cancel) {}
+        } message: {
+            Text(alertMessage)
         }
         .task {
             await extractVideoFromMotionPhoto(url: sourceURL)
@@ -184,14 +164,312 @@ struct MotionPhotoView: View {
         }
     }
 
+    @ViewBuilder
+    private func keyframeSheet(videoURL: URL) -> some View {
+        let sheet = KeyframePickerSheet(
+            videoURL: videoURL,
+            videoDuration: videoDuration,
+            initialSeconds: selectedCoverSeconds,
+            hasCustomCover: customCoverImageData != nil,
+            onConfirm: { seconds in
+                Task {
+                    await applyCustomCoverFrame(at: seconds)
+                }
+            },
+            onRestoreOriginal: {
+                restoreOriginalCoverFrame()
+            }
+        )
+        .presentationDetents([.height(540), .large])
+        .presentationDragIndicator(.visible)
+
+        if #available(iOS 16.4, *) {
+            sheet.presentationCornerRadius(AppTheme.Radius.sheet)
+        } else {
+            sheet
+        }
+    }
+
+    // MARK: - Full-Bleed Photo & Video Stage
+
+    private func fullBleedPhotoStage(size: CGSize) -> some View {
+        ZStack {
+            Color(red: 0.063, green: 0.075, blue: 0.086)
+                .ignoresSafeArea()
+
+            if let image = selectedImage {
+                // 柔和环境模糊衬底（在 iPad / Duo 宽屏下让留白边缘自然过渡）
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size.width, height: size.height)
+                    .blur(radius: 36)
+                    .overlay(Color.black.opacity(0.45))
+                    .clipped()
+                    .ignoresSafeArea()
+
+                // 主体画面（保持完整构图不裁切）
+                ZStack {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    if let player = videoPlayer {
+                        PlayerView(player: player)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .opacity(isPlayingVideo ? 1 : 0)
+                            .animation(.easeInOut(duration: 0.18), value: isPlayingVideo)
+                    }
+                }
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in startVideoPlayback() }
+                        .onEnded { _ in stopVideoPlayback() }
+                )
+            } else {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .tint(AppTheme.accent)
+                    Text(Localizable.string(.processing))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white.opacity(0.75))
+                }
+            }
+        }
+    }
+
+    // MARK: - Floating Top Navigation Bar
+
+    private func floatingTopBar(metrics: AdaptiveLayoutMetrics) -> some View {
+        HStack {
+            // 左上角：纯排版时间戳标题（严格遵循 HIG，不包玻璃胶囊）
+            if let date = creationDate {
+                Text(Self.timestampFormatter.string(from: date))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.96))
+                    .shadow(color: .black.opacity(0.35), radius: 4, y: 1)
+                    .padding(.leading, 4)
+            }
+
+            Spacer()
+
+            // 右上角：成组液态玻璃工具胶囊（切换照片 | 关闭）
+            LiquidGlassGroup(spacing: 0) {
+                HStack(spacing: 0) {
+                    Button {
+                        AppHaptics.lightImpact()
+                        isShowingPhotoPicker = true
+                    } label: {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 40)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Localizable.string(.selectMotionPhoto))
+
+                    Rectangle()
+                        .fill(Color.white.opacity(0.24))
+                        .frame(width: 0.8, height: 16)
+
+                    Button {
+                        AppHaptics.lightImpact()
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 40)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Localizable.string(.cancel))
+                }
+                .liquidGlassControl(in: Capsule(), interactive: true, overDarkMedia: true)
+            }
+        }
+        .frame(height: 48)
+        .padding(.horizontal, metrics.horizontalPadding)
+        .padding(.top, 4)
+    }
+
+    // MARK: - Quiet Metadata Row (Content Layer — No Liquid Glass)
+
+    private func quietMetadataRow(metrics: AdaptiveLayoutMetrics) -> some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "livephoto")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(isPlayingVideo ? .white : Color(red: 0.220, green: 0.737, blue: 0.878))
+
+                Text(metadataLabelText)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.95))
+                    .lineLimit(1)
+            }
+            .padding(.leading, 11)
+            .padding(.trailing, 12)
+            .frame(height: 30)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isPlayingVideo ? AppTheme.accent.opacity(0.85) : AppTheme.quietPhotoBadgeFill)
+            )
+            .animation(.easeInOut(duration: 0.18), value: isPlayingVideo)
+
+            if customCoverImageData != nil {
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(red: 0.290, green: 0.871, blue: 0.502))
+                    Text(Localizable.string(.customCoverBadge))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color(red: 0.722, green: 0.980, blue: 0.800))
+                        .lineLimit(1)
+                }
+                .padding(.leading, 10)
+                .padding(.trailing, 11)
+                .frame(height: 30)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Color(red: 0.141, green: 0.722, blue: 0.341).opacity(0.24))
+                )
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, metrics.horizontalPadding)
+    }
+
+    private var metadataLabelText: String {
+        if videoDuration > 0 {
+            return String(format: "LIVE · %@ · %.2fs", detectedBrand.displayName, videoDuration)
+        }
+        return "LIVE · \(detectedBrand.displayName)"
+    }
+
+    // MARK: - Floating Liquid Glass Bottom Dock
+
+    private func floatingBottomDock(metrics: AdaptiveLayoutMetrics) -> some View {
+        VStack(spacing: 12) {
+            LiquidGlassGroup(spacing: 10) {
+                HStack(spacing: 10) {
+                    // 悬浮液态玻璃分段格式切换器
+                    HStack(spacing: 0) {
+                        ForEach(BatchExportFormat.allCases) { format in
+                            let isSelected = selectedExportFormat == format
+                            Button {
+                                AppHaptics.selection()
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                                    selectedExportFormat = format
+                                }
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: format.icon)
+                                        .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                                    Text(format.displayName)
+                                        .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
+                                .foregroundColor(isSelected ? .white : .white.opacity(0.68))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 38)
+                                .contentShape(Capsule())
+                                .background {
+                                    if isSelected {
+                                        Capsule(style: .continuous)
+                                            .fill(Color.white.opacity(0.22))
+                                            .overlay(
+                                                Capsule(style: .continuous)
+                                                    .strokeBorder(Color.white.opacity(0.26), lineWidth: 0.75)
+                                            )
+                                            .matchedGeometryEffect(id: "singleFormatPill", in: formatNamespace)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isProcessing)
+                        }
+                    }
+                    .padding(3)
+                    .frame(height: 44)
+                    .liquidGlassControl(in: Capsule(), interactive: true, overDarkMedia: true)
+
+                    // 悬浮液态玻璃封面帧按钮（仅在实况照片模式显示）
+                    if selectedExportFormat == .livePhoto {
+                        Button {
+                            AppHaptics.lightImpact()
+                            isShowingKeyframePicker = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(previewVideoURL == nil ? .white.opacity(0.35) : Color(red: 0.220, green: 0.737, blue: 0.878))
+                                Text(Localizable.string(.inspectorCoverShort))
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(previewVideoURL == nil ? .white.opacity(0.4) : .white.opacity(0.96))
+                                    .lineLimit(1)
+                            }
+                            .padding(.leading, 14)
+                            .padding(.trailing, 15)
+                            .frame(height: 44)
+                            .contentShape(Capsule())
+                            .liquidGlassControl(in: Capsule(), interactive: true, overDarkMedia: true)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(previewVideoURL == nil || isProcessing)
+                    }
+                }
+            }
+
+            // 主导出行动按钮（.glassProminent）
+            Button(action: performPrimaryExport) {
+                HStack(spacing: 9) {
+                    if isProcessing {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: selectedExportFormat.icon)
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    Text(primaryCTATitle)
+                }
+            }
+            .buttonStyle(StudioPrimaryButtonStyle(isDisabled: selectedImage == nil || isProcessing, height: 54))
+            .disabled(selectedImage == nil || isProcessing)
+        }
+        .frame(maxWidth: metrics.floatingDockMaxWidth)
+        .padding(.horizontal, metrics.horizontalPadding)
+        .padding(.bottom, 16)
+    }
+
+    private var primaryCTATitle: String {
+        switch selectedExportFormat {
+        case .livePhoto:
+            return Localizable.string(.exportLivePhotoCTA)
+        case .video:
+            return "\(Localizable.string(.export)) \(Localizable.string(.video))"
+        case .gif:
+            return "\(Localizable.string(.export)) \(Localizable.string(.gif))"
+        }
+    }
+
+    // MARK: - Playback & Keyframe Controls
+
     private func startVideoPlayback() {
-        guard !isPlayingVideo else { return }
+        guard !isPlayingVideo, videoPlayer != nil else { return }
+        AppHaptics.lightImpact()
         isPlayingVideo = true
         videoPlayer?.seek(to: .zero)
         videoPlayer?.play()
     }
 
     private func stopVideoPlayback() {
+        guard isPlayingVideo else { return }
         isPlayingVideo = false
         videoPlayer?.pause()
         videoPlayer?.seek(to: .zero)
@@ -207,6 +485,41 @@ struct MotionPhotoView: View {
         MediaExportService.removeIfInTemporaryDirectory(previewVideoURL)
         previewVideoURL = nil
     }
+
+    private func applyCustomCoverFrame(at seconds: Double) async {
+        guard let videoURL = previewVideoURL, let extracted = motionPhotoData else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+
+        do {
+            let newCoverData = try await MediaExportService.extractCoverFrameData(
+                from: videoURL,
+                at: seconds,
+                preservingMetadataFrom: extracted.imageData
+            )
+            self.customCoverImageData = newCoverData
+            self.selectedCoverSeconds = seconds
+            self.stillImageTime = max(0, min(127, Int(round(seconds * videoFrameRate))))
+            if let uiImage = UIImage(data: newCoverData) {
+                self.selectedImage = uiImage
+            }
+            AppHaptics.success()
+        } catch {
+            AppHaptics.error()
+            showAlert(message: error.localizedDescription)
+        }
+    }
+
+    private func restoreOriginalCoverFrame() {
+        self.customCoverImageData = nil
+        self.selectedImage = originalPreviewImage
+        self.stillImageTime = defaultStillImageTime
+        if videoFrameRate > 0 {
+            self.selectedCoverSeconds = Double(defaultStillImageTime) / videoFrameRate
+        }
+    }
+
+    // MARK: - Off-Main-Thread Loading
 
     private struct LoadedMotionPhoto: Sendable {
         let extracted: MotionPhotoData
@@ -261,6 +574,7 @@ struct MotionPhotoView: View {
 
     func extractVideoFromMotionPhoto(url: URL) async {
         cleanupPlaybackResources()
+        customCoverImageData = nil
         AppLogger.parser.info("Loading motion photo: \(url.lastPathComponent, privacy: .public)")
 
         let loaded: LoadedMotionPhoto
@@ -284,6 +598,8 @@ struct MotionPhotoView: View {
         }
 
         self.motionPhotoData = loaded.extracted
+        self.detectedBrand = loaded.extracted.brand
+        self.originalPreviewImage = loaded.previewImage
         self.selectedImage = loaded.previewImage
         self.previewVideoURL = loaded.tempVideoURL
         if let resolvedDate = loaded.creationDate {
@@ -293,15 +609,21 @@ struct MotionPhotoView: View {
         do {
             let asset = AVAsset(url: loaded.tempVideoURL)
             let duration = try await asset.load(.duration)
-            let videoDuration = CMTimeGetSeconds(duration)
+            let durationSec = CMTimeGetSeconds(duration)
             let tracks = try await asset.loadTracks(withMediaType: .video)
-            let frameRate = try await tracks.first?.load(.nominalFrameRate) ?? 30.0
+            let fps = Double(try await tracks.first?.load(.nominalFrameRate) ?? 30.0)
 
-            self.stillImageTime = loaded.processor.calculateStillImageTime(
-                videoDuration: videoDuration,
+            self.videoDuration = durationSec.isFinite ? durationSec : 0
+            self.videoFrameRate = fps > 0 ? fps : 30.0
+
+            let computedStillTime = loaded.processor.calculateStillImageTime(
+                videoDuration: self.videoDuration,
                 presentationTimestamp: loaded.extracted.presentationTimestamp,
-                frameRate: Double(frameRate)
+                frameRate: self.videoFrameRate
             )
+            self.stillImageTime = computedStillTime
+            self.defaultStillImageTime = computedStillTime
+            self.selectedCoverSeconds = min(self.videoDuration, Double(computedStillTime) / self.videoFrameRate)
 
             let player = AVPlayer(url: loaded.tempVideoURL)
             player.actionAtItemEnd = .none
@@ -324,6 +646,20 @@ struct MotionPhotoView: View {
         }
     }
 
+    // MARK: - Export Actions
+
+    private func performPrimaryExport() {
+        AppHaptics.mediumImpact()
+        switch selectedExportFormat {
+        case .livePhoto:
+            exportAsLivePhoto()
+        case .video:
+            exportVideo()
+        case .gif:
+            exportAsGIF()
+        }
+    }
+
     private func exportVideo() {
         guard let extracted = motionPhotoData else {
             showAlert(message: Localizable.string(.cannotGetVideoData))
@@ -339,9 +675,11 @@ struct MotionPhotoView: View {
                     fallbackURL: sourceURL,
                     preferredDate: creationDate
                 )
+                AppHaptics.success()
                 showAlert(message: Localizable.string(.videoSaved))
             } catch {
-                showAlert(message: Localizable.string(.savingVideoFailed) + ": \(error.localizedDescription)")
+                AppHaptics.error()
+                handleExportError(error, prefix: Localizable.string(.savingVideoFailed))
             }
         }
     }
@@ -352,19 +690,35 @@ struct MotionPhotoView: View {
             return
         }
 
+        let effectiveData: MotionPhotoData
+        if let customCover = customCoverImageData {
+            effectiveData = MotionPhotoData(
+                imageData: customCover,
+                videoData: extracted.videoData,
+                stillImageTime: stillImageTime,
+                brand: extracted.brand,
+                videoOffset: extracted.videoOffset,
+                presentationTimestamp: extracted.presentationTimestamp
+            )
+        } else {
+            effectiveData = extracted
+        }
+
         isProcessing = true
         Task {
             defer { isProcessing = false }
             do {
                 try await MediaExportService.exportLivePhoto(
-                    motionPhotoData: extracted,
+                    motionPhotoData: effectiveData,
                     fallbackURL: sourceURL,
                     preferredDate: creationDate,
                     stillImageTime: stillImageTime
                 )
+                AppHaptics.success()
                 showAlert(message: Localizable.string(.livePhotoSaved))
             } catch {
-                showAlert(message: Localizable.string(.savingLivePhotoFailed) + ": \(error.localizedDescription)")
+                AppHaptics.error()
+                handleExportError(error, prefix: Localizable.string(.savingLivePhotoFailed))
             }
         }
     }
@@ -384,15 +738,26 @@ struct MotionPhotoView: View {
                     fallbackURL: sourceURL,
                     preferredDate: creationDate
                 )
+                AppHaptics.success()
                 showAlert(message: Localizable.string(.gifSavedToPhotos))
             } catch {
-                showAlert(message: Localizable.string(.failedToCreateGIF) + ": \(error.localizedDescription)")
+                AppHaptics.error()
+                handleExportError(error, prefix: Localizable.string(.failedToCreateGIF))
             }
         }
     }
 
-    private func showAlert(message: String) {
+    private func handleExportError(_ error: Error, prefix: String) {
+        if let exportError = error as? MediaExportError, case .photoLibraryPermissionDenied = exportError {
+            showAlert(message: exportError.localizedDescription, isPermissionDenied: true)
+        } else {
+            showAlert(message: "\(prefix): \(error.localizedDescription)")
+        }
+    }
+
+    private func showAlert(message: String, isPermissionDenied: Bool = false) {
         self.alertMessage = message
+        self.isPermissionDeniedAlert = isPermissionDenied
         self.showAlert = true
     }
 }

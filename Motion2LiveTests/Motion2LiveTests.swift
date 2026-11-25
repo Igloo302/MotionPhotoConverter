@@ -273,4 +273,47 @@ final class Motion2LiveTests: XCTestCase {
         XCTAssertEqual(prepared.imageURL.pathExtension.lowercased(), "png")
         XCTAssertTrue(FileManager.default.fileExists(atPath: prepared.imageURL.path))
     }
+
+    func testExtractCoverFrameDataPreservesMetadataAndProducesValidJPEG() async throws {
+        let data = try Data(contentsOf: try sampleURL(named: "XiaomiNew"))
+        let xmpInfo = XMPParser.extractAndParse(from: data)
+        let processor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data))
+        let extracted = try XCTUnwrap(processor.processMotionPhoto(data: data, xmpInfo: xmpInfo).data)
+
+        let tempMP4 = FileManager.default.temporaryDirectory.appendingPathComponent("cover_test_\(UUID().uuidString).mp4")
+        try extracted.videoData.write(to: tempMP4)
+        defer { try? FileManager.default.removeItem(at: tempMP4) }
+
+        let coverData = try await MediaExportService.extractCoverFrameData(
+            from: tempMP4,
+            at: 0.5,
+            preservingMetadataFrom: extracted.imageData
+        )
+        XCTAssertGreaterThan(coverData.count, 1_000)
+        XCTAssertNotNil(UIImage(data: coverData))
+        XCTAssertNotNil(ISOBMFFHelper.extractExifCreationDate(from: coverData))
+    }
+
+    @MainActor
+    func testRecentConversionStoreCapsAtThreeEntriesAndClears() async throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("recent_test_\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let store = RecentConversionStore(directory: tempDir)
+        let data = try Data(contentsOf: try sampleURL(named: "XiaomiNew"))
+        let xmpInfo = XMPParser.extractAndParse(from: data)
+        let processor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data))
+        let extracted = try XCTUnwrap(processor.processMotionPhoto(data: data, xmpInfo: xmpInfo).data)
+
+        for i in 1...4 {
+            await store.recordConversion(imageData: extracted.imageData, durationSeconds: Double(i))
+        }
+
+        XCTAssertEqual(store.entries.count, 3)
+        XCTAssertEqual(store.entries.first?.durationSeconds, 4.0)
+        XCTAssertNotNil(store.image(for: store.entries[0]))
+
+        store.clearHistory()
+        XCTAssertTrue(store.entries.isEmpty)
+    }
 }

@@ -2,7 +2,7 @@
 //  BatchConvertView.swift
 //  Motion2Live
 //
-//  Created for Motion2Live Batch Conversion Feature.
+//  Batch Motion Photo Conversion with Adaptive Photo Grid & Apple HIG Liquid Glass controls.
 //
 
 import SwiftUI
@@ -17,7 +17,7 @@ enum BatchItemStatus: Equatable {
     case processing
     case success
     case failed(String)
-    
+
     var iconName: String {
         switch self {
         case .pending: return "clock"
@@ -26,16 +26,16 @@ enum BatchItemStatus: Equatable {
         case .failed: return "exclamationmark.circle.fill"
         }
     }
-    
+
     var iconColor: Color {
         switch self {
-        case .pending: return .secondary
-        case .processing: return .blue
-        case .success: return .green
-        case .failed: return .red
+        case .pending: return AppTheme.textTertiary
+        case .processing: return AppTheme.accent
+        case .success: return AppTheme.success
+        case .failed: return AppTheme.danger
         }
     }
-    
+
     var title: String {
         switch self {
         case .pending: return Localizable.string(.statusPending)
@@ -51,9 +51,9 @@ enum BatchExportFormat: String, CaseIterable, Identifiable {
     case livePhoto = "Live Photo"
     case video = "Video"
     case gif = "GIF"
-    
+
     var id: String { rawValue }
-    
+
     var displayName: String {
         switch self {
         case .livePhoto: return Localizable.string(.livePhoto)
@@ -61,15 +61,15 @@ enum BatchExportFormat: String, CaseIterable, Identifiable {
         case .gif: return Localizable.string(.gif)
         }
     }
-    
+
     var icon: String {
         switch self {
         case .livePhoto: return "livephoto"
-        case .video: return "video.fill"
-        case .gif: return "photo.on.rectangle.angled"
+        case .video: return "video"
+        case .gif: return "play.rectangle"
         }
     }
-    
+
     var description: String {
         switch self {
         case .livePhoto: return Localizable.string(.livePhotoFormatDesc)
@@ -106,7 +106,7 @@ struct BatchPhotoItem: Identifiable {
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: 160
+            kCGImageSourceThumbnailMaxPixelSize: 320
         ]
         guard let imageRef = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
         return UIImage(cgImage: imageRef)
@@ -204,10 +204,8 @@ final class BatchConvertViewModel: ObservableObject {
         successCount = 0
         failureCount = 0
 
-        // 批量转换期间保持屏幕常亮
         UIApplication.shared.isIdleTimerDisabled = true
 
-        // 重置所有项目状态为待处理
         for i in 0..<items.count {
             items[i].status = .pending
             items[i].errorMessage = nil
@@ -251,7 +249,6 @@ final class BatchConvertViewModel: ObservableObject {
             if self.shouldCleanupOnFinish {
                 self.performTempFileCleanup()
             } else if !self.isCancelled {
-                // 仅在正常完成时触发触感反馈
                 if self.failureCount == 0 {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 } else {
@@ -288,50 +285,48 @@ final class BatchConvertViewModel: ObservableObject {
 struct BatchConvertView: View {
     @StateObject private var viewModel: BatchConvertViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.colorScheme) private var colorScheme
     @Namespace private var formatAnimation
     var onDismiss: (() -> Void)? = nil
-    
+
     init(motionPhotoURLs: [URL], ignoredCount: Int, onDismiss: (() -> Void)? = nil) {
         _viewModel = StateObject(wrappedValue: BatchConvertViewModel(urls: motionPhotoURLs, ignoredCount: ignoredCount))
         self.onDismiss = onDismiss
     }
-    
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // 顶部信息总览卡片
-                headerSummaryCard
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                
-                // 导出格式选择器
-                formatSelectorSection
-                    .padding(.horizontal)
-                    .padding(.top, 14)
-                
-                // 照片卡片列表
-                photosListView
-                    .padding(.top, 12)
-                
-                // 底部常驻操作区
-                bottomActionBar
-            }
-            .background(Color(UIColor.systemGroupedBackground).edgesIgnoringSafeArea(.all))
-            .navigationTitle(Localizable.string(.batchConvert))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(Localizable.string(.cancel)) {
-                        if viewModel.isProcessing {
-                            viewModel.cancelConversion()
-                        }
-                        viewModel.cleanupTempFiles()
-                        onDismiss?()
-                        dismiss()
+            GeometryReader { proxy in
+                let metrics = AdaptiveLayoutMetrics(
+                    containerSize: proxy.size,
+                    horizontalSizeClass: horizontalSizeClass,
+                    verticalSizeClass: verticalSizeClass
+                )
+
+                ZStack {
+                    AppTheme.canvas
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 0) {
+                        // 顶部悬浮液态玻璃导航栏
+                        topNavigationBar(metrics: metrics)
+
+                        // 内容区：标准 iOS 分段格式控制器（无玻璃特效）
+                        formatSelectorSection(metrics: metrics)
+                            .padding(.top, 10)
+
+                        // 自适应照片小图网格（iPhone 3 列 / Duo 4-5 列 / iPad 5-6 列）
+                        photoThumbnailGrid(metrics: metrics)
+                            .padding(.top, 14)
+
+                        // 底部悬浮液态玻璃操作/进度区
+                        bottomFloatingDock(metrics: metrics)
                     }
-                    .foregroundColor(viewModel.isProcessing ? .secondary : .primary)
                 }
             }
+            .toolbar(.hidden, for: .navigationBar)
             .interactiveDismissDisabled(viewModel.isProcessing)
             .task {
                 await viewModel.loadThumbnails()
@@ -348,88 +343,107 @@ struct BatchConvertView: View {
             }
         }
     }
-    
-    // MARK: - Header Summary Card
-    private var headerSummaryCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.blue.opacity(0.12))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "photo.stack.fill")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.blue)
+
+    // MARK: - Top Floating Navigation Bar
+
+    private func topNavigationBar(metrics: AdaptiveLayoutMetrics) -> some View {
+        ZStack {
+            // 中央双行标题
+            VStack(spacing: 1) {
+                Text(Localizable.string(.batchTitleWithCount, viewModel.items.count))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppTheme.textPrimary)
+
+                if viewModel.ignoredCount > 0 {
+                    Text(Localizable.string(.batchIgnoredCount, viewModel.ignoredCount))
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(AppTheme.textSecondary)
                 }
-                
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(Localizable.string(.batchMotionPhotoCount, viewModel.items.count))
-                        .font(.headline)
-                        .fontWeight(.bold)
-                    
-                    if viewModel.ignoredCount > 0 {
-                        Text(Localizable.string(.batchIgnoredCount, viewModel.ignoredCount))
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    } else {
-                        Text(Localizable.string(.batchPhotoCount, viewModel.items.count))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+            }
+
+            HStack {
+                StudioIconCircleButton(
+                    systemName: "xmark",
+                    accessibilityLabel: Localizable.string(.cancel),
+                    size: 38
+                ) {
+                    if viewModel.isProcessing {
+                        viewModel.cancelConversion()
                     }
+                    viewModel.cleanupTempFiles()
+                    onDismiss?()
+                    dismiss()
                 }
-                
+
                 Spacer()
-                
+
                 if viewModel.isFinished {
+                    let isSuccess = !viewModel.isCancelled && viewModel.failureCount == 0
+                    let badgeColor = isSuccess ? AppTheme.success : AppTheme.warning
                     HStack(spacing: 4) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .foregroundColor(.green)
+                        Image(systemName: isSuccess ? "checkmark" : "exclamationmark")
+                            .font(.system(size: 11, weight: .bold))
                         Text("\(viewModel.successCount)/\(viewModel.items.count)")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
                     }
+                    .foregroundColor(badgeColor)
+                    .padding(.leading, 10)
+                    .padding(.trailing, 11)
+                    .frame(height: 34)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(badgeColor.opacity(0.16))
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .strokeBorder(badgeColor.opacity(0.35), lineWidth: 0.8)
+                            )
+                    )
                 }
             }
         }
-        .padding(14)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .cornerRadius(12)
+        .frame(height: 54)
+        .padding(.horizontal, max(16, metrics.horizontalPadding - 2))
+        .padding(.top, 4)
     }
-    
-    // MARK: - Format Selector Section
-    private var formatSelectorSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(Localizable.string(.exportFormat))
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-                .padding(.leading, 4)
-            
-            // 纯 SwiftUI 像素级对齐分段控制器 (避免 UIKit UISegmentedControl 图标文字错位问题)
+
+    // MARK: - Standard Content-Layer Format Segmented Control (No Glass per HIG)
+
+    private func formatSelectorSection(metrics: AdaptiveLayoutMetrics) -> some View {
+        VStack(spacing: 6) {
             HStack(spacing: 0) {
                 ForEach(BatchExportFormat.allCases) { format in
                     let isSelected = viewModel.selectedFormat == format
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        AppHaptics.selection()
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
                             viewModel.selectedFormat = format
                         }
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 5) {
                             Image(systemName: format.icon)
-                                .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
+                                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                             Text(format.displayName)
-                                .font(.subheadline)
-                                .fontWeight(isSelected ? .semibold : .regular)
+                                .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
                         }
-                        .foregroundColor(isSelected ? .primary : .secondary)
+                        .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .contentShape(Rectangle())
+                        .frame(height: 38)
+                        .contentShape(Capsule())
                         .background {
                             if isSelected {
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-                                    .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
+                                Capsule(style: .continuous)
+                                    .fill(AppTheme.surface0)
+                                    .overlay(
+                                        Capsule(style: .continuous)
+                                            .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.6)
+                                    )
+                                    .shadow(
+                                        color: Color.black.opacity(colorScheme == .light ? 0.06 : 0),
+                                        radius: 3,
+                                        y: 1
+                                    )
                                     .matchedGeometryEffect(id: "formatSelectorHighlight", in: formatAnimation)
                             }
                         }
@@ -439,215 +453,314 @@ struct BatchConvertView: View {
                 }
             }
             .padding(3)
-            .background(Color(UIColor.tertiarySystemGroupedBackground))
-            .cornerRadius(9)
-            
-            // 格式简短说明
+            .frame(height: 44)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(AppTheme.surface1)
+            )
+
             Text(viewModel.selectedFormat.description)
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 4)
-                .padding(.top, 2)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundColor(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
         }
+        .frame(maxWidth: metrics.isExpandedCanvas ? 520 : .infinity)
+        .padding(.horizontal, max(16, metrics.horizontalPadding - 4))
     }
-    
-    // MARK: - Photos List View
-    private var photosListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 10) {
+
+    // MARK: - Adaptive Photo Thumbnail Grid
+
+    private func photoThumbnailGrid(metrics: AdaptiveLayoutMetrics) -> some View {
+        let columns = Array(
+            repeating: GridItem(.flexible(), spacing: 8),
+            count: metrics.batchGridColumns
+        )
+
+        return ScrollView(showsIndicators: false) {
+            LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(viewModel.items) { item in
-                    HStack(spacing: 12) {
-                        // 缩略图
-                        if let thumb = item.thumbnail {
-                            Image(uiImage: thumb)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 52, height: 52)
-                                .clipped()
-                                .cornerRadius(8)
-                        } else {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(width: 52, height: 52)
-                                .cornerRadius(8)
-                                .overlay(
-                                    Image(systemName: "photo")
-                                        .foregroundColor(.secondary)
-                                )
+                    BatchPhotoGridTile(
+                        item: item,
+                        isBatchRunning: viewModel.isProcessing,
+                        onTapError: {
+                            viewModel.selectedErrorItem = item
                         }
-                        
-                        // 文件信息
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.fileName)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .lineLimit(1)
-                            
-                            Text(ByteCountFormatter.string(fromByteCount: item.fileSize, countStyle: .file))
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        // 状态指示器
-                        statusIndicator(for: item)
-                    }
-                    .padding(12)
-                    .background(Color(UIColor.secondarySystemGroupedBackground))
-                    .cornerRadius(10)
+                    )
                 }
             }
-            .padding(.horizontal)
+            .frame(maxWidth: metrics.batchGridMaxWidth)
+            .padding(.horizontal, max(16, metrics.horizontalPadding - 4))
             .padding(.bottom, 16)
+            .frame(maxWidth: .infinity)
         }
     }
-    
-    // MARK: - Status Indicator
-    @ViewBuilder
-    private func statusIndicator(for item: BatchPhotoItem) -> some View {
-        switch item.status {
-        case .pending:
-            HStack(spacing: 4) {
-                Image(systemName: item.status.iconName)
-                    .font(.footnote)
-                    .foregroundColor(item.status.iconColor)
-                Text(item.status.title)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-        case .processing:
-            HStack(spacing: 6) {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle())
-                    .scaleEffect(0.7)
-                Text(item.status.title)
-                    .font(.caption2)
-                    .foregroundColor(.blue)
-            }
-        case .success:
-            HStack(spacing: 4) {
-                Image(systemName: item.status.iconName)
-                    .font(.subheadline)
-                    .foregroundColor(item.status.iconColor)
-            }
-        case .failed:
-            Button(action: {
-                viewModel.selectedErrorItem = item
-            }) {
-                HStack(spacing: 4) {
-                    Image(systemName: item.status.iconName)
-                        .font(.subheadline)
-                        .foregroundColor(item.status.iconColor)
-                    Image(systemName: "info.circle")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-    }
-    
-    // MARK: - Bottom Action Bar
-    private var bottomActionBar: some View {
-        VStack(spacing: 12) {
-            Divider()
-            
+
+    // MARK: - Bottom Floating Liquid Glass Dock
+
+    private func bottomFloatingDock(metrics: AdaptiveLayoutMetrics) -> some View {
+        VStack(spacing: 10) {
             if viewModel.isProcessing {
-                // 正在处理状态
-                VStack(spacing: 8) {
-                    HStack {
-                        Text(Localizable.string(.convertingItem, viewModel.currentIndex, viewModel.items.count))
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        Spacer()
-                        Text("\(Int(viewModel.progress * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                LiquidGlassGroup(spacing: 10) {
+                    HStack(spacing: 10) {
+                        // 悬浮液态玻璃进度胶囊
+                        VStack(spacing: 6) {
+                            HStack {
+                                Text(Localizable.string(.convertingItem, viewModel.currentIndex, viewModel.items.count))
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(AppTheme.textPrimary)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Text("\(Int(viewModel.progress * 100))%")
+                                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(AppTheme.accent)
+                            }
+
+                            GeometryReader { barGeo in
+                                ZStack(alignment: .leading) {
+                                    Capsule(style: .continuous)
+                                        .fill(AppTheme.surface2)
+                                    Capsule(style: .continuous)
+                                        .fill(AppTheme.accent)
+                                        .frame(width: max(8, barGeo.size.width * CGFloat(viewModel.progress)))
+                                        .animation(.easeOut(duration: 0.25), value: viewModel.progress)
+                                }
+                            }
+                            .frame(height: 5)
+                        }
+                        .padding(.horizontal, 18)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .liquidGlassControl(in: Capsule(), interactive: false)
+
+                        // 独立悬浮液态玻璃取消圆形按钮
+                        Button {
+                            AppHaptics.warning()
+                            viewModel.cancelConversion()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(AppTheme.textPrimary)
+                                .frame(width: 54, height: 54)
+                                .contentShape(Circle())
+                                .liquidGlassControl(in: Circle(), interactive: true)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Localizable.string(.cancelConversion))
                     }
-                    
-                    ProgressView(value: viewModel.progress, total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                    
-                    Button(action: viewModel.cancelConversion) {
-                        Text(Localizable.string(.cancelConversion))
-                            .font(.footnote)
-                            .foregroundColor(.red)
-                    }
-                    .padding(.top, 4)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
             } else if viewModel.isFinished {
-                // 处理完成或已取消状态
                 VStack(spacing: 10) {
-                    if viewModel.isCancelled {
-                        HStack(spacing: 6) {
-                            Image(systemName: "stop.circle.fill")
-                                .foregroundColor(.orange)
-                            Text(Localizable.string(.batchCancelledSummary, viewModel.successCount))
-                                .font(.footnote)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                    } else if viewModel.failureCount == 0 {
-                        HStack(spacing: 6) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                            Text(Localizable.string(.batchCompletedAllSuccess, viewModel.successCount))
-                                .font(.footnote)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                    } else {
-                        HStack(spacing: 6) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                            Text(Localizable.string(.batchCompletedPartial, viewModel.successCount, viewModel.failureCount))
-                                .font(.footnote)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                    }
-                    
-                    Button(action: {
+                    completionSummaryLine
+
+                    Button {
                         viewModel.cleanupTempFiles()
                         onDismiss?()
                         dismiss()
-                    }) {
-                        Text(Localizable.string(.done))
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.blue)
-                            .cornerRadius(10)
+                    } label: {
+                        HStack(spacing: 9) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 16, weight: .bold))
+                            Text(Localizable.string(.done))
+                        }
                     }
+                    .buttonStyle(StudioPrimaryButtonStyle(height: 54))
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 10)
             } else {
-                // 未开始状态
-                Button(action: {
+                Button {
+                    AppHaptics.mediumImpact()
                     viewModel.startBatchConversion()
-                }) {
-                    HStack(spacing: 8) {
+                } label: {
+                    HStack(spacing: 9) {
                         Image(systemName: "arrow.triangle.2.circlepath")
-                        Text(Localizable.string(.startBatchConversion))
+                            .font(.system(size: 17, weight: .semibold))
+                        Text(Localizable.string(.startBatchConversionWithCount, viewModel.items.count))
                     }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.blue)
-                    .cornerRadius(10)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 10)
+                .buttonStyle(StudioPrimaryButtonStyle(height: 54))
             }
         }
+        .frame(maxWidth: metrics.floatingDockMaxWidth)
+        .padding(.horizontal, metrics.horizontalPadding)
+        .padding(.top, 8)
+        .padding(.bottom, 16)
+        .frame(maxWidth: .infinity)
         .background(
-            Color(UIColor.systemBackground).opacity(0.9)
-                .edgesIgnoringSafeArea(.bottom)
+            AppTheme.canvas.opacity(0.94)
+                .ignoresSafeArea(edges: .bottom)
         )
+    }
+
+    @ViewBuilder
+    private var completionSummaryLine: some View {
+        if viewModel.isCancelled {
+            HStack(spacing: 5) {
+                Image(systemName: "stop.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(AppTheme.warning)
+                Text(Localizable.string(.batchCancelledSummary, viewModel.successCount))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppTheme.warning)
+            }
+        } else if viewModel.failureCount == 0 {
+            HStack(spacing: 5) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(AppTheme.success)
+                Text(Localizable.string(.batchCompletedAllSuccess, viewModel.successCount))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppTheme.success)
+            }
+        } else {
+            HStack(spacing: 5) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(AppTheme.warning)
+                Text(Localizable.string(.batchCompletedPartial, viewModel.successCount, viewModel.failureCount))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppTheme.warning)
+            }
+        }
+    }
+}
+
+// MARK: - Individual Grid Tile
+private struct BatchPhotoGridTile: View {
+    let item: BatchPhotoItem
+    let isBatchRunning: Bool
+    let onTapError: () -> Void
+
+    private var isProcessingItem: Bool {
+        item.status == .processing
+    }
+
+    private var isDimmedPending: Bool {
+        isBatchRunning && item.status == .pending
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let side = geo.size.width
+
+            ZStack {
+                // Thumbnail
+                if let thumb = item.thumbnail {
+                    Image(uiImage: thumb)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: side, height: side)
+                        .clipped()
+                } else {
+                    Rectangle()
+                        .fill(AppTheme.surface1)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .foregroundColor(AppTheme.textTertiary)
+                        )
+                }
+
+                // Dim pending tiles while batch is actively converting
+                if isDimmedPending {
+                    Color.black.opacity(0.42)
+                }
+
+                // Ready state: subtle bottom vignette + quiet LIVE badge
+                if !isBatchRunning && item.status == .pending {
+                    VStack {
+                        Spacer()
+                        LinearGradient(
+                            colors: [.clear, Color.black.opacity(0.55)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: side * 0.38)
+                    }
+
+                    VStack {
+                        Spacer()
+                        HStack {
+                            HStack(spacing: 3) {
+                                Image(systemName: "livephoto")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(Color(red: 0.220, green: 0.737, blue: 0.878))
+                                Text("LIVE")
+                                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.95))
+                            }
+                            .padding(.leading, 6)
+                            .padding(.trailing, 7)
+                            .frame(height: 20)
+                            .quietPhotoBadge(cornerRadius: 9)
+
+                            Spacer()
+                        }
+                        .padding(7)
+                    }
+                }
+
+                // Processing state: centered dark circle + cyan spinner (no glass border per HIG)
+                if isProcessingItem {
+                    Color.black.opacity(0.28)
+                    Circle()
+                        .fill(Color(red: 0.039, green: 0.051, blue: 0.071).opacity(0.68))
+                        .frame(width: 46, height: 46)
+                        .overlay(
+                            ProgressView()
+                                .tint(AppTheme.accent)
+                                .scaleEffect(1.05)
+                        )
+                }
+
+                // Success / Failed top-trailing badge
+                if case .success = item.status {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Circle()
+                                .fill(AppTheme.success)
+                                .frame(width: 23, height: 23)
+                                .overlay(
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.white)
+                                )
+                        }
+                        Spacer()
+                    }
+                    .padding(7)
+                } else if case .failed = item.status {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button(action: onTapError) {
+                                Circle()
+                                    .fill(AppTheme.danger)
+                                    .frame(width: 24, height: 24)
+                                    .overlay(
+                                        Image(systemName: "exclamationmark")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.white)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Spacer()
+                    }
+                    .padding(7)
+                }
+            }
+            .frame(width: side, height: side)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.tile, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.tile, style: .continuous)
+                    .strokeBorder(
+                        isProcessingItem ? AppTheme.accent : AppTheme.borderSubtle,
+                        lineWidth: isProcessingItem ? 2.2 : 0.6
+                    )
+            )
+        }
+        .aspectRatio(1, contentMode: .fit)
     }
 }

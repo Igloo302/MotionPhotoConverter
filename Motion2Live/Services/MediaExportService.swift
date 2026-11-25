@@ -108,6 +108,62 @@ enum MediaExportService {
         return nil
     }
 
+    // MARK: - Extract Cover Frame from Video (Preserving Original EXIF Metadata)
+    static func extractCoverFrameData(
+        from videoURL: URL,
+        at seconds: Double,
+        preservingMetadataFrom originalImageData: Data? = nil
+    ) async throws -> Data {
+        let asset = AVAsset(url: videoURL)
+        let duration = try await asset.load(.duration)
+        let durationSeconds = CMTimeGetSeconds(duration)
+        guard durationSeconds.isFinite, durationSeconds > 0 else {
+            throw MediaExportError.invalidVideoDuration
+        }
+
+        let clampedSeconds = max(0, min(seconds, max(0, durationSeconds - 0.01)))
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = CMTime(seconds: 0.02, preferredTimescale: 600)
+        generator.requestedTimeToleranceAfter = CMTime(seconds: 0.02, preferredTimescale: 600)
+
+        let cgImage = try await generator.image(at: CMTime(seconds: clampedSeconds, preferredTimescale: 600)).image
+
+        let outputData = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            outputData as CFMutableData,
+            UTType.jpeg.identifier as CFString,
+            1,
+            nil
+        ) else {
+            throw MediaExportError.imageDestinationCreationFailed
+        }
+
+        var properties: [String: Any] = [
+            kCGImageDestinationLossyCompressionQuality as String: 0.95
+        ]
+        if let originalImageData = originalImageData,
+           let originalSource = CGImageSourceCreateWithData(originalImageData as CFData, nil),
+           let originalProps = CGImageSourceCopyPropertiesAtIndex(originalSource, 0, nil) as? [String: Any] {
+            if let exif = originalProps[kCGImagePropertyExifDictionary as String] {
+                properties[kCGImagePropertyExifDictionary as String] = exif
+            }
+            if let tiff = originalProps[kCGImagePropertyTIFFDictionary as String] {
+                properties[kCGImagePropertyTIFFDictionary as String] = tiff
+            }
+            if let gps = originalProps[kCGImagePropertyGPSDictionary as String] {
+                properties[kCGImagePropertyGPSDictionary as String] = gps
+            }
+        }
+
+        CGImageDestinationAddImage(destination, cgImage, properties as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else {
+            throw MediaExportError.metadataWriteFailed
+        }
+
+        return outputData as Data
+    }
+
     // MARK: - Prepare Live Photo Artifacts (Testable without PHPhotoLibrary)
     static func prepareLivePhotoFiles(
         imageData: Data,
@@ -239,6 +295,13 @@ enum MediaExportService {
                 request.creationDate = finalDate
             }
         }
+
+        let videoDurationSec = (try? await AVAsset(url: tempMP4URL).load(.duration)).map(CMTimeGetSeconds)
+        let validDuration = (videoDurationSec?.isFinite == true && (videoDurationSec ?? 0) > 0) ? videoDurationSec : nil
+        await RecentConversionStore.shared.recordConversion(
+            imageData: motionPhotoData.imageData,
+            durationSeconds: validDuration
+        )
     }
 
     // MARK: - Export Custom Live Photo (Lab)
@@ -262,6 +325,13 @@ enum MediaExportService {
             request.addResource(with: .pairedVideo, fileURL: prepared.videoURL, options: nil)
             request.creationDate = creationDate
         }
+
+        let videoDurationSec = (try? await AVAsset(url: videoURL).load(.duration)).map(CMTimeGetSeconds)
+        let validDuration = (videoDurationSec?.isFinite == true && (videoDurationSec ?? 0) > 0) ? videoDurationSec : nil
+        await RecentConversionStore.shared.recordConversion(
+            imageData: imageData,
+            durationSeconds: validDuration
+        )
     }
 
     // MARK: - Export Standalone Video
@@ -285,6 +355,8 @@ enum MediaExportService {
                 request?.creationDate = finalDate
             }
         }
+
+        await RecentConversionStore.shared.recordConversion(videoURL: tempVideoURL)
     }
 
     // MARK: - Generate GIF File (Testable without PHPhotoLibrary)
@@ -363,5 +435,7 @@ enum MediaExportService {
                 request.creationDate = finalDate
             }
         }
+
+        await RecentConversionStore.shared.recordConversion(videoURL: tempMP4URL)
     }
 }
