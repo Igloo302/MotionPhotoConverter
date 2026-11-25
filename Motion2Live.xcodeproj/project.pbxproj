@@ -25,10 +25,15 @@
 		A10000062E20000100000001 /* MotionPhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000052E20000100000001 /* MotionPhotoView.swift */; };
 		A10000082E20000100000001 /* PhotoPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000072E20000100000001 /* PhotoPicker.swift */; };
 		A100000A2E20000100000001 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000092E20000100000001 /* PlayerView.swift */; };
+		A10000312E20000100000001 /* ObsidianTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000302E20000100000001 /* ObsidianTheme.swift */; };
+		A10000332E20000100000001 /* KeyframePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000322E20000100000001 /* KeyframePickerSheet.swift */; };
+		A10000352E20000100000001 /* RecentConversionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000362E20000100000001 /* RecentConversionStore.swift */; };
 		A10000212E20000100000001 /* Pixel.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A10000202E20000100000001 /* Pixel.jpg */; };
 		A10000232E20000100000001 /* Samsung.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A10000222E20000100000001 /* Samsung.jpg */; };
 		A10000252E20000100000001 /* XiaomiNew.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A10000242E20000100000001 /* XiaomiNew.jpg */; };
 		A10000272E20000100000001 /* XiaomiOld.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A10000262E20000100000001 /* XiaomiOld.jpg */; };
+		A10000382E20000100000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A10000372E20000100000001 /* PrivacyInfo.xcprivacy */; };
+		A10000392E20000100000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10000402E20000100000001 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,10 +77,21 @@
 		A10000052E20000100000001 /* MotionPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPhotoView.swift; sourceTree = "<group>"; };
 		A10000072E20000100000001 /* PhotoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoPicker.swift; sourceTree = "<group>"; };
 		A10000092E20000100000001 /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
+		A10000302E20000100000001 /* ObsidianTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianTheme.swift; sourceTree = "<group>"; };
+		A10000322E20000100000001 /* KeyframePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyframePickerSheet.swift; sourceTree = "<group>"; };
+		A10000362E20000100000001 /* RecentConversionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentConversionStore.swift; sourceTree = "<group>"; };
 		A10000202E20000100000001 /* Pixel.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = Pixel.jpg; path = samples/Pixel.jpg; sourceTree = SOURCE_ROOT; };
 		A10000222E20000100000001 /* Samsung.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = Samsung.jpg; path = samples/Samsung.jpg; sourceTree = SOURCE_ROOT; };
 		A10000242E20000100000001 /* XiaomiNew.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = XiaomiNew.jpg; path = samples/XiaomiNew.jpg; sourceTree = SOURCE_ROOT; };
 		A10000262E20000100000001 /* XiaomiOld.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = XiaomiOld.jpg; path = samples/XiaomiOld.jpg; sourceTree = SOURCE_ROOT; };
+		A10000372E20000100000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A10000412E20000100000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A10000422E20000100000001 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		A10000432E20000100000001 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A10000442E20000100000001 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A10000452E20000100000001 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A10000462E20000100000001 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A10000472E20000100000001 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -127,6 +143,8 @@
 			isa = PBXGroup;
 			children = (
 				61A0CA592C958E6A0080EF64 /* Info.plist */,
+				A10000402E20000100000001 /* InfoPlist.strings */,
+				A10000372E20000100000001 /* PrivacyInfo.xcprivacy */,
 				61A0CA2E2C9589550080EF64 /* Motion2LiveApp.swift */,
 				03BDAC1E2C9EDE5000F363ED /* HomeView.swift */,
 				61A0CA6A2C95A0100080EF64 /* BatchConvertView.swift */,
@@ -134,6 +152,7 @@
 				0329E0CC2C9ED90C0099759B /* Localizable.swift */,
 				036968852C9FA036001E1B13 /* LabView.swift */,
 				61A0CA5E2C95A0020080EF64 /* Models */,
+				A10000342E20000100000001 /* DesignSystem */,
 				A10000102E20000100000001 /* Services */,
 				A10000112E20000100000001 /* Utils */,
 				61A0CA5F2C95A0030080EF64 /* Views */,
@@ -196,14 +215,24 @@
 				6196846B2E17C58B0025BE5D /* SupportedBrandsView.swift */,
 				A10000072E20000100000001 /* PhotoPicker.swift */,
 				A10000092E20000100000001 /* PlayerView.swift */,
+				A10000322E20000100000001 /* KeyframePickerSheet.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		A10000342E20000100000001 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				A10000302E20000100000001 /* ObsidianTheme.swift */,
+			);
+			path = DesignSystem;
 			sourceTree = "<group>";
 		};
 		A10000102E20000100000001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
 				A10000032E20000100000001 /* MediaExportService.swift */,
+				A10000362E20000100000001 /* RecentConversionStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -301,6 +330,12 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				"zh-Hans",
+				fr,
+				de,
+				es,
+				ja,
+				ko,
 				Base,
 			);
 			mainGroup = 61A0CA222C9589540080EF64;
@@ -322,6 +357,8 @@
 			files = (
 				61A0CA372C9589590080EF64 /* Preview Assets.xcassets in Resources */,
 				61A0CA332C9589590080EF64 /* Assets.xcassets in Resources */,
+				A10000382E20000100000001 /* PrivacyInfo.xcprivacy in Resources */,
+				A10000392E20000100000001 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -363,6 +400,9 @@
 				A10000062E20000100000001 /* MotionPhotoView.swift in Sources */,
 				A10000082E20000100000001 /* PhotoPicker.swift in Sources */,
 				A100000A2E20000100000001 /* PlayerView.swift in Sources */,
+				A10000312E20000100000001 /* ObsidianTheme.swift in Sources */,
+				A10000332E20000100000001 /* KeyframePickerSheet.swift in Sources */,
+				A10000352E20000100000001 /* RecentConversionStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -384,6 +424,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		A10000402E20000100000001 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A10000412E20000100000001 /* en */,
+				A10000422E20000100000001 /* zh-Hans */,
+				A10000432E20000100000001 /* fr */,
+				A10000442E20000100000001 /* de */,
+				A10000452E20000100000001 /* es */,
+				A10000462E20000100000001 /* ja */,
+				A10000472E20000100000001 /* ko */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin PBXTargetDependency section */
 		61A0CA3E2C9589590080EF64 /* PBXTargetDependency */ = {
@@ -522,7 +579,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Motion2Live/Motion2Live.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Motion2Live/Preview Content\"";
 				DEVELOPMENT_TEAM = G5BA866C4B;
@@ -544,7 +601,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.igloo.MotionPhotoConverter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -564,7 +621,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Motion2Live/Motion2Live.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Motion2Live/Preview Content\"";
 				DEVELOPMENT_TEAM = G5BA866C4B;
@@ -586,7 +643,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.igloo.MotionPhotoConverter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
