@@ -45,6 +45,12 @@ struct MotionPhotoView: View {
     // 资源生命周期追踪
     @State private var previewVideoURL: URL?
     @State private var playerEndObserver: NSObjectProtocol?
+    @State private var hingeState: HingeStateSnapshot = .unavailable
+    @State private var lastMetrics = AdaptiveLayoutMetrics(
+        containerSize: CGSize(width: 390, height: 844),
+        horizontalSizeClass: nil,
+        verticalSizeClass: nil
+    )
 
     private static let timestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -60,65 +66,49 @@ struct MotionPhotoView: View {
         GeometryReader { proxy in
             let metrics = AdaptiveLayoutMetrics(
                 containerSize: proxy.size,
+                safeAreaInsets: proxy.safeAreaInsets,
                 horizontalSizeClass: horizontalSizeClass,
-                verticalSizeClass: verticalSizeClass
+                verticalSizeClass: verticalSizeClass,
+                hinge: hingeState
             )
+            let isSplitStudioMode = metrics.layoutMode == .hingeFlexSplit
+                || (metrics.isWideSplit && metrics.isCompactShortScreen)
+
+            let stageLayout: AnyLayout = {
+                if !isSplitStudioMode {
+                    return AnyLayout(ZStackLayout())
+                }
+                return metrics.prefersHorizontalSplitAxis
+                    ? AnyLayout(HStackLayout(alignment: .center, spacing: metrics.hingeAvoidanceGap))
+                    : AnyLayout(VStackLayout(spacing: metrics.hingeAvoidanceGap))
+            }()
 
             ZStack {
-                // 1. 100% 全屏出血沉浸式取景舞台
-                fullBleedPhotoStage(size: proxy.size)
+                // 1. 柔和环境模糊衬底（始终保留在底层，避免切换布局时重建）
+                ambientBackdrop(size: proxy.size)
 
-                // 2. 上下光学渐变护航层（保证白色文字与悬浮控件在任何照片上清晰可读）
-                VStack(spacing: 0) {
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.020, green: 0.031, blue: 0.051).opacity(0.56),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 170)
+                // 2. 上下光学渐变护航层（仅全屏叠层模式启用，分屏模式下淡出）
+                opticalGradients
+                    .opacity(isSplitStudioMode ? 0 : 1)
 
-                    Spacer()
+                // 3. 单一视图树：预览舞台 + 悬浮控制区（通过 AnyLayout 在全屏叠层 / 左右分栏 / 上下折屏间无损切换）
+                stageLayout {
+                    interactiveMediaStage(isSplitStudioMode: isSplitStudioMode)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            Color(red: 0.031, green: 0.039, blue: 0.051).opacity(0.78)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 250)
-                }
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-                // 3. 悬浮导航栏 + 静默元数据 + 底部悬浮液态玻璃操作台
-                VStack(spacing: 0) {
-                    floatingTopBar(metrics: metrics)
-
-                    quietMetadataRow(metrics: metrics)
-                        .padding(.top, 8)
-
-                    Spacer()
-
-                    if !isPlayingVideo && videoPlayer != nil {
-                        Text(Localizable.string(.holdToPlayHint))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.92))
-                            .padding(.horizontal, 12)
-                            .frame(height: 28)
-                            .quietPhotoBadge(cornerRadius: 14)
-                            .padding(.bottom, 12)
-                            .transition(.opacity)
-                    }
-
-                    floatingBottomDock(metrics: metrics)
+                    inspectorControlsPanel(metrics: metrics, isSplitStudioMode: isSplitStudioMode)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            .onAdaptiveChange(of: metrics) { newMetrics in
+                lastMetrics = newMetrics
+            }
+            .onAppear {
+                lastMetrics = metrics
+            }
         }
+        .observeDeviceHinge($hingeState)
+        .immersiveToolbarVerticalBehaviorDisabled()
         .toolbar(.hidden, for: .navigationBar)
         .preferredColorScheme(.dark)
         .sheet(isPresented: $isShowingPhotoPicker) {
@@ -180,7 +170,7 @@ struct MotionPhotoView: View {
                 restoreOriginalCoverFrame()
             }
         )
-        .presentationDetents([.height(540), .large])
+        .presentationDetents(lastMetrics.preferredKeyframeDetents)
         .presentationDragIndicator(.visible)
 
         if #available(iOS 16.4, *) {
@@ -192,7 +182,7 @@ struct MotionPhotoView: View {
 
     // MARK: - Full-Bleed Photo & Video Stage
 
-    private func fullBleedPhotoStage(size: CGSize) -> some View {
+    private func ambientBackdrop(size: CGSize) -> some View {
         ZStack {
             Color(red: 0.063, green: 0.075, blue: 0.086)
                 .ignoresSafeArea()
@@ -207,37 +197,96 @@ struct MotionPhotoView: View {
                     .overlay(Color.black.opacity(0.45))
                     .clipped()
                     .ignoresSafeArea()
+            }
+        }
+        .allowsHitTesting(false)
+    }
 
-                // 主体画面（保持完整构图不裁切）
-                ZStack {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
+    private var opticalGradients: some View {
+        VStack(spacing: 0) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.020, green: 0.031, blue: 0.051).opacity(0.56),
+                    Color.clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 170)
+
+            Spacer()
+
+            LinearGradient(
+                colors: [
+                    Color.clear,
+                    Color(red: 0.031, green: 0.039, blue: 0.051).opacity(0.78)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 250)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private func interactiveMediaStage(isSplitStudioMode: Bool) -> some View {
+        if let image = selectedImage {
+            ZStack {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if let player = videoPlayer {
+                    PlayerView(player: player)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    if let player = videoPlayer {
-                        PlayerView(player: player)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .opacity(isPlayingVideo ? 1 : 0)
-                            .animation(.easeInOut(duration: 0.18), value: isPlayingVideo)
-                    }
-                }
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { _ in startVideoPlayback() }
-                        .onEnded { _ in stopVideoPlayback() }
-                )
-            } else {
-                VStack(spacing: 12) {
-                    ProgressView()
-                        .tint(AppTheme.accent)
-                    Text(Localizable.string(.processing))
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.75))
+                        .opacity(isPlayingVideo ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.18), value: isPlayingVideo)
                 }
             }
+            .padding(isSplitStudioMode ? 12 : 0)
+            .clipShape(RoundedRectangle(cornerRadius: isSplitStudioMode ? 20 : 0, style: .continuous))
+            .ignoresSafeArea(edges: isSplitStudioMode ? [] : .all)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in startVideoPlayback() }
+                    .onEnded { _ in stopVideoPlayback() }
+            )
+        } else {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .tint(AppTheme.accent)
+                Text(Localizable.string(.processing))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white.opacity(0.75))
+            }
+        }
+    }
+
+    private func inspectorControlsPanel(metrics: AdaptiveLayoutMetrics, isSplitStudioMode: Bool) -> some View {
+        VStack(spacing: 0) {
+            floatingTopBar(metrics: metrics)
+
+            quietMetadataRow(metrics: metrics)
+                .padding(.top, 8)
+
+            Spacer(minLength: isSplitStudioMode ? 12 : 0)
+
+            if !isPlayingVideo && videoPlayer != nil {
+                Text(Localizable.string(.holdToPlayHint))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.white.opacity(0.92))
+                    .padding(.horizontal, 12)
+                    .frame(height: 28)
+                    .quietPhotoBadge(cornerRadius: 14)
+                    .padding(.bottom, metrics.isCompactShortScreen ? 8 : 12)
+                    .transition(.opacity)
+            }
+
+            floatingBottomDock(metrics: metrics)
         }
     }
 
@@ -444,7 +493,7 @@ struct MotionPhotoView: View {
         }
         .frame(maxWidth: metrics.floatingDockMaxWidth)
         .padding(.horizontal, metrics.horizontalPadding)
-        .padding(.bottom, 16)
+        .padding(.bottom, metrics.dockBottomPadding)
     }
 
     private var primaryCTATitle: String {

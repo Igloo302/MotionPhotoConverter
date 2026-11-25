@@ -6,6 +6,7 @@
 import XCTest
 import AVFoundation
 import ImageIO
+import SwiftUI
 import UIKit
 @testable import Motion2Live
 
@@ -471,5 +472,128 @@ final class Motion2LiveTests: XCTestCase {
                 XCTAssertEqual(contentIdValue, prepared.assetIdentifier)
             }
         }
+    }
+
+    // MARK: - iPhone Duo Adaptive Layout Metrics Tests
+
+    func testDuoOuterScreenMetrics() {
+        let metrics = AdaptiveLayoutMetrics(
+            containerSize: CGSize(width: 466, height: 678),
+            safeAreaInsets: EdgeInsets(top: 59, leading: 0, bottom: 34, trailing: 0),
+            horizontalSizeClass: .compact,
+            verticalSizeClass: .regular,
+            hinge: HingeStateSnapshot(status: .closed, angleDegrees: 0)
+        )
+
+        XCTAssertEqual(metrics.layoutMode, .compactVertical)
+        XCTAssertTrue(metrics.isCompactShortScreen)
+        XCTAssertFalse(metrics.isWideSplit)
+        XCTAssertEqual(metrics.batchGridColumns, 3)
+        XCTAssertEqual(metrics.keyframeDetentMode, .largeOnly)
+        XCTAssertFalse(metrics.usesSideBySideKeyframeLayout)
+        XCTAssertEqual(metrics.hingeAvoidanceGap, 0)
+        XCTAssertGreaterThan(metrics.heroDeckScale, 0.95)
+    }
+
+    func testDuoUnfoldedPortraitMetrics() {
+        let metrics = AdaptiveLayoutMetrics(
+            containerSize: CGSize(width: 669, height: 951),
+            horizontalSizeClass: .compact,
+            verticalSizeClass: .regular,
+            hinge: HingeStateSnapshot(status: .fullyOpen, angleDegrees: 180)
+        )
+
+        XCTAssertEqual(metrics.layoutMode, .unfoldedWideSplit)
+        XCTAssertFalse(metrics.isCompactShortScreen)
+        XCTAssertTrue(metrics.isWideSplit)
+        XCTAssertTrue(metrics.prefersHorizontalSplitAxis)
+        XCTAssertEqual(metrics.batchGridColumns, 4)
+        XCTAssertEqual(metrics.keyframeDetentMode, .mediumAndLarge)
+        XCTAssertFalse(metrics.usesSideBySideKeyframeLayout)
+        XCTAssertEqual(metrics.hingeAvoidanceGap, 24)
+    }
+
+    func testDuoUnfoldedLandscapeMetrics() {
+        let metrics = AdaptiveLayoutMetrics(
+            containerSize: CGSize(width: 951, height: 669),
+            horizontalSizeClass: .regular,
+            verticalSizeClass: .compact,
+            hinge: HingeStateSnapshot(status: .fullyOpen, angleDegrees: 180)
+        )
+
+        XCTAssertEqual(metrics.layoutMode, .unfoldedWideSplit)
+        XCTAssertTrue(metrics.isCompactShortScreen)
+        XCTAssertTrue(metrics.isWideSplit)
+        XCTAssertTrue(metrics.prefersHorizontalSplitAxis)
+        XCTAssertEqual(metrics.batchGridColumns, 5)
+        XCTAssertEqual(metrics.keyframeDetentMode, .largeOnly)
+        XCTAssertTrue(metrics.usesSideBySideKeyframeLayout)
+        XCTAssertEqual(metrics.hingeAvoidanceGap, 24)
+    }
+
+    func testDuoPartiallyOpenFlexPostureMetrics() {
+        let portraitFlex = AdaptiveLayoutMetrics(
+            containerSize: CGSize(width: 669, height: 951),
+            horizontalSizeClass: .compact,
+            verticalSizeClass: .regular,
+            hinge: HingeStateSnapshot(status: .partiallyOpen, angleDegrees: 115)
+        )
+        XCTAssertEqual(portraitFlex.layoutMode, .hingeFlexSplit)
+        XCTAssertTrue(portraitFlex.isWideSplit)
+        XCTAssertFalse(portraitFlex.prefersHorizontalSplitAxis)
+        XCTAssertEqual(portraitFlex.hingeAvoidanceGap, 28)
+
+        let landscapeFlex = AdaptiveLayoutMetrics(
+            containerSize: CGSize(width: 951, height: 669),
+            horizontalSizeClass: .regular,
+            verticalSizeClass: .compact,
+            hinge: HingeStateSnapshot(status: .partiallyOpen, angleDegrees: 115)
+        )
+        XCTAssertEqual(landscapeFlex.layoutMode, .hingeFlexSplit)
+        XCTAssertTrue(landscapeFlex.isWideSplit)
+        XCTAssertTrue(landscapeFlex.prefersHorizontalSplitAxis)
+        XCTAssertEqual(landscapeFlex.hingeAvoidanceGap, 28)
+    }
+
+    func testHingeStateSnapshotDebounce() {
+        let initial = HingeStateSnapshot(status: .partiallyOpen, angleDegrees: 110.0)
+        let jittered = HingeStateSnapshot.resolveNext(
+            current: initial,
+            rawStatus: .partiallyOpen,
+            rawAngleDegrees: 111.2
+        )
+        XCTAssertEqual(jittered, initial)
+
+        let moved = HingeStateSnapshot.resolveNext(
+            current: initial,
+            rawStatus: .partiallyOpen,
+            rawAngleDegrees: 114.0
+        )
+        XCTAssertEqual(moved.angleDegrees, 114.0)
+
+        let statusChanged = HingeStateSnapshot.resolveNext(
+            current: initial,
+            rawStatus: .fullyOpen,
+            rawAngleDegrees: 111.0
+        )
+        XCTAssertEqual(statusChanged.status, .fullyOpen)
+    }
+
+    func testSafeAreaHorizontalPaddingAvoidsEdgeInsets() {
+        let noEdge = AdaptiveLayoutMetrics(
+            containerSize: CGSize(width: 466, height: 678),
+            safeAreaInsets: EdgeInsets(top: 59, leading: 0, bottom: 34, trailing: 0),
+            horizontalSizeClass: .compact,
+            verticalSizeClass: .regular
+        )
+        XCTAssertEqual(noEdge.horizontalPadding, 20)
+
+        let withSideBar = AdaptiveLayoutMetrics(
+            containerSize: CGSize(width: 466, height: 678),
+            safeAreaInsets: EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 20),
+            horizontalSizeClass: .compact,
+            verticalSizeClass: .regular
+        )
+        XCTAssertEqual(withSideBar.horizontalPadding, 32)
     }
 }

@@ -123,15 +123,162 @@ enum AppTheme {
     }
 }
 
+// MARK: - iPhone Duo Hinge Abstraction (iOS 16+ Safe, iOS 27.1+ Native)
+
+enum DuoHingeStatus: Equatable, Sendable {
+    case unavailable   // 非折叠设备或 iOS < 27.1
+    case closed        // 合盖使用外屏
+    case partiallyOpen // 半开姿态（Flex / Tabletop，建议分屏避让折痕）
+    case fullyOpen     // 180° 完全展开
+}
+
+struct HingeStateSnapshot: Equatable, Sendable {
+    let status: DuoHingeStatus
+    let angleDegrees: Double
+
+    static let unavailable = HingeStateSnapshot(status: .unavailable, angleDegrees: 0)
+
+    /// 处于有效半开姿态时启用折屏分栏体验
+    var isFlexTabletopPosture: Bool {
+        status == .partiallyOpen
+    }
+
+    /// 状态机防抖：同状态下角度变化 < 2° 不触发重绘
+    static func resolveNext(
+        current: HingeStateSnapshot,
+        rawStatus: DuoHingeStatus,
+        rawAngleDegrees: Double
+    ) -> HingeStateSnapshot {
+        if current.status == rawStatus && abs(current.angleDegrees - rawAngleDegrees) < 2.0 {
+            return current
+        }
+        return HingeStateSnapshot(status: rawStatus, angleDegrees: rawAngleDegrees)
+    }
+}
+
+extension View {
+    /// 监听 iPhone Duo 铰链开合状态（iOS 27.1+ 启用原生 `.onHingeChange`，低版本零开销降级）
+    @ViewBuilder
+    func observeDeviceHinge(_ binding: Binding<HingeStateSnapshot>) -> some View {
+        if #available(iOS 27.1, *) {
+            onHingeChange { _, newContext in
+                let mappedStatus: DuoHingeStatus
+                let rawAngle: Double
+                if let hinge = newContext.hinge {
+                    rawAngle = hinge.angle.degrees
+                    if hinge.status == .closed {
+                        mappedStatus = .closed
+                    } else if hinge.status == .partiallyOpen {
+                        mappedStatus = .partiallyOpen
+                    } else if hinge.status == .fullyOpen {
+                        mappedStatus = .fullyOpen
+                    } else {
+                        mappedStatus = .unavailable
+                    }
+                } else {
+                    mappedStatus = .unavailable
+                    rawAngle = 0
+                }
+                let next = HingeStateSnapshot.resolveNext(
+                    current: binding.wrappedValue,
+                    rawStatus: mappedStatus,
+                    rawAngleDegrees: rawAngle
+                )
+                if next != binding.wrappedValue {
+                    binding.wrappedValue = next
+                }
+            }
+        } else {
+            self
+        }
+    }
+
+    /// 全屏媒体检视器在 iOS 27.1+ 禁用侧边 Vertical Bar 以保持水平对称沉浸感
+    @ViewBuilder
+    func immersiveToolbarVerticalBehaviorDisabled() -> some View {
+        if #available(iOS 27.1, *) {
+            toolbarVerticalBehavior(.disabled)
+        } else {
+            self
+        }
+    }
+
+    /// 跨 iOS 16 / iOS 17+ 无警告值监听辅助方法
+    @ViewBuilder
+    func onAdaptiveChange<V: Equatable>(of value: V, perform action: @escaping (V) -> Void) -> some View {
+        if #available(iOS 17.0, *) {
+            onChange(of: value) { _, newValue in
+                action(newValue)
+            }
+        } else {
+            onChange(of: value, perform: action)
+        }
+    }
+}
+
 // MARK: - Adaptive Multi-Device Layout Metrics (iPhone / iPhone Duo / iPad)
-struct AdaptiveLayoutMetrics {
+
+enum DuoLayoutMode: Equatable, Sendable {
+    case compactVertical          // 标准 iPhone 竖屏 / Duo 外屏 (466×678)
+    case compactShortLandscape    // 矮横屏（如普通 iPhone 横屏）
+    case unfoldedWideSplit        // Duo 内屏展开或 iPad 宽屏（含 669×951 竖向 & 951×669 横向）
+    case hingeFlexSplit           // Duo 半开姿态：主预览区 + 独立控制区避让折痕
+}
+
+enum KeyframeSheetDetentMode: Equatable, Sendable {
+    case largeOnly
+    case mediumAndLarge
+}
+
+struct AdaptiveLayoutMetrics: Equatable {
     let containerSize: CGSize
+    let safeAreaInsets: EdgeInsets
     let horizontalSizeClass: UserInterfaceSizeClass?
     let verticalSizeClass: UserInterfaceSizeClass?
+    let hinge: HingeStateSnapshot
 
-    /// 宽屏横排模式（iPad 横屏、iPhone Duo 展开态、iPhone 横屏）
+    init(
+        containerSize: CGSize,
+        safeAreaInsets: EdgeInsets = EdgeInsets(),
+        horizontalSizeClass: UserInterfaceSizeClass?,
+        verticalSizeClass: UserInterfaceSizeClass?,
+        hinge: HingeStateSnapshot = .unavailable
+    ) {
+        self.containerSize = containerSize
+        self.safeAreaInsets = safeAreaInsets
+        self.horizontalSizeClass = horizontalSizeClass
+        self.verticalSizeClass = verticalSizeClass
+        self.hinge = hinge
+    }
+
+    /// 核心布局形态决策
+    var layoutMode: DuoLayoutMode {
+        if hinge.isFlexTabletopPosture {
+            return .hingeFlexSplit
+        }
+        if isWideSplit {
+            return .unfoldedWideSplit
+        }
+        if verticalSizeClass == .compact || containerSize.width > containerSize.height {
+            return .compactShortLandscape
+        }
+        return .compactVertical
+    }
+
+    /// 矮屏判定（涵盖 Duo 外屏 678pt 与 Duo 内屏横屏 669pt）
+    var isCompactShortScreen: Bool {
+        containerSize.height <= 700
+    }
+
+    /// 宽屏横排模式（iPad、iPhone Duo 展开态 669×951 / 951×669、iPhone 横屏）
     var isWideSplit: Bool {
-        containerSize.width >= 680 || (verticalSizeClass == .compact && containerSize.width >= 560)
+        if hinge.isFlexTabletopPosture {
+            return true
+        }
+        if hinge.status == .fullyOpen {
+            return containerSize.width >= 640 || (verticalSizeClass == .compact && containerSize.width >= 560)
+        }
+        return containerSize.width >= 660 || (verticalSizeClass == .compact && containerSize.width >= 560)
     }
 
     /// 宽画布（iPad 竖屏 / iPhone Duo 展开态等）
@@ -144,11 +291,55 @@ struct AdaptiveLayoutMetrics {
         verticalSizeClass == .compact || containerSize.height < 640
     }
 
-    /// 水平安全边距
+    /// 半开姿态或宽屏分栏时，是否应使用水平左右分栏（否则为上下分栏，如竖直握持半开折屏）
+    var prefersHorizontalSplitAxis: Bool {
+        if hinge.isFlexTabletopPosture && containerSize.height > containerSize.width {
+            return false
+        }
+        return isWideSplit
+    }
+
+    /// 跨越物理折痕时的中心留白间距
+    var hingeAvoidanceGap: CGFloat {
+        if hinge.isFlexTabletopPosture {
+            return 28
+        }
+        return isWideSplit ? 24 : 0
+    }
+
+    /// 水平安全边距（兼顾外屏非对称大圆角与 Vertical Bar 安全区）
     var horizontalPadding: CGFloat {
-        if containerSize.width >= 900 { return 36 }
-        if containerSize.width >= 600 { return 28 }
-        return 20
+        let base: CGFloat
+        if containerSize.width >= 900 {
+            base = 36
+        } else if containerSize.width >= 600 {
+            base = 28
+        } else {
+            base = 20
+        }
+        let maxEdgeInset = max(safeAreaInsets.leading, safeAreaInsets.trailing)
+        return maxEdgeInset > 0 ? max(base, min(40, maxEdgeInset + 12)) : base
+    }
+
+    /// 底部悬浮栏外侧安全留白（防止靠近外屏 59pt 圆角时胶囊视觉发紧）
+    var dockBottomPadding: CGFloat {
+        isCompactShortScreen ? 12 : 16
+    }
+
+    /// HomeView Hero 叠卡缩放比例
+    var heroDeckScale: CGFloat {
+        if prefersHorizontalSplitAxis {
+            let verticalReserve: CGFloat = isCompactShortScreen ? 110 : 130
+            let maxH = max(200, containerSize.height - verticalReserve)
+            let maxW = max(220, containerSize.width * 0.44)
+            let upperBound: CGFloat = containerSize.width >= 960 ? 1.32 : 1.16
+            return min(upperBound, min(maxH / 358, maxW / 351))
+        } else {
+            let verticalReserve: CGFloat = isCompactShortScreen ? 290 : 340
+            let maxH = max(210, containerSize.height - verticalReserve)
+            let maxW = max(260, containerSize.width - horizontalPadding * 2)
+            return min(1.12, min(maxH / 358, maxW / 351))
+        }
     }
 
     /// 底部悬浮主操作区最大宽度（避免在 iPad / Duo 上过度拉伸）
@@ -161,7 +352,7 @@ struct AdaptiveLayoutMetrics {
         isExpandedCanvas ? 620 : .infinity
     }
 
-    /// 批量转换照片网格列数（iPhone 3 列，iPhone Duo 4–5 列，iPad 5–6 列）
+    /// 批量转换照片网格列数（iPhone / 外屏 3 列，Duo 竖屏 4 列，Duo 横屏 5 列，iPad 6 列）
     var batchGridColumns: Int {
         switch containerSize.width {
         case ..<500: return 3
@@ -174,6 +365,25 @@ struct AdaptiveLayoutMetrics {
     /// 批量转换网格最大宽度
     var batchGridMaxWidth: CGFloat {
         containerSize.width >= 1024 ? 980 : .infinity
+    }
+
+    /// KeyframePickerSheet 动态高度档位决策（矮屏直接使用 .large 以避免 540pt 与 .large 高度重叠）
+    var keyframeDetentMode: KeyframeSheetDetentMode {
+        isCompactShortScreen ? .largeOnly : .mediumAndLarge
+    }
+
+    var preferredKeyframeDetents: Set<PresentationDetent> {
+        switch keyframeDetentMode {
+        case .largeOnly:
+            return [.large]
+        case .mediumAndLarge:
+            return [.height(540), .large]
+        }
+    }
+
+    /// KeyframePickerSheet 在宽且矮的屏幕上采用左右双列选帧（如 Duo 内屏横屏 951×669）
+    var usesSideBySideKeyframeLayout: Bool {
+        containerSize.width >= 640 && isCompactShortScreen
     }
 }
 

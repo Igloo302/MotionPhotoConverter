@@ -14,6 +14,7 @@ struct LabView: View {
             GeometryReader { proxy in
                 let metrics = AdaptiveLayoutMetrics(
                     containerSize: proxy.size,
+                    safeAreaInsets: proxy.safeAreaInsets,
                     horizontalSizeClass: horizontalSizeClass,
                     verticalSizeClass: verticalSizeClass
                 )
@@ -137,6 +138,7 @@ struct CustomLivePhotoView: View {
         GeometryReader { proxy in
             let metrics = AdaptiveLayoutMetrics(
                 containerSize: proxy.size,
+                safeAreaInsets: proxy.safeAreaInsets,
                 horizontalSizeClass: horizontalSizeClass,
                 verticalSizeClass: verticalSizeClass
             )
@@ -183,7 +185,7 @@ struct CustomLivePhotoView: View {
                     ScrollView(showsIndicators: false) {
                         Group {
                             if metrics.isWideSplit {
-                                HStack(alignment: .top, spacing: 16) {
+                                HStack(alignment: .top, spacing: max(16, metrics.hingeAvoidanceGap)) {
                                     stepOneImageCard
                                     stepTwoVideoCard
                                 }
@@ -197,8 +199,8 @@ struct CustomLivePhotoView: View {
                             }
                         }
                         .padding(.horizontal, metrics.horizontalPadding)
-                        .padding(.top, 14)
-                        .padding(.bottom, 20)
+                        .padding(.top, metrics.isCompactShortScreen ? 10 : 14)
+                        .padding(.bottom, metrics.isCompactShortScreen ? 14 : 20)
                         .frame(maxWidth: .infinity)
                     }
 
@@ -222,7 +224,7 @@ struct CustomLivePhotoView: View {
                     .frame(maxWidth: metrics.floatingDockMaxWidth)
                     .padding(.horizontal, metrics.horizontalPadding)
                     .padding(.top, 8)
-                    .padding(.bottom, 16)
+                    .padding(.bottom, metrics.dockBottomPadding)
                     .frame(maxWidth: .infinity)
                 }
             }
