@@ -596,4 +596,368 @@ final class Motion2LiveTests: XCTestCase {
         )
         XCTAssertEqual(withSideBar.horizontalPadding, 32)
     }
+
+    // MARK: - Live Photo -> Motion Photo (Reverse Conversion) Tests
+
+    private func makeSyntheticHEICWithMetadata(from jpegData: Data, orientation: Int = 6, make: String = "Apple", dateOriginal: String = "2025:06:15 14:30:00") throws -> Data {
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(jpegData as CFData, nil))
+        let cgImage = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let out = NSMutableData()
+        let dest = try XCTUnwrap(CGImageDestinationCreateWithData(out as CFMutableData, AVFileType.heic.rawValue as CFString, 1, nil))
+        let props: [String: Any] = [
+            kCGImagePropertyOrientation as String: orientation,
+            kCGImagePropertyTIFFDictionary as String: [
+                kCGImagePropertyTIFFMake as String: make,
+                kCGImagePropertyTIFFOrientation as String: orientation
+            ],
+            kCGImagePropertyExifDictionary as String: [
+                kCGImagePropertyExifDateTimeOriginal as String: dateOriginal
+            ]
+        ]
+        CGImageDestinationAddImage(dest, cgImage, props as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(dest))
+        return out as Data
+    }
+
+    func testLiveToMotion7BrandsRoundTrip() async throws {
+        // 1. 从样图拆出合法视频流并封装为带 QuickTime 元数据的 .mov，模拟系统 Live Photo 配对资源
+        let sampleData = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let sampleXMP = XMPParser.extractAndParse(from: sampleData)
+        let sampleProcessor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: sampleXMP, data: sampleData))
+        let parsedSample = sampleProcessor.processMotionPhoto(data: sampleData, xmpInfo: sampleXMP)
+        let sampleMotion = try XCTUnwrap(parsedSample.data)
+
+        let tempRoot = FileManager.default.temporaryDirectory
+        let sourceMP4URL = tempRoot.appendingPathComponent("test_src_\(UUID().uuidString).mp4")
+        let heicURL = tempRoot.appendingPathComponent("test_src_\(UUID().uuidString).heic")
+        defer {
+            MediaExportService.removeIfInTemporaryDirectory(sourceMP4URL)
+            MediaExportService.removeIfInTemporaryDirectory(heicURL)
+        }
+        try sampleMotion.videoData.write(to: sourceMP4URL)
+
+        let preparedLive = try await MediaExportService.prepareLivePhotoFiles(
+            imageData: sampleMotion.imageData,
+            videoURL: sourceMP4URL,
+            stillImageTime: 5
+        )
+        defer { preparedLive.cleanup() }
+
+        let heicData = try makeSyntheticHEICWithMetadata(
+            from: sampleMotion.imageData,
+            orientation: 6,
+            make: "Apple",
+            dateOriginal: "2025:06:15 14:30:00"
+        )
+        try heicData.write(to: heicURL)
+
+        // 2. 遍历全部 7 类品牌执行逆向封装与正向解析闭环校验
+        let allBrands = MotionPhotoProcessorFactory.getAllSupportedBrands()
+        XCTAssertEqual(allBrands.count, 7)
+
+        for brand in allBrands {
+            let exportedURL = try await MediaExportService.exportMotionPhoto(
+                imageURL: heicURL,
+                videoURL: preparedLive.videoURL,
+                targetBrand: brand
+            )
+            defer { MediaExportService.removeIfInTemporaryDirectory(exportedURL) }
+
+            XCTAssertTrue(FileManager.default.fileExists(atPath: exportedURL.path))
+            let exportedData = try Data(contentsOf: exportedURL)
+            let xmpInfo = XMPParser.extractAndParse(from: exportedData)
+
+            if brand == .universal {
+                XCTAssertTrue(xmpInfo.isEmpty, "Universal should not inject vendor Motion XMP")
+            } else {
+                XCTAssertFalse(xmpInfo.isEmpty, "Brand \(brand.rawValue) should contain XMP")
+            }
+
+            let detectedProcessor = try XCTUnwrap(
+                MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: exportedData),
+                "Failed to detect processor for brand \(brand.rawValue)"
+            )
+            XCTAssertEqual(detectedProcessor.brand, brand, "Brand mismatch for \(brand.rawValue)")
+
+            let roundTrip = detectedProcessor.processMotionPhoto(data: exportedData, xmpInfo: xmpInfo)
+            XCTAssertTrue(roundTrip.success, "Round-trip parse failed for \(brand.rawValue)")
+            let decoded = try XCTUnwrap(roundTrip.data)
+            XCTAssertGreaterThan(decoded.videoData.count, 10_000)
+            XCTAssertTrue(ISOBMFFHelper.hasFtypSignature(in: decoded.videoData, at: 0))
+
+            if brand == .samsung {
+                XCTAssertNil(decoded.videoData.range(of: Data("MotionPhoto_Versionmpv3".utf8)), "Samsung SEF trailer should be stripped from videoData")
+                XCTAssertNil(decoded.videoData.range(of: Data("SEFT".utf8)))
+            }
+
+            // 验证 HEIC->JPEG 元数据保留（方向与拍摄时间）
+            let imageSource = try XCTUnwrap(CGImageSourceCreateWithData(decoded.imageData as CFData, nil))
+            let props = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any])
+            XCTAssertEqual(props[kCGImagePropertyOrientation as String] as? Int, 6)
+            let exif = props[kCGImagePropertyExifDictionary as String] as? [String: Any]
+            XCTAssertEqual(exif?[kCGImagePropertyExifDateTimeOriginal as String] as? String, "2025:06:15 14:30:00")
+
+            // 验证导出的 MP4 可被 AVAsset 正常读取时长
+            let verifyMP4URL = tempRoot.appendingPathComponent("verify_\(UUID().uuidString).mp4")
+            defer { MediaExportService.removeIfInTemporaryDirectory(verifyMP4URL) }
+            try decoded.videoData.write(to: verifyMP4URL)
+            let duration = try await AVAsset(url: verifyMP4URL).load(.duration)
+            XCTAssertGreaterThan(CMTimeGetSeconds(duration), 0.1)
+        }
+    }
+
+    func testMotionPhotoEncoderStripsConflictingXMPAndMakes() async throws {
+        // 使用带小米 XMP 的样图作为输入，重新封装为 Huawei，验证旧 XMP 被剥离且不会误命中 Xiaomi
+        let xiaomiData = try Data(contentsOf: try sampleURL(named: "XiaomiNew"))
+        let xiaomiXMP = XMPParser.extractAndParse(from: xiaomiData)
+        let xiaomiProc = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: xiaomiXMP, data: xiaomiData))
+        let parsed = try XCTUnwrap(xiaomiProc.processMotionPhoto(data: xiaomiData, xmpInfo: xiaomiXMP).data)
+
+        let tempRoot = FileManager.default.temporaryDirectory
+        let videoURL = tempRoot.appendingPathComponent("test_conflict_\(UUID().uuidString).mp4")
+        defer { MediaExportService.removeIfInTemporaryDirectory(videoURL) }
+        try parsed.videoData.write(to: videoURL)
+
+        let reencoded = try await MotionPhotoEncoder.encode(
+            imageData: parsed.imageData,
+            videoURL: videoURL,
+            targetBrand: .huawei
+        )
+
+        let newXMP = XMPParser.extractAndParse(from: reencoded)
+        XCTAssertNil(newXMP["GCamera:MicroVideo"])
+        XCTAssertNil(newXMP["GCamera:MicroVideoOffset"])
+        XCTAssertEqual(newXMP["HwCamera:MovingPicture"], "1")
+
+        let detected = MotionPhotoProcessorFactory.getProcessor(for: newXMP, data: reencoded)
+        XCTAssertEqual(detected?.brand, .huawei)
+
+        // 验证直接传入完整 Motion Photo JPEG（含 EOI 之后的旧 MP4 字节）时，旧视频尾部与 XMP 均被剥离
+        let pixelRawData = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let strippedPixel = MotionPhotoEncoder.stripXMPApp1Segments(from: pixelRawData)
+        XCTAssertEqual(strippedPixel.suffix(2), Data([0xFF, 0xD9]))
+        XCTAssertNil(ISOBMFFHelper.findMP4Offset(in: strippedPixel), "Old embedded MP4 after EOI must be stripped")
+        XCTAssertTrue(XMPParser.extractAndParse(from: strippedPixel).isEmpty)
+
+        let reencodedFromRawPixel = try await MotionPhotoEncoder.encode(
+            imageData: pixelRawData,
+            videoURL: videoURL,
+            targetBrand: .huawei
+        )
+        let huaweiXMP = XMPParser.extractAndParse(from: reencodedFromRawPixel)
+        let huaweiProc = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: huaweiXMP, data: reencodedFromRawPixel))
+        XCTAssertEqual(huaweiProc.brand, .huawei)
+        let huaweiParsed = try XCTUnwrap(huaweiProc.processMotionPhoto(data: reencodedFromRawPixel, xmpInfo: huaweiXMP).data)
+        XCTAssertNil(ISOBMFFHelper.findMP4Offset(in: huaweiParsed.imageData))
+    }
+
+    func testExtractedLivePhotoAndTempDirectoryCleanupGuard() throws {
+        let tempRoot = FileManager.default.temporaryDirectory
+        let imgURL = tempRoot.appendingPathComponent("cleanup_img_\(UUID().uuidString).heic")
+        let vidURL = tempRoot.appendingPathComponent("cleanup_vid_\(UUID().uuidString).mov")
+        try Data("img".utf8).write(to: imgURL)
+        try Data("vid".utf8).write(to: vidURL)
+
+        let extracted = ExtractedLivePhoto(imageURL: imgURL, videoURL: vidURL, creationDate: nil)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: imgURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: vidURL.path))
+
+        extracted.cleanup()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: imgURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: vidURL.path))
+
+        // 验证非临时目录文件不会被 removeIfInTemporaryDirectory 误删
+        let sample = try sampleURL(named: "Pixel")
+        MediaExportService.removeIfInTemporaryDirectory(sample)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: sample.path))
+
+        // 验证 nil URL 不会崩溃
+        MediaExportService.removeIfInTemporaryDirectory(nil)
+    }
+
+    private func makePlainJPEGData(from jpegData: Data, includeExifDate: Bool) throws -> Data {
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(jpegData as CFData, nil))
+        let cgImage = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let out = NSMutableData()
+        let dest = try XCTUnwrap(CGImageDestinationCreateWithData(out as CFMutableData, AVFileType.jpg.rawValue as CFString, 1, nil))
+        var props: [String: Any] = [
+            kCGImageDestinationLossyCompressionQuality as String: 0.9
+        ]
+        if includeExifDate {
+            props[kCGImagePropertyExifDictionary as String] = [
+                kCGImagePropertyExifDateTimeOriginal as String: "2025:07:10 11:22:33"
+            ]
+        }
+        CGImageDestinationAddImage(dest, cgImage, props as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(dest))
+        return out as Data
+    }
+
+    func testCustomImageDataAndPlainVideoWithoutStillTime7BrandsRoundTrip() async throws {
+        let sampleData = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let sampleXMP = XMPParser.extractAndParse(from: sampleData)
+        let sampleProcessor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: sampleXMP, data: sampleData))
+        let sampleMotion = try XCTUnwrap(sampleProcessor.processMotionPhoto(data: sampleData, xmpInfo: sampleXMP).data)
+
+        let tempRoot = FileManager.default.temporaryDirectory
+        let rawMP4URL = tempRoot.appendingPathComponent("plain_raw_\(UUID().uuidString).mp4")
+        let plainVideoURL = tempRoot.appendingPathComponent("plain_nometa_\(UUID().uuidString).mp4")
+        defer {
+            MediaExportService.removeIfInTemporaryDirectory(rawMP4URL)
+            MediaExportService.removeIfInTemporaryDirectory(plainVideoURL)
+        }
+        try sampleMotion.videoData.write(to: rawMP4URL)
+
+        // 生成纯视频流（剥离一切元数据轨道，确保无 com.apple.quicktime.still-image-time）
+        let remuxedMP4 = try await MotionPhotoEncoder.remuxToMP4Data(from: rawMP4URL)
+        try remuxedMP4.write(to: plainVideoURL)
+
+        let plainAsset = AVAsset(url: plainVideoURL)
+        let metadataTracks = try await plainAsset.loadTracks(withMediaType: .metadata)
+        XCTAssertTrue(metadataTracks.isEmpty, "Plain video must not have timed metadata tracks")
+        let containerMetadata = try await plainAsset.load(.metadata)
+        XCTAssertFalse(containerMetadata.contains { ($0.key as? String) == "com.apple.quicktime.still-image-time" })
+
+        let durationSeconds = CMTimeGetSeconds(try await plainAsset.load(.duration))
+        XCTAssertGreaterThan(durationSeconds, 0.1)
+        let expectedMidpointUs = Int64(round((durationSeconds / 2.0) * 1_000_000.0))
+        let resolvedUs = await MotionPhotoEncoder.readStillImageTimestampUs(from: plainVideoURL)
+        XCTAssertLessThanOrEqual(abs(resolvedUs - expectedMidpointUs), 1_000)
+
+        let plainJPEGData = try makePlainJPEGData(from: sampleMotion.imageData, includeExifDate: true)
+        let plainHEICData = try makeSyntheticHEICWithMetadata(
+            from: sampleMotion.imageData,
+            orientation: 8,
+            make: "Canon",
+            dateOriginal: "2025:08:20 09:15:30"
+        )
+
+        let inputs: [(label: String, data: Data, expectedOrientation: Int?, expectedDate: String?)] = [
+            ("JPEG", plainJPEGData, nil, "2025:07:10 11:22:33"),
+            ("HEIC", plainHEICData, 8, "2025:08:20 09:15:30")
+        ]
+
+        let allBrands = MotionPhotoProcessorFactory.getAllSupportedBrands()
+        XCTAssertEqual(allBrands.count, 7)
+
+        for input in inputs {
+            for brand in allBrands {
+                let exportedURL = try await MediaExportService.exportMotionPhoto(
+                    imageData: input.data,
+                    videoURL: plainVideoURL,
+                    targetBrand: brand
+                )
+                defer { MediaExportService.removeIfInTemporaryDirectory(exportedURL) }
+
+                XCTAssertEqual(exportedURL.pathExtension.lowercased(), "jpg")
+                XCTAssertTrue(FileManager.default.fileExists(atPath: exportedURL.path))
+
+                let exportedData = try Data(contentsOf: exportedURL)
+                let xmpInfo = XMPParser.extractAndParse(from: exportedData)
+
+                if brand == .universal {
+                    XCTAssertTrue(xmpInfo.isEmpty)
+                } else {
+                    let tsString = xmpInfo["GCamera:MotionPhotoPresentationTimestampUs"]
+                        ?? xmpInfo["GCamera:MicroVideoPresentationTimestampUs"]
+                    let parsedTs = try XCTUnwrap(Int64(tsString ?? ""), "Missing midpoint timestamp for \(input.label)/\(brand.rawValue)")
+                    XCTAssertLessThanOrEqual(abs(parsedTs - expectedMidpointUs), 1_000)
+                }
+
+                let detectedProcessor = try XCTUnwrap(
+                    MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: exportedData),
+                    "Processor not detected for \(input.label)/\(brand.rawValue)"
+                )
+                XCTAssertEqual(detectedProcessor.brand, brand)
+
+                let roundTrip = detectedProcessor.processMotionPhoto(data: exportedData, xmpInfo: xmpInfo)
+                XCTAssertTrue(roundTrip.success)
+                let decoded = try XCTUnwrap(roundTrip.data)
+                XCTAssertTrue(ISOBMFFHelper.hasFtypSignature(in: decoded.videoData, at: 0))
+
+                if brand == .samsung {
+                    XCTAssertNil(decoded.videoData.range(of: Data("MotionPhoto_Versionmpv3".utf8)))
+                    XCTAssertNil(decoded.videoData.range(of: Data("SEFT".utf8)))
+                }
+
+                let imageSource = try XCTUnwrap(CGImageSourceCreateWithData(decoded.imageData as CFData, nil))
+                let props = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any])
+                if let expectedOrientation = input.expectedOrientation {
+                    XCTAssertEqual(props[kCGImagePropertyOrientation as String] as? Int, expectedOrientation)
+                }
+                if let expectedDate = input.expectedDate {
+                    let exif = props[kCGImagePropertyExifDictionary as String] as? [String: Any]
+                    XCTAssertEqual(exif?[kCGImagePropertyExifDateTimeOriginal as String] as? String, expectedDate)
+                }
+
+                MediaExportService.removeIfInTemporaryDirectory(exportedURL)
+                XCTAssertFalse(FileManager.default.fileExists(atPath: exportedURL.path))
+            }
+        }
+    }
+
+    func testCreationDateFallbackAndRemuxTempFileCleanup() async throws {
+        let sampleData = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let sampleXMP = XMPParser.extractAndParse(from: sampleData)
+        let sampleProcessor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: sampleXMP, data: sampleData))
+        let sampleMotion = try XCTUnwrap(sampleProcessor.processMotionPhoto(data: sampleData, xmpInfo: sampleXMP).data)
+
+        let tempRoot = FileManager.default.temporaryDirectory
+        let videoURL = tempRoot.appendingPathComponent("test_date_vid_\(UUID().uuidString).mp4")
+        defer { MediaExportService.removeIfInTemporaryDirectory(videoURL) }
+        try sampleMotion.videoData.write(to: videoURL)
+
+        // 构造无 EXIF 日期的普通 JPEG Data
+        let noDateJPEG = try makePlainJPEGData(from: sampleMotion.imageData, includeExifDate: false)
+        XCTAssertNil(ISOBMFFHelper.extractExifCreationDate(from: noDateJPEG))
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        let targetDate = try XCTUnwrap(formatter.date(from: "2024:11:05 18:20:30"))
+
+        let remuxBefore = (try? FileManager.default.contentsOfDirectory(atPath: tempRoot.path))?
+            .filter { $0.hasPrefix("motion_remux_") } ?? []
+
+        let exportedURL = try await MediaExportService.exportMotionPhoto(
+            imageData: noDateJPEG,
+            videoURL: videoURL,
+            targetBrand: .pixel,
+            creationDate: targetDate
+        )
+        defer { MediaExportService.removeIfInTemporaryDirectory(exportedURL) }
+
+        let remuxAfter = (try? FileManager.default.contentsOfDirectory(atPath: tempRoot.path))?
+            .filter { $0.hasPrefix("motion_remux_") } ?? []
+        XCTAssertEqual(remuxAfter.count, remuxBefore.count, "Intermediate motion_remux_* temp files must be cleaned up")
+
+        let exportedData = try Data(contentsOf: exportedURL)
+        let extractedDate = try XCTUnwrap(ISOBMFFHelper.extractExifCreationDate(from: exportedData))
+        XCTAssertLessThan(abs(extractedDate.timeIntervalSince(targetDate)), 1.0)
+
+        let exportedAttrs = try FileManager.default.attributesOfItem(atPath: exportedURL.path)
+        let fileCreationDate = try XCTUnwrap(exportedAttrs[.creationDate] as? Date)
+        let fileModificationDate = try XCTUnwrap(exportedAttrs[.modificationDate] as? Date)
+        XCTAssertLessThan(abs(fileCreationDate.timeIntervalSince(targetDate)), 1.0)
+        XCTAssertLessThan(abs(fileModificationDate.timeIntervalSince(targetDate)), 1.0)
+
+        MediaExportService.removeIfInTemporaryDirectory(exportedURL)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: exportedURL.path))
+
+        // 验证不传 creationDate 时，自动从源图 EXIF DateTimeOriginal 继承并同步输出 .jpg 文件时间戳
+        let exifJPEG = try makePlainJPEGData(from: sampleMotion.imageData, includeExifDate: true)
+        let expectedExifDate = try XCTUnwrap(formatter.date(from: "2025:07:10 11:22:33"))
+        let exifExportedURL = try await MediaExportService.exportMotionPhoto(
+            imageData: exifJPEG,
+            videoURL: videoURL,
+            targetBrand: .pixel
+        )
+        defer { MediaExportService.removeIfInTemporaryDirectory(exifExportedURL) }
+
+        let exifAttrs = try FileManager.default.attributesOfItem(atPath: exifExportedURL.path)
+        let exifFileCreationDate = try XCTUnwrap(exifAttrs[.creationDate] as? Date)
+        let exifFileModificationDate = try XCTUnwrap(exifAttrs[.modificationDate] as? Date)
+        XCTAssertLessThan(abs(exifFileCreationDate.timeIntervalSince(expectedExifDate)), 1.0)
+        XCTAssertLessThan(abs(exifFileModificationDate.timeIntervalSince(expectedExifDate)), 1.0)
+    }
 }
