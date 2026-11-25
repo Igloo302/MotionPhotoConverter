@@ -316,4 +316,160 @@ final class Motion2LiveTests: XCTestCase {
         store.clearHistory()
         XCTAssertTrue(store.entries.isEmpty)
     }
+
+    // MARK: - Local Samples Verification (samples/local)
+    private struct LocalManifest: Decodable {
+        struct FileItem: Decodable {
+            let path: String
+            let size_bytes: Int
+            let sha256: String
+            let kind: String?
+            let pair: String?
+            let expected: String?
+            let embedded_video_payload: Bool?
+        }
+        let files: [FileItem]
+    }
+
+    private var localSamplesManifestURL: URL? {
+        let currentFileURL = URL(fileURLWithPath: #filePath)
+        let repoRoot = currentFileURL.deletingLastPathComponent().deletingLastPathComponent()
+        let manifest = repoRoot.appendingPathComponent("samples/local/manifest.json")
+        guard FileManager.default.fileExists(atPath: manifest.path) else {
+            return nil
+        }
+        return manifest
+    }
+
+    func testLocalSamplesAllCases() async throws {
+        guard let manifestURL = localSamplesManifestURL else {
+            print("Notice: samples/local/manifest.json not present in environment. Skipping local samples test.")
+            return
+        }
+
+        let repoRoot = manifestURL.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let manifestData = try Data(contentsOf: manifestURL)
+        let manifest = try JSONDecoder().decode(LocalManifest.self, from: manifestData)
+
+        XCTAssertFalse(manifest.files.isEmpty, "Manifest should contain test files")
+
+        for fileItem in manifest.files {
+            let fileURL = repoRoot.appendingPathComponent(fileItem.path)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                XCTFail("Missing local sample file: \(fileItem.path)")
+                continue
+            }
+
+            let fileData = try Data(contentsOf: fileURL)
+            XCTAssertEqual(fileData.count, fileItem.size_bytes, "File size mismatch for \(fileItem.path)")
+
+            let kind = fileItem.kind ?? ""
+            let expected = fileItem.expected ?? "positive"
+
+            if kind == "apple-pair" || kind == "vivo-live" || expected == "positive-pair" {
+                // Dual-file / Pair test
+                if let pairPath = fileItem.pair {
+                    let pairURL = repoRoot.appendingPathComponent(pairPath)
+                    XCTAssertTrue(FileManager.default.fileExists(atPath: pairURL.path), "Pair file must exist: \(pairPath)")
+
+                    let isImage = fileItem.path.hasSuffix(".jpg") || fileItem.path.hasSuffix(".jpeg") || fileItem.path.hasSuffix(".HEIC") || fileItem.path.hasSuffix(".heic")
+                    if isImage {
+                        let prepared = try await MediaExportService.prepareLivePhotoFiles(
+                            imageData: fileData,
+                            videoURL: pairURL,
+                            stillImageTime: 0
+                        )
+                        defer { prepared.cleanup() }
+
+                        XCTAssertTrue(FileManager.default.fileExists(atPath: prepared.imageURL.path))
+                        XCTAssertTrue(FileManager.default.fileExists(atPath: prepared.videoURL.path))
+
+                        let prepSource = try XCTUnwrap(CGImageSourceCreateWithURL(prepared.imageURL as CFURL, nil))
+                        let prepProps = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(prepSource, 0, nil) as? [String: Any])
+                        let makerApple = try XCTUnwrap(prepProps[kCGImagePropertyMakerAppleDictionary as String] as? [String: Any])
+                        XCTAssertEqual(makerApple["17"] as? String, prepared.assetIdentifier)
+
+                        let movAsset = AVAsset(url: prepared.videoURL)
+                        let movMetadata = try await movAsset.load(.metadata)
+                        let contentIdItem = movMetadata.first { ($0.key as? String) == "com.apple.quicktime.content.identifier" }
+                        let contentIdValue = try await contentIdItem?.load(.stringValue)
+                        XCTAssertEqual(contentIdValue, prepared.assetIdentifier)
+                    }
+                }
+            } else if expected == "negative" || expected == "no-motion-photo" {
+                // Negative / Non-Motion Photo validation
+                let xmpInfo = XMPParser.extractAndParse(from: fileData)
+                let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: fileData)
+                if let proc = processor {
+                    let result = proc.processMotionPhoto(data: fileData, xmpInfo: xmpInfo)
+                    XCTAssertFalse(
+                        result.success,
+                        "Expected negative result for non-motion photo \(fileItem.path), but processing succeeded"
+                    )
+                } else {
+                    XCTAssertNil(processor, "Expected nil processor for \(fileItem.path)")
+                }
+            } else {
+                // Single-file embedded Motion Photo (positive)
+                let xmpInfo = XMPParser.extractAndParse(from: fileData)
+                let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: fileData)
+                XCTAssertNotNil(processor, "Expected processor for positive sample: \(fileItem.path)")
+
+                guard let proc = processor else { continue }
+                let result = proc.processMotionPhoto(data: fileData, xmpInfo: xmpInfo)
+                XCTAssertTrue(result.success, "processMotionPhoto failed for \(fileItem.path): \(result.errorMessage ?? "")")
+
+                guard let extracted = result.data else {
+                    XCTFail("Missing extracted data for \(fileItem.path)")
+                    continue
+                }
+
+                // 1. Verify valid image payload
+                let imageSource = CGImageSourceCreateWithData(extracted.imageData as CFData, nil)
+                XCTAssertNotNil(imageSource, "Extracted image data must be readable by CGImageSource for \(fileItem.path)")
+                let imageProps = imageSource.flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) }
+                XCTAssertNotNil(imageProps, "Image properties must be extractable for \(fileItem.path)")
+
+                // 2. Verify valid video payload starting with ftyp
+                XCTAssertTrue(
+                    ISOBMFFHelper.hasFtypSignature(in: extracted.videoData, at: 0),
+                    "Extracted video data must begin with ftyp box for \(fileItem.path)"
+                )
+
+                // 3. Verify video can be loaded and played by AVAsset
+                let tempVideo = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("test_local_\(UUID().uuidString).mp4")
+                try extracted.videoData.write(to: tempVideo)
+                defer { try? FileManager.default.removeItem(at: tempVideo) }
+
+                let avAsset = AVAsset(url: tempVideo)
+                let duration = try await avAsset.load(.duration)
+                let tracks = try await avAsset.loadTracks(withMediaType: .video)
+                XCTAssertFalse(tracks.isEmpty, "Video must have at least one video track for \(fileItem.path)")
+                XCTAssertGreaterThan(CMTimeGetSeconds(duration), 0, "Video duration must be > 0 for \(fileItem.path)")
+
+                // 4. Verify end-to-end Live Photo preparation
+                let prepared = try await MediaExportService.prepareLivePhotoFiles(
+                    imageData: extracted.imageData,
+                    videoURL: tempVideo,
+                    stillImageTime: extracted.stillImageTime
+                )
+                defer { prepared.cleanup() }
+
+                XCTAssertTrue(FileManager.default.fileExists(atPath: prepared.imageURL.path))
+                XCTAssertTrue(FileManager.default.fileExists(atPath: prepared.videoURL.path))
+
+                let prepSource = try XCTUnwrap(CGImageSourceCreateWithURL(prepared.imageURL as CFURL, nil))
+                let prepProps = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(prepSource, 0, nil) as? [String: Any])
+                let makerApple = try XCTUnwrap(prepProps[kCGImagePropertyMakerAppleDictionary as String] as? [String: Any])
+                XCTAssertEqual(makerApple["17"] as? String, prepared.assetIdentifier)
+
+                let movAsset = AVAsset(url: prepared.videoURL)
+                let movMetadata = try await movAsset.load(.metadata)
+                let contentIdItem = movMetadata.first { ($0.key as? String) == "com.apple.quicktime.content.identifier" }
+                let contentIdValue = try await contentIdItem?.load(.stringValue)
+                XCTAssertEqual(contentIdValue, prepared.assetIdentifier)
+            }
+        }
+    }
 }
