@@ -682,7 +682,7 @@ private struct AboutSheetView: View {
 
                                 aboutInfoRow(
                                     label: Localizable.string(.aboutLicenseLabel),
-                                    value: "MIT License"
+                                    value: "MPL-2.0"
                                 )
 
                                 if let privacyURL = privacyPolicyURL {

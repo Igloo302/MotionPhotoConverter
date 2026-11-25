@@ -44,6 +44,8 @@ Motion2Live is an iOS application (iOS 16.0+) designed to help users process and
 
 ## 许可证 / License
 
-此项目遵循 MIT 许可证。详细信息请参阅 LICENSE 文件。
+本项目采用 Mozilla Public License 2.0（MPL-2.0）。你可以在遵守该许可证的前提下使用、修改和分发本项目，包括商业用途；对 MPL 覆盖文件的修改需以 MPL-2.0 公开。完整条款见 [LICENSE](LICENSE)。
 
-This project is licensed under the MIT License. For more details, please refer to the LICENSE file.
+This project is licensed under the Mozilla Public License 2.0 (MPL-2.0). You may use, modify and distribute it, including commercially, provided you comply with the license; modifications to MPL-covered files must be shared under MPL-2.0. See [LICENSE](LICENSE) for the full terms.
+
+Copyright 2024–2026 Larry Shen (Igloo)
