@@ -6,10 +6,14 @@
 //
 
 import SwiftUI
+import Photos
 import PhotosUI
 import UniformTypeIdentifiers
 
 struct PhotoPicker: UIViewControllerRepresentable {
+    /// 批量选择上限：超过此数量会显著抬高临时磁盘占用与缩略图内存，故在 Picker 层硬性拦截。
+    static let batchSelectionLimit = 50
+
     var onSinglePicked: ((URL) -> Void)?
     var onBatchPicked: (([URL], Int) -> Void)?
     var onNoneValidSelected: ((Int) -> Void)?
@@ -37,9 +41,13 @@ struct PhotoPicker: UIViewControllerRepresentable {
     }
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration()
+        // Attach the photo library so results carry an assetIdentifier; the original
+        // asset resource is required to recover motion data that third-party apps
+        // (e.g. WeChat) rewrite when saving back to the library.
+        var config = PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())
         config.filter = .images
-        config.selectionLimit = (onBatchPicked != nil) ? 0 : 1
+        config.selectionLimit = (onBatchPicked != nil) ? Self.batchSelectionLimit : 1
+        config.preferredAssetRepresentationMode = .current
 
         let picker = PHPickerViewController(configuration: config)
         picker.delegate = context.coordinator
@@ -65,18 +73,17 @@ struct PhotoPicker: UIViewControllerRepresentable {
             guard !results.isEmpty else { return }
 
             let totalCount = results.count
-            let providers = results.map(\.itemProvider)
 
             Task {
                 var validURLs: [URL] = []
                 var ignoredCount = 0
 
-                for (index, provider) in providers.enumerated() {
+                for (index, result) in results.enumerated() {
                     await MainActor.run {
                         self.parent.onAnalyzingProgress?(index + 1, totalCount)
                     }
 
-                    let loadedURL = await Self.loadFile(from: provider)
+                    let loadedURL = await Self.loadOriginalFile(from: result)
                     if let url = loadedURL {
                         let isMotion = await Task.detached(priority: .userInitiated) {
                             Self.isMotionPhoto(url: url)
@@ -139,6 +146,52 @@ struct PhotoPicker: UIViewControllerRepresentable {
             }
         }
 
+        /// Loads the untouched original asset when possible, falling back to the
+        /// picker's copy for sources that are not backed by a library asset.
+        private static func loadOriginalFile(from result: PHPickerResult) async -> URL? {
+            if let assetIdentifier = result.assetIdentifier,
+               let url = await loadAssetResource(assetIdentifier: assetIdentifier) {
+                return url
+            }
+            return await loadFile(from: result.itemProvider)
+        }
+
+        /// Writes the original photo resource straight to a temp file. Streaming to
+        /// disk avoids holding a full-resolution photo in memory.
+        private static func loadAssetResource(assetIdentifier: String) async -> URL? {
+            let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [assetIdentifier], options: nil)
+            guard let asset = fetched.firstObject else { return nil }
+
+            let resources = PHAssetResource.assetResources(for: asset)
+            // `.photo` keeps the original bytes (and the embedded video trailer);
+            // `.fullSizePhoto` is the edited copy and may no longer be a Motion Photo.
+            let preferredTypes: [PHAssetResourceType] = [.photo, .fullSizePhoto, .alternatePhoto]
+            guard let resource = preferredTypes.compactMap({ type in
+                resources.first(where: { $0.type == type })
+            }).first else {
+                return nil
+            }
+
+            let ext = (resource.originalFilename as NSString).pathExtension.lowercased()
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(UUID().uuidString).\(ext.isEmpty ? "jpg" : ext)")
+
+            let options = PHAssetResourceRequestOptions()
+            options.isNetworkAccessAllowed = true
+
+            let succeeded: Bool = await withCheckedContinuation { continuation in
+                PHAssetResourceManager.default().writeData(for: resource, toFile: tempURL, options: options) { error in
+                    continuation.resume(returning: error == nil)
+                }
+            }
+
+            guard succeeded else {
+                try? FileManager.default.removeItem(at: tempURL)
+                return nil
+            }
+            return tempURL
+        }
+
         private static func loadFile(from provider: NSItemProvider) async -> URL? {
             let supportedTypes = [
                 UTType.jpeg.identifier,
@@ -173,7 +226,7 @@ struct PhotoPicker: UIViewControllerRepresentable {
         }
 
         private nonisolated static func isMotionPhoto(url: URL) -> Bool {
-            let supportedExtensions = ["jpg", "jpeg", "heic", "avif"]
+            let supportedExtensions = ["jpg", "jpeg", "heic", "heif", "avif"]
             guard supportedExtensions.contains(url.pathExtension.lowercased()),
                   let data = try? Data(contentsOf: url, options: .mappedIfSafe) else {
                 return false

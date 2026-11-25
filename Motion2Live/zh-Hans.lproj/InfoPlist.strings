@@ -1,1 +1,2 @@
+"NSPhotoLibraryUsageDescription" = "Motion2Live 需要读取照片权限，以提取包含动态视频数据的原始照片资源。";
 "NSPhotoLibraryAddUsageDescription" = "Motion2Live 需要添加照片权限，以将转换后的实况照片、视频或 GIF 保存到您的相册。";

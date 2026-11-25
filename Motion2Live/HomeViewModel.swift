@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import Photos
 
 @MainActor
 final class HomeViewModel: ObservableObject {
@@ -17,7 +18,18 @@ final class HomeViewModel: ObservableObject {
     let randomEmojis: [String] = ["🌟", "🎉", "🎈", "🎊", "🎁", "🎀", "🎵", "🎶", "🌈", "🍭", "🍬", "🍫", "🍿", "🧁", "🍰", "🍩"]
     
     func selectPhoto() {
-        isShowingPhotoPicker = true
+        // Library authorization is what lets PHPicker return an assetIdentifier so we
+        // can read the original resource. The picker still opens without it, in which
+        // case PhotoPicker falls back to the picker-provided copy.
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .notDetermined else {
+            isShowingPhotoPicker = true
+            return
+        }
+
+        Task { @MainActor in
+            _ = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            self.isShowingPhotoPicker = true
+        }
     }
 
     func resetBatchState() {
