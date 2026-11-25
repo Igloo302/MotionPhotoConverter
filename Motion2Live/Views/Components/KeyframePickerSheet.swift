@@ -19,6 +19,8 @@ struct KeyframePickerSheet: View {
     let onRestoreOriginal: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     @State private var selectedSeconds: Double
     @State private var filmstripImages: [UIImage] = []
@@ -52,105 +54,59 @@ struct KeyframePickerSheet: View {
     }
 
     var body: some View {
-        ZStack {
-            AppTheme.canvas
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            let metrics = AdaptiveLayoutMetrics(
+                containerSize: proxy.size,
+                safeAreaInsets: proxy.safeAreaInsets,
+                horizontalSizeClass: horizontalSizeClass,
+                verticalSizeClass: verticalSizeClass
+            )
 
-            VStack(spacing: 16) {
-                // Header: Title + standard surface1 Timecode Pill
-                HStack(spacing: 10) {
-                    Text(Localizable.string(.selectCoverFrame))
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(AppTheme.textPrimary)
+            ZStack {
+                AppTheme.canvas
+                    .ignoresSafeArea()
 
-                    Spacer()
-
-                    Text("\(formatTimecode(selectedSeconds)) / \(formatTimecode(videoDuration))")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundColor(AppTheme.accent)
-                        .padding(.horizontal, 11)
-                        .frame(height: 30)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(AppTheme.surface1)
-                                .overlay(
-                                    Capsule(style: .continuous)
-                                        .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.6)
-                                )
-                        )
-                }
-                .padding(.top, 14)
-
-                // Live Frame Preview (r=24)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(AppTheme.stageBackground)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
-                        )
-
-                    if let frame = previewFrame {
-                        Image(uiImage: frame)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
+                if metrics.usesSideBySideKeyframeLayout {
+                    HStack(alignment: .center, spacing: max(20, metrics.hingeAvoidanceGap)) {
+                        liveFramePreview
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    } else {
-                        ProgressView()
-                            .tint(AppTheme.accent)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 190, maxHeight: 230)
 
-                // Filmstrip Scrubber with Playhead Lens
-                filmstripScrubber
-
-                Spacer(minLength: 4)
-
-                // Actions
-                VStack(spacing: 12) {
-                    Button {
-                        AppHaptics.mediumImpact()
-                        onConfirm(selectedSeconds)
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 9) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 15, weight: .bold))
-                            Text(Localizable.string(.setCoverFrame))
+                        VStack(spacing: 14) {
+                            headerRow
+                            Spacer(minLength: 4)
+                            filmstripScrubber
+                            Spacer(minLength: 4)
+                            actionButtons
                         }
+                        .frame(maxWidth: 420)
                     }
-                    .buttonStyle(StudioPrimaryButtonStyle(height: 52))
+                    .frame(maxWidth: 920, maxHeight: .infinity)
+                    .padding(.horizontal, metrics.horizontalPadding)
+                    .padding(.vertical, 18)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    VStack(spacing: metrics.isCompactShortScreen ? 12 : 16) {
+                        headerRow
+                            .padding(.top, metrics.isCompactShortScreen ? 10 : 14)
 
-                    HStack(spacing: 28) {
-                        if hasCustomCover {
-                            Button {
-                                AppHaptics.selection()
-                                onRestoreOriginal()
-                                dismiss()
-                            } label: {
-                                Text(Localizable.string(.restoreOriginalCover))
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(AppTheme.accent)
-                            }
-                        }
+                        liveFramePreview
+                            .frame(
+                                minHeight: metrics.isCompactShortScreen ? 150 : 190,
+                                maxHeight: metrics.isCompactShortScreen ? 200 : 230
+                            )
 
-                        Button {
-                            dismiss()
-                        } label: {
-                            Text(Localizable.string(.cancel))
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(AppTheme.textSecondary)
-                        }
+                        filmstripScrubber
+
+                        Spacer(minLength: 4)
+
+                        actionButtons
                     }
-                    .padding(.vertical, 2)
+                    .frame(maxWidth: 520)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, metrics.dockBottomPadding)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .frame(maxWidth: 520)
-            .padding(.horizontal, 18)
-            .padding(.bottom, 18)
         }
         .task {
             await loadFilmstrip()
@@ -158,6 +114,93 @@ struct KeyframePickerSheet: View {
         }
         .onDisappear {
             previewTask?.cancel()
+        }
+    }
+
+    private var headerRow: some View {
+        HStack(spacing: 10) {
+            Text(Localizable.string(.selectCoverFrame))
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(AppTheme.textPrimary)
+
+            Spacer()
+
+            Text("\(formatTimecode(selectedSeconds)) / \(formatTimecode(videoDuration))")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundColor(AppTheme.accent)
+                .padding(.horizontal, 11)
+                .frame(height: 30)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(AppTheme.surface1)
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.6)
+                        )
+                )
+        }
+    }
+
+    private var liveFramePreview: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(AppTheme.stageBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
+                )
+
+            if let frame = previewFrame {
+                Image(uiImage: frame)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            } else {
+                ProgressView()
+                    .tint(AppTheme.accent)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 12) {
+            Button {
+                AppHaptics.mediumImpact()
+                onConfirm(selectedSeconds)
+                dismiss()
+            } label: {
+                HStack(spacing: 9) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 15, weight: .bold))
+                    Text(Localizable.string(.setCoverFrame))
+                }
+            }
+            .buttonStyle(StudioPrimaryButtonStyle(height: 52))
+
+            HStack(spacing: 28) {
+                if hasCustomCover {
+                    Button {
+                        AppHaptics.selection()
+                        onRestoreOriginal()
+                        dismiss()
+                    } label: {
+                        Text(Localizable.string(.restoreOriginalCover))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(AppTheme.accent)
+                    }
+                }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text(Localizable.string(.cancel))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+            }
+            .padding(.vertical, 2)
         }
     }
 

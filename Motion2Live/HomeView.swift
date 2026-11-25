@@ -18,14 +18,17 @@ struct HomeView: View {
     @State private var alertMessage = ""
     @State private var showingLabView = false
     @State private var showingAboutView = false
+    @State private var hingeState: HingeStateSnapshot = .unavailable
 
     var body: some View {
         NavigationStack {
             GeometryReader { proxy in
                 let metrics = AdaptiveLayoutMetrics(
                     containerSize: proxy.size,
+                    safeAreaInsets: proxy.safeAreaInsets,
                     horizontalSizeClass: horizontalSizeClass,
-                    verticalSizeClass: verticalSizeClass
+                    verticalSizeClass: verticalSizeClass,
+                    hinge: hingeState
                 )
 
                 ZStack {
@@ -35,14 +38,11 @@ struct HomeView: View {
                     VStack(spacing: 0) {
                         topNavigationBar(metrics: metrics)
 
-                        if metrics.isWideSplit {
-                            wideEditorialLayout(metrics: metrics)
-                        } else {
-                            portraitEditorialLayout(metrics: metrics)
-                        }
+                        editorialStageLayout(metrics: metrics)
                     }
                 }
             }
+            .observeDeviceHinge($hingeState)
             .toolbar(.hidden, for: .navigationBar)
             .alert(isPresented: $showAlert) {
                 Alert(
@@ -208,75 +208,84 @@ struct HomeView: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Portrait Editorial Layout (iPhone & Narrow Split View)
+    // MARK: - Unified Adaptive Editorial Stage (Preserves HeroPhotoDeckStage identity across fold/unfold)
 
-    private func portraitEditorialLayout(metrics: AdaptiveLayoutMetrics) -> some View {
-        let deckScale = heroDeckScale(for: metrics)
-
-        return VStack(spacing: 0) {
-            Spacer(minLength: 10)
-
-            HeroPhotoDeckStage(scale: deckScale)
-                .padding(.horizontal, metrics.horizontalPadding)
-
-            Spacer(minLength: 18)
-
-            editorialHeadline(alignment: .center, isWide: false)
-                .padding(.horizontal, metrics.horizontalPadding)
-
-            Spacer(minLength: 20)
-
-            bottomStudioDock(metrics: metrics)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    // MARK: - Wide Split Editorial Layout (iPhone Duo Unfolded / iPad / Landscape)
-
-    private func wideEditorialLayout(metrics: AdaptiveLayoutMetrics) -> some View {
-        let deckScale = heroDeckScale(for: metrics)
-
-        return HStack(spacing: metrics.containerSize.width >= 960 ? 56 : 32) {
-            HeroPhotoDeckStage(scale: deckScale)
-                .frame(maxWidth: .infinity)
-
-            VStack(alignment: .leading, spacing: 26) {
-                editorialHeadline(alignment: .leading, isWide: true)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    primarySelectButton
-                        .frame(maxWidth: 360)
-
-                    Text(Localizable.string(.homeBrandFootnote))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(AppTheme.textTertiary)
-                        .lineLimit(2)
-                }
+    private func editorialStageLayout(metrics: AdaptiveLayoutMetrics) -> some View {
+        let isHorizontalSplit = metrics.prefersHorizontalSplitAxis
+        let splitSpacing: CGFloat = {
+            if isHorizontalSplit {
+                return metrics.containerSize.width >= 960 ? 56 : max(28, metrics.hingeAvoidanceGap)
             }
-            .frame(maxWidth: 420, alignment: .leading)
+            if metrics.layoutMode == .hingeFlexSplit {
+                return metrics.hingeAvoidanceGap
+            }
+            return metrics.isCompactShortScreen ? 8 : 16
+        }()
+
+        let layout = isHorizontalSplit
+            ? AnyLayout(HStackLayout(alignment: .center, spacing: splitSpacing))
+            : AnyLayout(VStackLayout(spacing: splitSpacing))
+
+        return layout {
+            HeroPhotoDeckStage(scale: metrics.heroDeckScale)
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: isHorizontalSplit ? .infinity : nil)
+
+            editorialControlCluster(metrics: metrics, isHorizontalSplit: isHorizontalSplit)
         }
-        .frame(maxWidth: 960, maxHeight: .infinity)
+        .frame(maxWidth: isHorizontalSplit ? 960 : .infinity, maxHeight: .infinity)
         .padding(.horizontal, metrics.horizontalPadding)
-        .padding(.bottom, 20)
+        .padding(.top, isHorizontalSplit ? 0 : (metrics.isCompactShortScreen ? 4 : 10))
+        .padding(.bottom, isHorizontalSplit ? 20 : metrics.dockBottomPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Shared Editorial Pieces
 
+    private func editorialControlCluster(metrics: AdaptiveLayoutMetrics, isHorizontalSplit: Bool) -> some View {
+        VStack(alignment: isHorizontalSplit ? .leading : .center, spacing: isHorizontalSplit ? 24 : (metrics.isCompactShortScreen ? 12 : 18)) {
+            if !isHorizontalSplit {
+                Spacer(minLength: metrics.isCompactShortScreen ? 4 : 10)
+            }
+
+            editorialHeadline(alignment: isHorizontalSplit ? .leading : .center, isWide: isHorizontalSplit)
+
+            if !isHorizontalSplit {
+                Spacer(minLength: metrics.isCompactShortScreen ? 4 : 12)
+            }
+
+            VStack(alignment: isHorizontalSplit ? .leading : .center, spacing: isHorizontalSplit ? 12 : 10) {
+                primarySelectButton
+                    .frame(maxWidth: isHorizontalSplit ? 360 : metrics.floatingDockMaxWidth)
+
+                Text(Localizable.string(.homeBrandFootnote))
+                    .font(.system(size: isHorizontalSplit ? 12 : 11, weight: .medium))
+                    .foregroundColor(AppTheme.textTertiary)
+                    .multilineTextAlignment(isHorizontalSplit ? .leading : .center)
+                    .lineLimit(isHorizontalSplit ? 2 : 1)
+                    .minimumScaleFactor(0.8)
+            }
+            .padding(.top, isHorizontalSplit ? 0 : 4)
+        }
+        .frame(maxWidth: isHorizontalSplit ? 420 : .infinity, alignment: isHorizontalSplit ? .leading : .center)
+    }
+
     private func editorialHeadline(alignment: HorizontalAlignment, isWide: Bool) -> some View {
         VStack(alignment: alignment, spacing: 8) {
             Text(Localizable.string(.homeHeroHeadline))
-                .font(.system(size: isWide ? 32 : 26, weight: .semibold))
+                .font(.system(size: isWide ? 30 : 25, weight: .semibold))
                 .tracking(-0.3)
                 .foregroundColor(AppTheme.textPrimary)
                 .multilineTextAlignment(alignment == .leading ? .leading : .center)
-                .minimumScaleFactor(0.82)
-                .lineLimit(2)
+                .minimumScaleFactor(0.78)
+                .lineLimit(isWide ? 3 : 2)
 
             Text(Localizable.string(.homeHeroSubtitle))
                 .font(.system(size: isWide ? 15 : 13, weight: .regular))
                 .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(alignment == .leading ? .leading : .center)
+                .lineLimit(3)
+                .minimumScaleFactor(0.85)
         }
     }
 
@@ -292,36 +301,6 @@ struct HomeView: View {
             }
         }
         .buttonStyle(StudioPrimaryButtonStyle(height: 54))
-    }
-
-    private func bottomStudioDock(metrics: AdaptiveLayoutMetrics) -> some View {
-        VStack(spacing: 11) {
-            primarySelectButton
-
-            Text(Localizable.string(.homeBrandFootnote))
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(AppTheme.textTertiary)
-                .multilineTextAlignment(.center)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: metrics.floatingDockMaxWidth)
-        .padding(.horizontal, metrics.horizontalPadding)
-        .padding(.top, 8)
-        .padding(.bottom, 16)
-    }
-
-    private func heroDeckScale(for metrics: AdaptiveLayoutMetrics) -> CGFloat {
-        if metrics.isWideSplit {
-            let maxH = max(220, metrics.containerSize.height - 130)
-            let maxW = max(240, metrics.containerSize.width * 0.44)
-            let upperBound: CGFloat = metrics.containerSize.width >= 960 ? 1.32 : 1.16
-            return min(upperBound, min(maxH / 358, maxW / 351))
-        } else {
-            let maxH = max(220, metrics.containerSize.height - 340)
-            let maxW = max(260, metrics.containerSize.width - metrics.horizontalPadding * 2)
-            return min(1.12, min(maxH / 358, maxW / 351))
-        }
     }
 
     private var analyzingOverlay: some View {
@@ -537,6 +516,7 @@ private struct AboutSheetView: View {
         GeometryReader { proxy in
             let metrics = AdaptiveLayoutMetrics(
                 containerSize: proxy.size,
+                safeAreaInsets: proxy.safeAreaInsets,
                 horizontalSizeClass: horizontalSizeClass,
                 verticalSizeClass: verticalSizeClass
             )

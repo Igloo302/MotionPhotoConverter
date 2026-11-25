@@ -301,6 +301,7 @@ struct BatchConvertView: View {
             GeometryReader { proxy in
                 let metrics = AdaptiveLayoutMetrics(
                     containerSize: proxy.size,
+                    safeAreaInsets: proxy.safeAreaInsets,
                     horizontalSizeClass: horizontalSizeClass,
                     verticalSizeClass: verticalSizeClass
                 )
@@ -315,11 +316,11 @@ struct BatchConvertView: View {
 
                         // 内容区：标准 iOS 分段格式控制器（无玻璃特效）
                         formatSelectorSection(metrics: metrics)
-                            .padding(.top, 10)
+                            .padding(.top, metrics.isCompactShortScreen ? 6 : 10)
 
                         // 自适应照片小图网格（iPhone 3 列 / Duo 4-5 列 / iPad 5-6 列）
                         photoThumbnailGrid(metrics: metrics)
-                            .padding(.top, 14)
+                            .padding(.top, metrics.isCompactShortScreen ? 10 : 14)
 
                         // 底部悬浮液态玻璃操作/进度区
                         bottomFloatingDock(metrics: metrics)
@@ -585,7 +586,7 @@ struct BatchConvertView: View {
         .frame(maxWidth: metrics.floatingDockMaxWidth)
         .padding(.horizontal, metrics.horizontalPadding)
         .padding(.top, 8)
-        .padding(.bottom, 16)
+        .padding(.bottom, metrics.dockBottomPadding)
         .frame(maxWidth: .infinity)
         .background(
             AppTheme.canvas.opacity(0.94)
