@@ -210,7 +210,10 @@ enum MediaExportService {
             exportSession.outputURL = tempMOVURL
             exportSession.outputFileType = .mov
 
-            let originalMetadata = (try? await asset.load(.metadata)) ?? []
+            let originalMetadata = ((try? await asset.load(.metadata)) ?? []).filter { item in
+                guard let key = item.key as? String else { return true }
+                return key != "com.apple.quicktime.content.identifier" && key != "com.apple.quicktime.still-image-time"
+            }
             let clampedStillTime = max(0, min(127, stillImageTime))
             let livePhotoMetadata: [AVMetadataItem] = [
                 {

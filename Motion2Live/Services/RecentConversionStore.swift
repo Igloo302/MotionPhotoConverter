@@ -137,8 +137,9 @@ final class RecentConversionStore: ObservableObject {
         updated.insert(newEntry, at: 0)
         let evicted = Array(updated.dropFirst(Self.maxEntries))
         let kept = Array(updated.prefix(Self.maxEntries))
-        entries = kept
 
+        // Persist thumbnail and index before publishing `entries` so the UI
+        // never reads an un-written file path on re-render.
         await Task.detached(priority: .utility) {
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let fileURL = directory.appendingPathComponent(fileName)
@@ -152,6 +153,8 @@ final class RecentConversionStore: ObservableObject {
                 try? encoded.write(to: indexURL, options: .atomic)
             }
         }.value
+
+        entries = kept
     }
 
     // MARK: - Low-Memory Thumbnail Generation

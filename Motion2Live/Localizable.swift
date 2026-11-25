@@ -188,6 +188,7 @@ enum LocalizableKey {
     case aboutPrivacyPolicyLabel
     case homeShowRecentConversions
     case homeResetDemoDeck
+    case homeNoRecentConversionsHint
     
     var english: String {
         switch self {
@@ -336,6 +337,7 @@ enum LocalizableKey {
         case .aboutPrivacyPolicyLabel: return "Privacy Policy"
         case .homeShowRecentConversions: return "Show Recent Conversions"
         case .homeResetDemoDeck: return "Restore Demo Photos"
+        case .homeNoRecentConversionsHint: return "No recent conversions yet (updates after saving)"
         }
     }
     
@@ -486,6 +488,7 @@ enum LocalizableKey {
         case .aboutPrivacyPolicyLabel: return "隐私政策"
         case .homeShowRecentConversions: return "首页展示最近转换"
         case .homeResetDemoDeck: return "恢复默认示范图"
+        case .homeNoRecentConversionsHint: return "暂无最近转换（导出保存后自动展示）"
         }
     }
     
@@ -636,6 +639,7 @@ enum LocalizableKey {
         case .aboutPrivacyPolicyLabel: return "Politique de confidentialité"
         case .homeShowRecentConversions: return "Afficher les conversions récentes"
         case .homeResetDemoDeck: return "Rétablir les photos démo"
+        case .homeNoRecentConversionsHint: return "Aucune conversion récente (mise à jour après enregistrement)"
         }
     }
     
@@ -786,6 +790,7 @@ enum LocalizableKey {
         case .aboutPrivacyPolicyLabel: return "Datenschutzerklärung"
         case .homeShowRecentConversions: return "Letzte Konvertierungen anzeigen"
         case .homeResetDemoDeck: return "Demo-Fotos wiederherstellen"
+        case .homeNoRecentConversionsHint: return "Noch keine Konvertierungen (wird nach dem Speichern aktualisiert)"
         }
     }
     
@@ -936,6 +941,7 @@ enum LocalizableKey {
         case .aboutPrivacyPolicyLabel: return "Política de privacidad"
         case .homeShowRecentConversions: return "Mostrar conversiones recientes"
         case .homeResetDemoDeck: return "Restaurar fotos de demo"
+        case .homeNoRecentConversionsHint: return "Sin conversiones recientes (se actualiza al guardar)"
         }
     }
     
@@ -1086,6 +1092,7 @@ enum LocalizableKey {
         case .aboutPrivacyPolicyLabel: return "プライバシーポリシー"
         case .homeShowRecentConversions: return "最近の変換を表示"
         case .homeResetDemoDeck: return "デモ写真に戻す"
+        case .homeNoRecentConversionsHint: return "最近の変換履歴はありません（保存後に自動更新）"
         }
     }
     
@@ -1236,6 +1243,7 @@ enum LocalizableKey {
         case .aboutPrivacyPolicyLabel: return "개인정보 처리방침"
         case .homeShowRecentConversions: return "최근 변환 표시"
         case .homeResetDemoDeck: return "데모 사진 복원"
+        case .homeNoRecentConversionsHint: return "최근 변환 기록 없음 (저장 후 자동 반영)"
         }
     }
 }

@@ -151,15 +151,6 @@ struct HomeView: View {
                             Label(Localizable.string(.homeShowRecentConversions), systemImage: "clock.arrow.circlepath")
                         }
 
-                        if !recentStore.entries.isEmpty {
-                            Button(role: .destructive) {
-                                AppHaptics.selection()
-                                recentStore.clearHistory()
-                            } label: {
-                                Label(Localizable.string(.homeResetDemoDeck), systemImage: "arrow.counterclockwise")
-                            }
-                        }
-
                         Divider()
 
                         Button {
