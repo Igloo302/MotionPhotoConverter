@@ -156,6 +156,38 @@ enum LocalizableKey {
     case batchCancelledSummary
     case imageLoadFailed
     case videoLoadFailed
+    case selectCoverFrame
+    case setCoverFrame
+    case restoreOriginalCover
+    case coverFrameUpdated
+    case holdToPlayHint
+    case exportLivePhotoCTA
+    case customCoverBadge
+    case openSettings
+    case homeHeroHeadline
+    case homeHeroSubtitle
+    case homeBrandFootnote
+    case inspectorCoverShort
+    case batchTitleWithCount
+    case startBatchConversionWithCount
+    case labExploreSubtitle
+    case customLiveStep1
+    case customLiveStep2
+    case customLiveVideoReady
+    case aboutPrivacyTitle
+    case aboutPrivacyDesc
+    case aboutMetadataTitle
+    case aboutMetadataDesc
+    case aboutFormatsTitle
+    case aboutFormatsDesc
+    case aboutSectionHighlights
+    case aboutSectionProject
+    case aboutDeveloperLabel
+    case aboutLicenseLabel
+    case aboutSourceCodeLabel
+    case aboutPrivacyPolicyLabel
+    case homeShowRecentConversions
+    case homeResetDemoDeck
     
     var english: String {
         switch self {
@@ -272,6 +304,38 @@ enum LocalizableKey {
         case .batchCancelledSummary: return "Conversion cancelled: %d saved."
         case .imageLoadFailed: return "Failed to load selected image"
         case .videoLoadFailed: return "Failed to load selected video"
+        case .selectCoverFrame: return "Cover Frame"
+        case .setCoverFrame: return "Set as Live Photo Cover"
+        case .restoreOriginalCover: return "Restore Original Cover"
+        case .coverFrameUpdated: return "Cover frame updated"
+        case .holdToPlayHint: return "Press & hold to preview motion"
+        case .exportLivePhotoCTA: return "Save as Live Photo"
+        case .customCoverBadge: return "Custom Cover"
+        case .openSettings: return "Open Settings"
+        case .homeHeroHeadline: return "Bring Motion Photos to Life"
+        case .homeHeroSubtitle: return "Native Live Photo · MP4 · GIF Lossless"
+        case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo"
+        case .inspectorCoverShort: return "Cover"
+        case .batchTitleWithCount: return "Batch · %d Photos"
+        case .startBatchConversionWithCount: return "Start Batch (%d)"
+        case .labExploreSubtitle: return "Explore experimental imaging features"
+        case .customLiveStep1: return "01 · Still Cover"
+        case .customLiveStep2: return "02 · Motion Video"
+        case .customLiveVideoReady: return "Ready"
+        case .aboutPrivacyTitle: return "100% On-Device Processing"
+        case .aboutPrivacyDesc: return "All parsing, transcoding, and Live Photo assembly happen locally on your device. Nothing is ever uploaded."
+        case .aboutMetadataTitle: return "Original Metadata Preserved"
+        case .aboutMetadataDesc: return "Retains capture date, EXIF orientation, and color profiles so exports fit right into your Photos timeline."
+        case .aboutFormatsTitle: return "Flexible Lossless Export"
+        case .aboutFormatsDesc: return "Export as native iOS Live Photos with custom keyframe selection, standalone MP4 videos, or shareable GIFs."
+        case .aboutSectionHighlights: return "Highlights & Privacy"
+        case .aboutSectionProject: return "Project Info"
+        case .aboutDeveloperLabel: return "Developer"
+        case .aboutLicenseLabel: return "License"
+        case .aboutSourceCodeLabel: return "GitHub Repository"
+        case .aboutPrivacyPolicyLabel: return "Privacy Policy"
+        case .homeShowRecentConversions: return "Show Recent Conversions"
+        case .homeResetDemoDeck: return "Restore Demo Photos"
         }
     }
     
@@ -390,6 +454,38 @@ enum LocalizableKey {
         case .batchCancelledSummary: return "已取消转换，已保存 %d 张"
         case .imageLoadFailed: return "加载所选图片失败"
         case .videoLoadFailed: return "加载所选视频失败"
+        case .selectCoverFrame: return "封面帧"
+        case .setCoverFrame: return "设为实况照片封面"
+        case .restoreOriginalCover: return "恢复原图封面"
+        case .coverFrameUpdated: return "已更新封面帧"
+        case .holdToPlayHint: return "长按画面预览动态"
+        case .exportLivePhotoCTA: return "导出为实况照片"
+        case .customCoverBadge: return "已自选封面"
+        case .openSettings: return "前往设置"
+        case .homeHeroHeadline: return "让动态照片鲜活如初"
+        case .homeHeroSubtitle: return "原生实况 · MP4 · GIF 无损转换"
+        case .homeBrandFootnote: return "兼容小米 · Pixel · 三星 · 华为 · OPPO · vivo"
+        case .inspectorCoverShort: return "封面"
+        case .batchTitleWithCount: return "批量转换 · %d 张"
+        case .startBatchConversionWithCount: return "开始批量转换 (%d)"
+        case .labExploreSubtitle: return "探索前沿影像实验功能"
+        case .customLiveStep1: return "01 · 静态封面"
+        case .customLiveStep2: return "02 · 动态视频"
+        case .customLiveVideoReady: return "已就绪"
+        case .aboutPrivacyTitle: return "100% 本地离线处理"
+        case .aboutPrivacyDesc: return "所有解析、封面提取与实况照片封装均在设备本地完成，不上传任何照片与视频数据。"
+        case .aboutMetadataTitle: return "完整保留拍摄元数据"
+        case .aboutMetadataDesc: return "自动保留原始拍摄时间、EXIF 方向与色彩信息，导出后无缝融入系统相册时间线。"
+        case .aboutFormatsTitle: return "多格式无损灵活输出"
+        case .aboutFormatsDesc: return "支持导出原生实况照片（可自定义封面帧）、独立 MP4 视频或 GIF 动图，并支持批量转换。"
+        case .aboutSectionHighlights: return "核心特性与隐私"
+        case .aboutSectionProject: return "项目信息"
+        case .aboutDeveloperLabel: return "开发者"
+        case .aboutLicenseLabel: return "开源协议"
+        case .aboutSourceCodeLabel: return "GitHub 开源仓库"
+        case .aboutPrivacyPolicyLabel: return "隐私政策"
+        case .homeShowRecentConversions: return "首页展示最近转换"
+        case .homeResetDemoDeck: return "恢复默认示范图"
         }
     }
     
@@ -508,6 +604,38 @@ enum LocalizableKey {
         case .batchCancelledSummary: return "Conversion annulée : %d enregistrées"
         case .imageLoadFailed: return "Échec du chargement de l'image sélectionnée"
         case .videoLoadFailed: return "Échec du chargement de la vidéo sélectionnée"
+        case .selectCoverFrame: return "Image clé"
+        case .setCoverFrame: return "Définir comme couverture"
+        case .restoreOriginalCover: return "Rétablir l'original"
+        case .coverFrameUpdated: return "Image de couverture mise à jour"
+        case .holdToPlayHint: return "Maintenir pour lire le mouvement"
+        case .exportLivePhotoCTA: return "Enregistrer en Live Photo"
+        case .customCoverBadge: return "Couverture personnalisée"
+        case .openSettings: return "Ouvrir Réglages"
+        case .homeHeroHeadline: return "Donnez vie aux Motion Photos"
+        case .homeHeroSubtitle: return "Live Photo · MP4 · GIF sans perte"
+        case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo"
+        case .inspectorCoverShort: return "Couverture"
+        case .batchTitleWithCount: return "Lot · %d photos"
+        case .startBatchConversionWithCount: return "Lancer (%d)"
+        case .labExploreSubtitle: return "Explorer les outils expérimentaux"
+        case .customLiveStep1: return "01 · Image fixe"
+        case .customLiveStep2: return "02 · Vidéo animée"
+        case .customLiveVideoReady: return "Prêt"
+        case .aboutPrivacyTitle: return "Traitement 100 % local"
+        case .aboutPrivacyDesc: return "L'analyse et la conversion s'effectuent entièrement sur votre appareil, sans aucun envoi en ligne."
+        case .aboutMetadataTitle: return "Métadonnées préservées"
+        case .aboutMetadataDesc: return "Conserve la date de prise de vue et les métadonnées EXIF dans votre photothèque."
+        case .aboutFormatsTitle: return "Exportation flexible"
+        case .aboutFormatsDesc: return "Exportez en Live Photo (avec image clé), vidéo MP4 ou GIF animé, à l'unité ou par lot."
+        case .aboutSectionHighlights: return "Points forts et confidentialité"
+        case .aboutSectionProject: return "Informations du projet"
+        case .aboutDeveloperLabel: return "Développeur"
+        case .aboutLicenseLabel: return "Licence"
+        case .aboutSourceCodeLabel: return "Dépôt GitHub"
+        case .aboutPrivacyPolicyLabel: return "Politique de confidentialité"
+        case .homeShowRecentConversions: return "Afficher les conversions récentes"
+        case .homeResetDemoDeck: return "Rétablir les photos démo"
         }
     }
     
@@ -626,6 +754,38 @@ enum LocalizableKey {
         case .batchCancelledSummary: return "Konvertierung abgebrochen: %d gespeichert"
         case .imageLoadFailed: return "Ausgewähltes Bild konnte nicht geladen werden"
         case .videoLoadFailed: return "Ausgewähltes Video konnte nicht geladen werden"
+        case .selectCoverFrame: return "Titelbild"
+        case .setCoverFrame: return "Als Live Photo-Cover festlegen"
+        case .restoreOriginalCover: return "Original wiederherstellen"
+        case .coverFrameUpdated: return "Titelbild aktualisiert"
+        case .holdToPlayHint: return "Gedrückt halten für Vorschau"
+        case .exportLivePhotoCTA: return "Als Live Photo sichern"
+        case .customCoverBadge: return "Eigenes Cover"
+        case .openSettings: return "Einstellungen öffnen"
+        case .homeHeroHeadline: return "Bewegungsfotos lebendig machen"
+        case .homeHeroSubtitle: return "Live Photo · MP4 · GIF verlustfrei"
+        case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo"
+        case .inspectorCoverShort: return "Cover"
+        case .batchTitleWithCount: return "Stapel · %d Fotos"
+        case .startBatchConversionWithCount: return "Konvertieren (%d)"
+        case .labExploreSubtitle: return "Experimentelle Bildfunktionen entdecken"
+        case .customLiveStep1: return "01 · Titelbild"
+        case .customLiveStep2: return "02 · Bewegungsvideo"
+        case .customLiveVideoReady: return "Bereit"
+        case .aboutPrivacyTitle: return "100 % lokale Verarbeitung"
+        case .aboutPrivacyDesc: return "Alle Analysen und Konvertierungen erfolgen direkt auf Ihrem Gerät ohne Upload."
+        case .aboutMetadataTitle: return "Metadaten bleiben erhalten"
+        case .aboutMetadataDesc: return "Behält Aufnahmedatum und EXIF-Daten für eine nahtlose Einordnung in Fotos bei."
+        case .aboutFormatsTitle: return "Flexibler Export"
+        case .aboutFormatsDesc: return "Exportieren Sie als Live Photo (mit eigenem Titelbild), MP4-Video oder GIF — auch im Stapel."
+        case .aboutSectionHighlights: return "Funktionen & Datenschutz"
+        case .aboutSectionProject: return "Projektinfos"
+        case .aboutDeveloperLabel: return "Entwickler"
+        case .aboutLicenseLabel: return "Lizenz"
+        case .aboutSourceCodeLabel: return "GitHub-Repository"
+        case .aboutPrivacyPolicyLabel: return "Datenschutzerklärung"
+        case .homeShowRecentConversions: return "Letzte Konvertierungen anzeigen"
+        case .homeResetDemoDeck: return "Demo-Fotos wiederherstellen"
         }
     }
     
@@ -744,6 +904,38 @@ enum LocalizableKey {
         case .batchCancelledSummary: return "Conversión cancelada: %d guardadas"
         case .imageLoadFailed: return "Error al cargar la imagen seleccionada"
         case .videoLoadFailed: return "Error al cargar el video seleccionado"
+        case .selectCoverFrame: return "Fotograma clave"
+        case .setCoverFrame: return "Usar como portada"
+        case .restoreOriginalCover: return "Restaurar original"
+        case .coverFrameUpdated: return "Portada actualizada"
+        case .holdToPlayHint: return "Mantén pulsado para reproducir"
+        case .exportLivePhotoCTA: return "Guardar como Live Photo"
+        case .customCoverBadge: return "Portada personalizada"
+        case .openSettings: return "Abrir Ajustes"
+        case .homeHeroHeadline: return "Da vida a tus Motion Photos"
+        case .homeHeroSubtitle: return "Live Photo · MP4 · GIF sin pérdida"
+        case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo"
+        case .inspectorCoverShort: return "Portada"
+        case .batchTitleWithCount: return "Lote · %d fotos"
+        case .startBatchConversionWithCount: return "Convertir (%d)"
+        case .labExploreSubtitle: return "Explora funciones experimentales"
+        case .customLiveStep1: return "01 · Imagen fija"
+        case .customLiveStep2: return "02 · Video en movimiento"
+        case .customLiveVideoReady: return "Listo"
+        case .aboutPrivacyTitle: return "Procesamiento 100 % local"
+        case .aboutPrivacyDesc: return "Todo el análisis y la conversión se realizan en tu dispositivo sin subir ningún archivo."
+        case .aboutMetadataTitle: return "Metadatos conservados"
+        case .aboutMetadataDesc: return "Mantiene la fecha de captura y los datos EXIF para integrarse en tu fototeca."
+        case .aboutFormatsTitle: return "Exportación flexible"
+        case .aboutFormatsDesc: return "Exporta como Live Photo (con portada personalizada), vídeo MP4 o GIF, individualmente o por lotes."
+        case .aboutSectionHighlights: return "Características y privacidad"
+        case .aboutSectionProject: return "Información del proyecto"
+        case .aboutDeveloperLabel: return "Desarrollador"
+        case .aboutLicenseLabel: return "Licencia"
+        case .aboutSourceCodeLabel: return "Repositorio de GitHub"
+        case .aboutPrivacyPolicyLabel: return "Política de privacidad"
+        case .homeShowRecentConversions: return "Mostrar conversiones recientes"
+        case .homeResetDemoDeck: return "Restaurar fotos de demo"
         }
     }
     
@@ -862,6 +1054,38 @@ enum LocalizableKey {
         case .batchCancelledSummary: return "変換をキャンセルしました（%d枚保存済み）"
         case .imageLoadFailed: return "選択した画像の読み込みに失敗しました"
         case .videoLoadFailed: return "選択したビデオの読み込みに失敗しました"
+        case .selectCoverFrame: return "キー写真"
+        case .setCoverFrame: return "Live Photoのカバーに設定"
+        case .restoreOriginalCover: return "オリジナルに戻す"
+        case .coverFrameUpdated: return "カバーフレームを更新しました"
+        case .holdToPlayHint: return "長押しでモーションを再生"
+        case .exportLivePhotoCTA: return "Live Photoとして保存"
+        case .customCoverBadge: return "カスタムカバー"
+        case .openSettings: return "設定を開く"
+        case .homeHeroHeadline: return "モーションフォトを鮮やかに"
+        case .homeHeroSubtitle: return "Live Photo · MP4 · GIF ロスレス変換"
+        case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo 対応"
+        case .inspectorCoverShort: return "カバー"
+        case .batchTitleWithCount: return "一括変換 · %d 枚"
+        case .startBatchConversionWithCount: return "一括変換を開始 (%d)"
+        case .labExploreSubtitle: return "最新の実験的イメージング機能"
+        case .customLiveStep1: return "01 · 静止カバー"
+        case .customLiveStep2: return "02 · モーション動画"
+        case .customLiveVideoReady: return "準備完了"
+        case .aboutPrivacyTitle: return "100% デバイス内オフライン処理"
+        case .aboutPrivacyDesc: return "解析・変換はすべて端末内で完結し、写真や動画が外部にアップロードされることはありません。"
+        case .aboutMetadataTitle: return "撮影メタデータを保持"
+        case .aboutMetadataDesc: return "撮影日時や EXIF 情報を維持し、写真アプリのタイムラインに自然に馴染みます。"
+        case .aboutFormatsTitle: return "多彩なロスレス書き出し"
+        case .aboutFormatsDesc: return "キー写真を選べる Live Photo、MP4 動画、GIF 出力および一括変換に対応しています。"
+        case .aboutSectionHighlights: return "特徴とプライバシー"
+        case .aboutSectionProject: return "プロジェクト情報"
+        case .aboutDeveloperLabel: return "開発者"
+        case .aboutLicenseLabel: return "ライセンス"
+        case .aboutSourceCodeLabel: return "GitHub リポジトリ"
+        case .aboutPrivacyPolicyLabel: return "プライバシーポリシー"
+        case .homeShowRecentConversions: return "最近の変換を表示"
+        case .homeResetDemoDeck: return "デモ写真に戻す"
         }
     }
     
@@ -980,6 +1204,38 @@ enum LocalizableKey {
         case .batchCancelledSummary: return "변환이 취소되었습니다: %d장 저장됨"
         case .imageLoadFailed: return "선택한 이미지를 불러오지 못했습니다"
         case .videoLoadFailed: return "선택한 비디오를 불러오지 못했습니다"
+        case .selectCoverFrame: return "키 프레임"
+        case .setCoverFrame: return "라이브 포토 커버로 설정"
+        case .restoreOriginalCover: return "원본 복원"
+        case .coverFrameUpdated: return "커버 프레임이 업데이트되었습니다"
+        case .holdToPlayHint: return "길게 눌러 모션 미리보기"
+        case .exportLivePhotoCTA: return "라이브 포토로 저장"
+        case .customCoverBadge: return "사용자 지정 커버"
+        case .openSettings: return "설정 열기"
+        case .homeHeroHeadline: return "모션 포토에 생동감을"
+        case .homeHeroSubtitle: return "Live Photo · MP4 · GIF 무손실 변환"
+        case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo 지원"
+        case .inspectorCoverShort: return "커버"
+        case .batchTitleWithCount: return "일괄 변환 · %d장"
+        case .startBatchConversionWithCount: return "일괄 변환 시작 (%d)"
+        case .labExploreSubtitle: return "실험적인 이미징 기능 탐색"
+        case .customLiveStep1: return "01 · 정지 커버"
+        case .customLiveStep2: return "02 · 모션 비디오"
+        case .customLiveVideoReady: return "준비됨"
+        case .aboutPrivacyTitle: return "100% 기기 내 오프라인 처리"
+        case .aboutPrivacyDesc: return "모든 분석과 변환은 기기에서 로컬로 수행되며 사진이나 비디오가 외부로 업로드되지 않습니다."
+        case .aboutMetadataTitle: return "원본 메타데이터 유지"
+        case .aboutMetadataDesc: return "촬영 날짜와 EXIF 정보를 그대로 유지해 사진 앱 타임라인에 자연스럽게 저장됩니다."
+        case .aboutFormatsTitle: return "유연한 무손실 내보내기"
+        case .aboutFormatsDesc: return "커버 프레임을 지정하는 Live Photo, MP4 비디오, GIF 및 일괄 변환을 지원합니다."
+        case .aboutSectionHighlights: return "주요 기능 및 개인정보"
+        case .aboutSectionProject: return "프로젝트 정보"
+        case .aboutDeveloperLabel: return "개발자"
+        case .aboutLicenseLabel: return "라이선스"
+        case .aboutSourceCodeLabel: return "GitHub 저장소"
+        case .aboutPrivacyPolicyLabel: return "개인정보 처리방침"
+        case .homeShowRecentConversions: return "최근 변환 표시"
+        case .homeResetDemoDeck: return "데모 사진 복원"
         }
     }
 }

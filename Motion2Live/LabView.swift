@@ -1,48 +1,126 @@
 import SwiftUI
 import PhotosUI
+import AVFoundation
 import ImageIO
 import UniformTypeIdentifiers
 
 struct LabView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
         NavigationStack {
-            List {
-                Section(header: Text(Localizable.string(.labDescription))) {
-                    NavigationLink(destination: CustomLivePhotoView()) {
-                        VStack(alignment: .leading, spacing: 8) {
+            GeometryReader { proxy in
+                let metrics = AdaptiveLayoutMetrics(
+                    containerSize: proxy.size,
+                    horizontalSizeClass: horizontalSizeClass,
+                    verticalSizeClass: verticalSizeClass
+                )
+
+                ZStack {
+                    AppTheme.canvas
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 0) {
+                        // Top Nav Bar with centered title & Liquid Glass circular close button
+                        ZStack {
+                            Text(Localizable.string(.lab))
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(AppTheme.textPrimary)
+
                             HStack {
-                                Image(systemName: "photo.on.rectangle.angled")
-                                Text(Localizable.string(.customLivePhoto))
-                                    .font(.headline)
+                                Spacer()
+                                StudioIconCircleButton(
+                                    systemName: "xmark",
+                                    accessibilityLabel: Localizable.string(.cancel),
+                                    size: 38
+                                ) {
+                                    dismiss()
+                                }
                             }
-                            Text(Localizable.string(.customLivePhotoDescription))
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
                         }
-                        .padding(.vertical, 8)
+                        .frame(height: 54)
+                        .padding(.horizontal, metrics.horizontalPadding)
+                        .padding(.top, 4)
+
+                        ScrollView(showsIndicators: false) {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text(Localizable.string(.labExploreSubtitle))
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(AppTheme.textSecondary)
+
+                                // Standard Content-Layer Feature Card (surface0, r=24, no glass per HIG)
+                                NavigationLink(destination: CustomLivePhotoView()) {
+                                    HStack(spacing: 14) {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                                .fill(AppTheme.accent.opacity(0.16))
+                                                .frame(width: 48, height: 48)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                                        .strokeBorder(AppTheme.accent.opacity(0.35), lineWidth: 0.8)
+                                                )
+
+                                            Image(systemName: "livephoto")
+                                                .font(.system(size: 22, weight: .medium))
+                                                .foregroundColor(AppTheme.accent)
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(Localizable.string(.customLivePhoto))
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundColor(AppTheme.textPrimary)
+                                            Text(Localizable.string(.customLivePhotoDescription))
+                                                .font(.system(size: 12, weight: .regular))
+                                                .foregroundColor(AppTheme.textSecondary)
+                                                .lineSpacing(2)
+                                                .multilineTextAlignment(.leading)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundColor(AppTheme.textTertiary)
+                                    }
+                                    .padding(.vertical, 18)
+                                    .padding(.horizontal, 16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                                            .fill(AppTheme.surface0)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                                                    .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
+                                            )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .frame(maxWidth: metrics.readableContentMaxWidth, alignment: .leading)
+                            .padding(.horizontal, metrics.horizontalPadding)
+                            .padding(.top, 14)
+                            .padding(.bottom, 24)
+                            .frame(maxWidth: .infinity)
+                        }
                     }
                 }
             }
-            .navigationTitle(Localizable.string(.lab))
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "xmark")
-                    }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }
 
 struct CustomLivePhotoView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
     @State private var selectedImage: UIImage?
     @State private var selectedImageData: Data?
+    @State private var selectedImagePixelSize: CGSize?
     @State private var selectedVideo: URL?
+    @State private var selectedVideoDuration: Double?
     @State private var isShowingImagePicker = false
     @State private var isShowingVideoPicker = false
     @State private var isProcessing = false
@@ -51,59 +129,110 @@ struct CustomLivePhotoView: View {
     @State private var alertMessage = ""
     @State private var alertIsSuccess = false
 
+    private var canCreate: Bool {
+        (selectedImageData != nil || selectedImage != nil) && selectedVideo != nil && !isProcessing
+    }
+
     var body: some View {
-        VStack(spacing: 20) {
-            Text(Localizable.string(.customLivePhotoDescription))
-                .padding()
-                .multilineTextAlignment(.center)
+        GeometryReader { proxy in
+            let metrics = AdaptiveLayoutMetrics(
+                containerSize: proxy.size,
+                horizontalSizeClass: horizontalSizeClass,
+                verticalSizeClass: verticalSizeClass
+            )
 
-            Button(action: {
-                isShowingImagePicker = true
-            }) {
-                Text(selectedImage == nil ? Localizable.string(.selectImage) : Localizable.string(.changeImage))
-                    .frame(minWidth: 200)
+            ZStack {
+                AppTheme.canvas
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    // Top Nav Bar: Liquid Glass Back Pill + Centered Title
+                    ZStack {
+                        Text(Localizable.string(.customLivePhoto))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(AppTheme.textPrimary)
+
+                        HStack {
+                            Button {
+                                AppHaptics.lightImpact()
+                                dismiss()
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 13, weight: .semibold))
+                                    Text(Localizable.string(.lab))
+                                        .font(.system(size: 13, weight: .medium))
+                                }
+                                .foregroundColor(AppTheme.textPrimary)
+                                .padding(.leading, 10)
+                                .padding(.trailing, 13)
+                                .frame(height: 36)
+                                .contentShape(Capsule())
+                                .liquidGlassControl(in: Capsule(), interactive: true)
+                            }
+                            .buttonStyle(.plain)
+
+                            Spacer()
+                        }
+                    }
+                    .frame(height: 54)
+                    .padding(.horizontal, metrics.horizontalPadding)
+                    .padding(.top, 4)
+
+                    // Scrollable Step Cards (2-column on wide iPad/Duo, 1-column on compact)
+                    ScrollView(showsIndicators: false) {
+                        Group {
+                            if metrics.isWideSplit {
+                                HStack(alignment: .top, spacing: 16) {
+                                    stepOneImageCard
+                                    stepTwoVideoCard
+                                }
+                                .frame(maxWidth: 840)
+                            } else {
+                                VStack(spacing: 16) {
+                                    stepOneImageCard
+                                    stepTwoVideoCard
+                                }
+                                .frame(maxWidth: metrics.readableContentMaxWidth)
+                            }
+                        }
+                        .padding(.horizontal, metrics.horizontalPadding)
+                        .padding(.top, 14)
+                        .padding(.bottom, 20)
+                        .frame(maxWidth: .infinity)
+                    }
+
+                    // Bottom Prominent Liquid Glass CTA
+                    VStack(spacing: 0) {
+                        Button(action: createLivePhoto) {
+                            HStack(spacing: 9) {
+                                if isProcessing {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "livephoto")
+                                        .font(.system(size: 18, weight: .semibold))
+                                }
+                                Text(Localizable.string(.createLivePhoto))
+                            }
+                        }
+                        .buttonStyle(StudioPrimaryButtonStyle(isDisabled: !canCreate, height: 54))
+                        .disabled(!canCreate)
+                    }
+                    .frame(maxWidth: metrics.floatingDockMaxWidth)
+                    .padding(.horizontal, metrics.horizontalPadding)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
+                    .frame(maxWidth: .infinity)
+                }
             }
-            .buttonStyle(.bordered)
-
-            if let image = selectedImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 100)
-            }
-
-            Button(action: {
-                isShowingVideoPicker = true
-            }) {
-                Text(selectedVideo == nil ? Localizable.string(.selectVideo) : Localizable.string(.changeVideo))
-                    .frame(minWidth: 200)
-            }
-            .buttonStyle(.bordered)
-
-            if selectedVideo != nil {
-                Text(Localizable.string(.videoSelected))
-                    .foregroundColor(.green)
-            }
-
-            Button(action: createLivePhoto) {
-                Text(Localizable.string(.createLivePhoto))
-                    .frame(minWidth: 200)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled((selectedImageData == nil && selectedImage == nil) || selectedVideo == nil || isProcessing)
-
-            if isProcessing {
-                ProgressView()
-            }
-
-            Spacer()
         }
-        .navigationTitle(Localizable.string(.customLivePhoto))
-        .padding()
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $isShowingImagePicker) {
             ImagePicker(
                 image: $selectedImage,
                 imageData: $selectedImageData,
+                pixelSize: $selectedImagePixelSize,
                 onError: { message in
                     alertIsSuccess = false
                     alertMessage = message
@@ -114,6 +243,7 @@ struct CustomLivePhotoView: View {
         .sheet(isPresented: $isShowingVideoPicker) {
             VideoPicker(
                 videoURL: $selectedVideo,
+                videoDuration: $selectedVideoDuration,
                 onError: { message in
                     alertIsSuccess = false
                     alertMessage = message
@@ -136,11 +266,126 @@ struct CustomLivePhotoView: View {
         }
     }
 
+    // MARK: - Step 01: Still Cover Card
+
+    private var stepOneImageCard: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text(Localizable.string(.customLiveStep1))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppTheme.textSecondary)
+
+                Spacer()
+
+                if let size = selectedImagePixelSize, size.width > 0, size.height > 0 {
+                    Text("\(Int(size.width)) × \(Int(size.height))")
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundColor(AppTheme.textTertiary)
+                }
+            }
+
+            if let image = selectedImage {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(AppTheme.stageBackground)
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 172)
+                        .clipped()
+                }
+                .frame(height: 172)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+
+            Button {
+                AppHaptics.lightImpact()
+                isShowingImagePicker = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "photo")
+                        .font(.system(size: 15, weight: .medium))
+                    Text(selectedImage == nil ? Localizable.string(.selectImage) : Localizable.string(.changeImage))
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+        }
+        .padding(.top, 14)
+        .padding(.bottom, 16)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                .fill(AppTheme.surface0)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                        .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
+                )
+        )
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Step 02: Motion Video Card
+
+    private var stepTwoVideoCard: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text(Localizable.string(.customLiveStep2))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppTheme.textSecondary)
+
+                Spacer()
+
+                if selectedVideo != nil {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                        if let duration = selectedVideoDuration, duration > 0 {
+                            Text(String(format: "%@ · %.1fs", Localizable.string(.customLiveVideoReady), duration))
+                                .font(.system(size: 12, weight: .semibold))
+                        } else {
+                            Text(Localizable.string(.customLiveVideoReady))
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                    }
+                    .foregroundColor(AppTheme.success)
+                }
+            }
+
+            Button {
+                AppHaptics.lightImpact()
+                isShowingVideoPicker = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "video")
+                        .font(.system(size: 15, weight: .medium))
+                    Text(selectedVideo == nil ? Localizable.string(.selectVideo) : Localizable.string(.changeVideo))
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+        }
+        .padding(.top, 14)
+        .padding(.bottom, 16)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                .fill(AppTheme.surface0)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                        .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
+                )
+        )
+        .frame(maxWidth: .infinity)
+    }
+
     private func createLivePhoto() {
         guard let videoURL = selectedVideo else { return }
         let rawData = selectedImageData ?? selectedImage?.jpegData(compressionQuality: 1.0)
         guard let imageData = rawData else { return }
 
+        AppHaptics.mediumImpact()
         isProcessing = true
         Task {
             defer {
@@ -151,10 +396,12 @@ struct CustomLivePhotoView: View {
             }
             do {
                 try await MediaExportService.exportCustomLivePhoto(imageData: imageData, videoURL: videoURL)
+                AppHaptics.success()
                 alertIsSuccess = true
                 alertMessage = Localizable.string(.livePhotoSaved)
                 showAlert = true
             } catch {
+                AppHaptics.error()
                 alertIsSuccess = false
                 alertMessage = error.localizedDescription
                 showAlert = true
@@ -166,6 +413,7 @@ struct CustomLivePhotoView: View {
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Binding var imageData: Data?
+    @Binding var pixelSize: CGSize?
     var onError: ((String) -> Void)?
     @Environment(\.dismiss) private var dismiss
 
@@ -205,10 +453,12 @@ struct ImagePicker: UIViewControllerRepresentable {
                         }
                         return
                     }
+                    let dimensions = Self.readPixelDimensions(from: data)
                     let previewImage = Self.makePreviewThumbnail(from: data) ?? UIImage(data: data)
                     Task { @MainActor in
                         self.parent.imageData = data
                         self.parent.image = previewImage
+                        self.parent.pixelSize = dimensions
                     }
                 }
             } else if provider.canLoadObject(ofClass: UIImage.self) {
@@ -221,12 +471,24 @@ struct ImagePicker: UIViewControllerRepresentable {
                         return
                     }
                     let jpegData = loaded.jpegData(compressionQuality: 1.0)
+                    let dimensions = CGSize(width: loaded.size.width * loaded.scale, height: loaded.size.height * loaded.scale)
                     Task { @MainActor in
                         self.parent.image = loaded
                         self.parent.imageData = jpegData
+                        self.parent.pixelSize = dimensions
                     }
                 }
             }
+        }
+
+        private static func readPixelDimensions(from data: Data) -> CGSize? {
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+                  let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let w = props[kCGImagePropertyPixelWidth] as? CGFloat,
+                  let h = props[kCGImagePropertyPixelHeight] as? CGFloat else {
+                return nil
+            }
+            return CGSize(width: w, height: h)
         }
 
         private static func makePreviewThumbnail(from data: Data) -> UIImage? {
@@ -244,6 +506,7 @@ struct ImagePicker: UIViewControllerRepresentable {
 
 struct VideoPicker: UIViewControllerRepresentable {
     @Binding var videoURL: URL?
+    @Binding var videoDuration: Double?
     var onError: ((String) -> Void)?
     @Environment(\.dismiss) private var dismiss
 
@@ -290,10 +553,16 @@ struct VideoPicker: UIViewControllerRepresentable {
                     .appendingPathComponent("lab_video_\(UUID().uuidString).\(ext)")
                 do {
                     try FileManager.default.copyItem(at: url, to: tempURL)
-                    Task { @MainActor in
-                        let oldURL = self.parent.videoURL
-                        self.parent.videoURL = tempURL
-                        MediaExportService.removeIfInTemporaryDirectory(oldURL)
+                    Task {
+                        let asset = AVAsset(url: tempURL)
+                        let duration = try? await asset.load(.duration)
+                        let seconds = duration.map { CMTimeGetSeconds($0) }
+                        await MainActor.run {
+                            let oldURL = self.parent.videoURL
+                            self.parent.videoURL = tempURL
+                            self.parent.videoDuration = (seconds?.isFinite == true) ? seconds : nil
+                            MediaExportService.removeIfInTemporaryDirectory(oldURL)
+                        }
                     }
                 } catch {
                     AppLogger.picker.error("Failed to copy lab video: \(error.localizedDescription, privacy: .public)")
