@@ -29,3 +29,6 @@ xcuserdata/
 
 # OneDrive / Cloud Sync conflict artifacts
 *-MBFVFG71WHQ6LW*
+samples/local/
+.asc/
+
