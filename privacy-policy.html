@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Motion2Live — 隐私政策 / Privacy Policy</title>
+  <style>
+    :root {
+      --canvas: #f4f6f9;
+      --surface0: #ffffff;
+      --surface1: #ebeef3;
+      --border: #d4dbe5;
+      --accent: #0284c7;
+      --accent-soft: rgba(2, 132, 199, 0.12);
+      --success: #248a3d;
+      --success-soft: rgba(36, 138, 61, 0.12);
+      --text-primary: #0f1419;
+      --text-secondary: #536070;
+      --text-tertiary: #8391a2;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: #0b0d0f;
+        --surface0: #121518;
+        --surface1: #181b1f;
+        --border: #2a2f36;
+        --accent: #38bce0;
+        --accent-soft: rgba(56, 188, 224, 0.14);
+        --success: #30d158;
+        --success-soft: rgba(48, 209, 88, 0.14);
+        --text-primary: #fafafa;
+        --text-secondary: #a6adb8;
+        --text-tertiary: #6b7585;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background-color: var(--canvas);
+      color: var(--text-primary);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      padding: 24px 16px 64px;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 17px;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      background: var(--surface1);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.18s ease, color 0.18s ease;
+    }
+
+    .lang-btn.active {
+      background: var(--surface0);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .hero {
+      background: var(--surface0);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 28px 24px;
+      margin-bottom: 20px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--success);
+      background: var(--success-soft);
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .lead {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .highlights {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .highlight-card {
+      background: var(--surface0);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .highlight-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+
+    .highlight-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .card {
+      background: var(--surface0);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul {
+      padding-left: 20px;
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    [data-lang-section] {
+      display: none;
+    }
+
+    [data-lang-section].active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">◎</span>
+        <span>Motion2Live</span>
+      </div>
+      <div class="lang-switch" role="tablist" aria-label="Language">
+        <button class="lang-btn active" id="btn-zh" onclick="setLang('zh')" role="tab" aria-selected="true">中文</button>
+        <button class="lang-btn" id="btn-en" onclick="setLang('en')" role="tab" aria-selected="false">English</button>
+      </div>
+    </header>
+
+    <!-- 中文版 -->
+    <main data-lang-section="zh" class="active">
+      <section class="hero">
+        <div class="badge"><span class="badge-dot"></span>100% 本地离线处理 · 零数据收集</div>
+        <h1>隐私政策</h1>
+        <div class="meta">生效日期：2026 年 11 月 25 日 · 适用应用：Motion2Live（iOS）</div>
+        <p class="lead">
+          Motion2Live 尊重并保护您的隐私。本应用是一款完全在您设备本地运行的动态照片转换工具，我们<strong>不收集、不存储、不上传、也不共享</strong>您的任何个人数据或媒体文件。
+        </p>
+      </section>
+
+      <section class="highlights">
+        <div class="highlight-card">
+          <div class="highlight-title">全程离线处理</div>
+          <div class="highlight-desc">动态照片解析、封面帧提取、Live Photo / 视频 / GIF 转换均在您的设备本地完成，不发起网络传输。</div>
+        </div>
+        <div class="highlight-card">
+          <div class="highlight-title">不收集个人信息</div>
+          <div class="highlight-desc">无需注册账号，不收集姓名、邮箱、设备 ID、位置信息、照片内容或任何使用行为统计。</div>
+        </div>
+        <div class="highlight-card">
+          <div class="highlight-title">零第三方 SDK</div>
+          <div class="highlight-desc">仅基于 Apple 原生系统框架开发，未集成任何第三方广告、统计分析或崩溃上报 SDK。</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>1. 我们收集的信息</h2>
+        <p><strong>我们不收集任何数据。</strong>Motion2Live 不会收集、记录或向开发者及任何第三方传输以下任意信息：</p>
+        <ul>
+          <li>您的照片、视频、实况照片或其中的 EXIF / GPS 元数据；</li>
+          <li>个人身份信息（如姓名、手机号、邮箱地址）；</li>
+          <li>设备标识符、IP 地址、位置信息或网络信息；</li>
+          <li>应用使用统计、交互日志或崩溃报告。</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>2. 相册权限的使用方式</h2>
+        <p>为实现动态照片的选取与转换保存，应用仅在必要时请求以下系统权限：</p>
+        <ul>
+          <li><strong>媒体选取（系统照片选择器）</strong>：应用通过 iOS 原生 <code>PHPickerViewController</code> 让您自主挑选照片或视频。系统仅向应用提供您主动选中的项目，应用无法读取您未选择的其他相册内容。</li>
+          <li><strong>照片库写入权限（仅添加）</strong>：在您将转换后的 Live Photo、视频或 GIF 保存到相册时，系统会请求“仅添加照片”权限。该权限仅用于写入导出结果，不会读取、修改或删除您相册中的现有文件。</li>
+        </ul>
+        <p>您可以随时在 iOS「设置 &gt; 隐私与安全性 &gt; 照片」中修改或撤回授权。</p>
+      </section>
+
+      <section class="card">
+        <h2>3. 本地处理与临时文件生命周期</h2>
+        <p>所有解析与格式转换均在您的设备本地沙盒内完成。处理过程中生成的临时视频、封面帧或 GIF 文件仅暂存于系统临时目录（<code>NSTemporaryDirectory</code>），并在导出完成、取消操作或离开页面后立即自动删除。这些临时文件受 iOS 系统沙盒保护，不会被其他应用访问，也不会上传至外部服务器。</p>
+      </section>
+
+      <section class="card">
+        <h2>4. 第三方服务与网络通信</h2>
+        <p>Motion2Live 是一款离线工具，核心功能无需网络连接即可运行。应用不包含任何第三方分析服务、广告网络或跨应用追踪技术（App Tracking Transparency）。</p>
+      </section>
+
+      <section class="card">
+        <h2>5. 儿童隐私保护</h2>
+        <p>由于 Motion2Live 不收集任何用户的个人信息，因此不会有意或无意地收集 13 岁以下儿童（或您所在司法管辖区规定的相应年龄以下未成年人）的任何个人数据。</p>
+      </section>
+
+      <section class="card">
+        <h2>6. 隐私政策的更新</h2>
+        <p>如果未来版本的功能变更影响到本隐私政策的内容，我们将在本页面发布更新版本并注明最新生效日期。建议您定期查阅以了解最新说明。</p>
+      </section>
+
+      <section class="card">
+        <h2>7. 联系我们</h2>
+        <p>如果您对本隐私政策或 Motion2Live 的隐私保护措施有任何疑问或建议，请通过以下方式联系开发者：</p>
+        <ul>
+          <li>电子邮箱：<a href="mailto:shenjy302@live.com">shenjy302@live.com</a></li>
+          <li>问题反馈：<a href="https://github.com/Igloo302/MotionPhotoConverter/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <!-- English Version -->
+    <main data-lang-section="en">
+      <section class="hero">
+        <div class="badge"><span class="badge-dot"></span>100% On-Device · Zero Data Collection</div>
+        <h1>Privacy Policy</h1>
+        <div class="meta">Effective Date: November 25, 2026 · App: Motion2Live (iOS)</div>
+        <p class="lead">
+          Motion2Live respects and protects your privacy. The app runs completely offline on your device. We <strong>do not collect, store, transmit, or share</strong> any of your personal data or media files.
+        </p>
+      </section>
+
+      <section class="highlights">
+        <div class="highlight-card">
+          <div class="highlight-title">On-Device Processing</div>
+          <div class="highlight-desc">Motion Photo parsing, cover frame extraction, and Live Photo / Video / GIF conversion happen strictly on your device.</div>
+        </div>
+        <div class="highlight-card">
+          <div class="highlight-title">No Data Collected</div>
+          <div class="highlight-desc">No account required. We never collect personal info, device identifiers, location data, media content, or usage analytics.</div>
+        </div>
+        <div class="highlight-card">
+          <div class="highlight-title">Zero Third-Party SDKs</div>
+          <div class="highlight-desc">Built exclusively with Apple native frameworks—no third-party ads, analytics, crash reporters, or trackers.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>1. Information We Collect</h2>
+        <p><strong>We collect no data.</strong> Motion2Live does not collect, log, or transmit any of the following to the developer or any third party:</p>
+        <ul>
+          <li>Your photos, videos, Live Photos, or embedded EXIF / GPS metadata;</li>
+          <li>Personally identifiable information (name, email, phone number, etc.);</li>
+          <li>Device identifiers, IP addresses, or location information;</li>
+          <li>Usage analytics, diagnostics, or crash reports.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>2. Photo Library Permissions</h2>
+        <p>To let you select Motion Photos and save converted results, Motion2Live uses iOS system permissions minimally:</p>
+        <ul>
+          <li><strong>Selecting Media (System Photo Picker)</strong>: Media selection uses Apple's <code>PHPickerViewController</code>. The app only receives the specific items you choose and cannot access the rest of your library.</li>
+          <li><strong>Add-Only Photo Library Access</strong>: Requested only when saving a converted Live Photo, video, or GIF to your Photos library. It is never used to read, modify, or delete existing items.</li>
+        </ul>
+        <p>You can manage or revoke Photo Library access at any time in iOS <em>Settings &gt; Privacy &amp; Security &gt; Photos</em>.</p>
+      </section>
+
+      <section class="card">
+        <h2>3. Local Processing &amp; Temporary Files</h2>
+        <p>All parsing and export operations occur locally inside the iOS app sandbox. Temporary video, cover image, or GIF files created during conversion are stored in the system temporary directory (<code>NSTemporaryDirectory</code>) and automatically removed once export completes, is cancelled, or you leave the screen. These files are isolated by iOS and never uploaded externally.</p>
+      </section>
+
+      <section class="card">
+        <h2>4. Third-Party Services &amp; Network Usage</h2>
+        <p>Motion2Live works completely offline and does not require an internet connection. The app does not integrate any third-party analytics, advertising networks, or cross-app tracking technologies.</p>
+      </section>
+
+      <section class="card">
+        <h2>5. Children's Privacy</h2>
+        <p>Because Motion2Live collects no personal data from any user, it does not knowingly or unknowingly collect personal information from children under 13 (or the applicable age of digital consent in your jurisdiction).</p>
+      </section>
+
+      <section class="card">
+        <h2>6. Changes to This Policy</h2>
+        <p>If future updates change how the app handles permissions or data, we will update this page and revise the effective date above.</p>
+      </section>
+
+      <section class="card">
+        <h2>7. Contact Us</h2>
+        <p>If you have any questions or feedback regarding this Privacy Policy, please contact the developer:</p>
+        <ul>
+          <li>Email: <a href="mailto:shenjy302@live.com">shenjy302@live.com</a></li>
+          <li>Support: <a href="https://github.com/Igloo302/MotionPhotoConverter/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      © 2024–2026 Motion2Live · Larry Shen
+    </footer>
+  </div>
+
+  <script>
+    function setLang(lang) {
+      document.querySelectorAll('[data-lang-section]').forEach(function (el) {
+        el.classList.toggle('active', el.getAttribute('data-lang-section') === lang);
+      });
+      document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+      document.getElementById('btn-zh').setAttribute('aria-selected', lang === 'zh' ? 'true' : 'false');
+      document.getElementById('btn-en').setAttribute('aria-selected', lang === 'en' ? 'true' : 'false');
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    }
+
+    (function initLang() {
+      var params = new URLSearchParams(window.location.search);
+      var qLang = params.get('lang');
+      if (qLang === 'en' || qLang === 'zh') {
+        setLang(qLang);
+        return;
+      }
+      var navLang = (navigator.language || 'zh').toLowerCase();
+      setLang(navLang.startsWith('zh') ? 'zh' : 'en');
+    })();
+  </script>
+</body>
+</html>
