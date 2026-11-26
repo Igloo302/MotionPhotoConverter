@@ -15,6 +15,7 @@ struct HomeView: View {
     @ObservedObject private var recentStore = RecentConversionStore.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var showAlert = false
     @State private var alertMessage = ""
@@ -22,6 +23,14 @@ struct HomeView: View {
     @State private var isShowingMorePopover = false
     @State private var isDropTargeted = false
     @State private var hingeState: HingeStateSnapshot = .unavailable
+
+    @State private var brandTapCount = 0
+    @State private var isBrandCoolingDown = false
+    @State private var pulseWaveToken = 0
+    @State private var cardFlipAngle: Double = 0
+    @State private var ringSpinAngle: Double = 0
+    @State private var comboResetTask: Task<Void, Never>?
+    @State private var cooldownTask: Task<Void, Never>?
 
     @MainActor
     init(viewModel: HomeViewModel) {
@@ -49,6 +58,9 @@ struct HomeView: View {
                         editorialStageLayout(metrics: metrics)
                     }
                 }
+            }
+            .onDisappear {
+                cancelEasterEggTasks()
             }
             .observeDeviceHinge($hingeState)
             .toolbar(.hidden, for: .navigationBar)
@@ -151,7 +163,13 @@ struct HomeView: View {
         HStack {
             // Brand Wordmark
             HStack(spacing: 8) {
-                Motion2LiveBrandMark()
+                Motion2LiveBrandMark(
+                    tapCount: brandTapCount,
+                    pulseWaveToken: pulseWaveToken,
+                    cardFlipAngle: cardFlipAngle,
+                    ringSpinAngle: ringSpinAngle,
+                    onTap: handleBrandMarkTap
+                )
                 Text(Localizable.string(.appTitle))
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(AppTheme.textPrimary)
@@ -310,6 +328,72 @@ struct HomeView: View {
         .padding(.top, 4)
     }
 
+    // MARK: - Brand Mark Easter Egg
+
+    private func handleBrandMarkTap() {
+        guard !isBrandCoolingDown else { return }
+
+        comboResetTask?.cancel()
+        let nextCount = brandTapCount + 1
+
+        if nextCount < 5 {
+            if nextCount <= 2 {
+                AppHaptics.lightImpact()
+            } else {
+                AppHaptics.mediumImpact()
+            }
+
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.68)) {
+                brandTapCount = nextCount
+                if !reduceMotion {
+                    ringSpinAngle += 72
+                }
+            }
+
+            comboResetTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 850_000_000)
+                guard !Task.isCancelled else { return }
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.78)) {
+                    brandTapCount = 0
+                }
+            }
+        } else {
+            comboResetTask = nil
+            isBrandCoolingDown = true
+            AppHaptics.success()
+
+            pulseWaveToken += 1
+
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.66)) {
+                brandTapCount = 0
+                if !reduceMotion {
+                    ringSpinAngle += 72
+                    cardFlipAngle += 360
+                }
+            }
+
+            cooldownTask?.cancel()
+            cooldownTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 90_000_000)
+                guard !Task.isCancelled else { return }
+                AppHaptics.mediumImpact()
+
+                try? await Task.sleep(nanoseconds: 1_510_000_000)
+                guard !Task.isCancelled else { return }
+                isBrandCoolingDown = false
+            }
+        }
+    }
+
+    private func cancelEasterEggTasks() {
+        comboResetTask?.cancel()
+        comboResetTask = nil
+        cooldownTask?.cancel()
+        cooldownTask = nil
+        brandTapCount = 0
+        isBrandCoolingDown = false
+    }
+
     // MARK: - Unified Adaptive Editorial Stage (Preserves HeroPhotoDeckStage identity across fold/unfold)
 
     private func editorialStageLayout(metrics: AdaptiveLayoutMetrics) -> some View {
@@ -329,7 +413,7 @@ struct HomeView: View {
             : AnyLayout(VStackLayout(spacing: splitSpacing))
 
         return layout {
-            HeroPhotoDeckStage(scale: metrics.heroDeckScale)
+            HeroPhotoDeckStage(scale: metrics.heroDeckScale, easterEggBurstToken: pulseWaveToken)
                 .frame(maxWidth: .infinity)
                 .frame(maxHeight: isHorizontalSplit ? .infinity : nil)
 
@@ -546,6 +630,7 @@ private struct HeroDeckCardItem: Identifiable {
 // MARK: - Hero Photo Deck Stage (Interactive 3-Card Fanned Showcase + Long-Press Live)
 private struct HeroPhotoDeckStage: View {
     let scale: CGFloat
+    let easterEggBurstToken: Int
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -557,6 +642,9 @@ private struct HeroPhotoDeckStage: View {
     @State private var isDragging: Bool = false
     @GestureState private var pressPhase: HeroPressPhase = .idle
     @State private var isPlayingLive: Bool = false
+    @State private var burstPhase: CGFloat = 0
+    @State private var shockwaveToken: Int = 0
+    @State private var burstResetTask: Task<Void, Never>?
 
     private var isPressing: Bool {
         pressPhase == .pressing && !isDragging
@@ -618,18 +706,26 @@ private struct HeroPhotoDeckStage: View {
         let parallaxMultiplier: CGFloat = reduceMotion ? 0.02 : 0.08
 
         ZStack {
-            // Ambient Cyan & Indigo Halos with subtle drag parallax
+            // Ambient Cyan & Indigo Halos with subtle drag parallax + burst glow
             Circle()
-                .fill(Color(red: 0.220, green: 0.737, blue: 0.878).opacity(colorScheme == .dark ? 0.22 : 0.16))
+                .fill(Color(red: 0.220, green: 0.737, blue: 0.878).opacity((colorScheme == .dark ? 0.22 : 0.16) + Double(burstPhase) * 0.26))
                 .frame(width: 220, height: 220)
+                .scaleEffect(1.0 + burstPhase * (reduceMotion ? 0.08 : 0.35))
                 .blur(radius: 62)
                 .offset(x: -44 + dragOffset * parallaxMultiplier, y: -42)
 
             Circle()
-                .fill(Color(red: 0.349, green: 0.341, blue: 0.922).opacity(colorScheme == .dark ? 0.18 : 0.12))
+                .fill(Color(red: 0.349, green: 0.341, blue: 0.922).opacity((colorScheme == .dark ? 0.18 : 0.12) + Double(burstPhase) * 0.22))
                 .frame(width: 200, height: 200)
+                .scaleEffect(1.0 + burstPhase * (reduceMotion ? 0.08 : 0.32))
                 .blur(radius: 66)
                 .offset(x: 54 - dragOffset * parallaxMultiplier, y: 36)
+
+            if shockwaveToken > 0 {
+                HeroDeckShockwaveRing(reduceMotion: reduceMotion)
+                    .id(shockwaveToken)
+                    .allowsHitTesting(false)
+            }
 
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 let slot = HeroDeckMath.cyclicRelativeSlot(
@@ -682,9 +778,46 @@ private struct HeroPhotoDeckStage: View {
                 prepareCurrentCenterVideo()
             }
         }
+        .onChange(of: easterEggBurstToken) { newValue in
+            guard newValue > 0 else { return }
+            triggerDeckBurst()
+        }
         .onDisappear {
+            burstResetTask?.cancel()
+            burstResetTask = nil
+            burstPhase = 0
             cancelPressAndResetLive()
             livePlayerController.teardown()
+        }
+    }
+
+    private func triggerDeckBurst() {
+        burstResetTask?.cancel()
+        shockwaveToken += 1
+
+        if reduceMotion {
+            withAnimation(.easeOut(duration: 0.22)) {
+                burstPhase = 1.0
+            }
+            burstResetTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 240_000_000)
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeOut(duration: 0.45)) {
+                    burstPhase = 0.0
+                }
+            }
+            return
+        }
+
+        withAnimation(.spring(response: 0.20, dampingFraction: 0.56)) {
+            burstPhase = 1.0
+        }
+        burstResetTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 210_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.62, dampingFraction: 0.48)) {
+                burstPhase = 0.0
+            }
         }
     }
 
@@ -694,23 +827,28 @@ private struct HeroPhotoDeckStage: View {
         let t = min(absSlot, 1.0)
         let sign: CGFloat = slot >= 0 ? 1 : -1
 
+        let burstX: CGFloat = reduceMotion ? 0 : burstPhase * slot * 34
+        let burstY: CGFloat = reduceMotion ? 0 : burstPhase * (absSlot < 0.4 ? -12 : 6)
+        let burstRotation: Double = reduceMotion ? 0 : Double(burstPhase * slot * 9.0)
+        let burstScale: CGFloat = reduceMotion ? 1.0 : (1.0 + burstPhase * (absSlot < 0.4 ? 0.08 : 0.04))
+
         let baseX: CGFloat = absSlot <= 1.0
             ? slot * 78
             : (2.0 - absSlot) * 78 * sign
         let arcOutward: CGFloat = reduceMotion ? 0 : sin(t * .pi) * 14 * sign
-        let xOffset = baseX + arcOutward
+        let xOffset = baseX + arcOutward + burstX
 
         let targetSideY: CGFloat = slot >= 0 ? 10 : 6
-        let yOffset = targetSideY * t
+        let yOffset = targetSideY * t + burstY
 
         let baseRotation: CGFloat = absSlot <= 1.0
             ? slot * 8.0
             : (2.0 - absSlot) * 8.0 * sign
-        let rotation = reduceMotion ? baseRotation * 0.5 : baseRotation
+        let rotation = (reduceMotion ? baseRotation * 0.5 : baseRotation) + burstRotation
 
-        let baseScale: CGFloat = absSlot <= 1.0
+        let baseScale: CGFloat = (absSlot <= 1.0
             ? 1.0 - (1.0 - 0.704) * t
-            : max(0.64, 0.704 - (absSlot - 1.0) * 0.12)
+            : max(0.64, 0.704 - (absSlot - 1.0) * 0.12)) * burstScale
 
         let isCenterSlot = absSlot < 0.08 && !isDragging
         let pressScale: CGFloat = {
@@ -1210,85 +1348,208 @@ private struct AboutSheetView: View {
 // MARK: - Brand Mark (Dual Liquid Glass Cards + Live Photo Concentric Ring)
 
 private struct Motion2LiveBrandMark: View {
+    let tapCount: Int
+    let pulseWaveToken: Int
+    let cardFlipAngle: Double
+    let ringSpinAngle: Double
+    let onTap: () -> Void
+
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isDark: Bool { colorScheme == .dark }
+    private var chargeRatio: CGFloat {
+        CGFloat(min(max(tapCount, 0), 4)) / 4.0
+    }
+    private var glowIntensity: Double {
+        Double(min(max(tapCount, 0), 5)) / 5.0
+    }
 
     var body: some View {
         ZStack {
-            // Rear glass card (-10°)
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(isDark ? AppTheme.surface2.opacity(0.88) : AppTheme.surface2.opacity(0.95))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .strokeBorder(
-                            isDark ? Color.white.opacity(0.16) : AppTheme.borderSubtle,
-                            lineWidth: 0.75
-                        )
-                )
-                .frame(width: 17, height: 17)
-                .offset(x: -2.2, y: -1.4)
-                .rotationEffect(.degrees(-10))
+            // Underlying accent charge glow
+            Circle()
+                .fill(AppTheme.accent.opacity(glowIntensity * (isDark ? 0.55 : 0.40)))
+                .frame(width: 24, height: 24)
+                .blur(radius: 5)
+                .allowsHitTesting(false)
 
-            // Front liquid glass card (+6°)
+            // Pulse wave / reduce-motion highlight on 5th tap
+            if pulseWaveToken > 0 {
+                BrandPulseWaveOverlay(reduceMotion: reduceMotion)
+                    .id(pulseWaveToken)
+                    .allowsHitTesting(false)
+            }
+
+            // Stacked glass cards
             ZStack {
-                RoundedRectangle(cornerRadius: 5.5, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: isDark
-                                ? [AppTheme.surface1.opacity(0.95), AppTheme.surface0.opacity(0.88)]
-                                : [Color.white.opacity(0.98), AppTheme.surface1.opacity(0.92)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                // Rear glass card (-10°)
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(isDark ? AppTheme.surface2.opacity(0.88) : AppTheme.surface2.opacity(0.95))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 5.5, style: .continuous)
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
                             .strokeBorder(
-                                LinearGradient(
-                                    colors: isDark
-                                        ? [Color.white.opacity(0.32), Color.white.opacity(0.10)]
-                                        : [Color.white, AppTheme.borderSubtle],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 0.85
+                                isDark ? Color.white.opacity(0.16) : AppTheme.borderSubtle,
+                                lineWidth: 0.75
                             )
                     )
-                    .shadow(
-                        color: Color.black.opacity(isDark ? 0.35 : 0.12),
-                        radius: 2.5,
-                        x: 0,
-                        y: 1
+                    .frame(width: 17, height: 17)
+                    .offset(
+                        x: -2.2 - (reduceMotion ? 0 : 1.8 * chargeRatio),
+                        y: -1.4 - (reduceMotion ? 0 : 1.8 * chargeRatio)
                     )
+                    .rotationEffect(.degrees(-10 - (reduceMotion ? 0 : 6 * Double(chargeRatio))))
 
-                // Live Photo concentric rings + cyan accent dot
+                // Front liquid glass card (+6°)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5.5, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: isDark
+                                    ? [AppTheme.surface1.opacity(0.95), AppTheme.surface0.opacity(0.88)]
+                                    : [Color.white.opacity(0.98), AppTheme.surface1.opacity(0.92)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5.5, style: .continuous)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: isDark
+                                            ? [Color.white.opacity(0.32), Color.white.opacity(0.10)]
+                                            : [Color.white, AppTheme.borderSubtle],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.85
+                                )
+                        )
+                        .shadow(
+                            color: Color.black.opacity(isDark ? 0.35 : 0.12),
+                            radius: 2.5,
+                            x: 0,
+                            y: 1
+                        )
+
+                    // Live Photo concentric rings + cyan accent dot
+                    ZStack {
+                        Circle()
+                            .stroke(
+                                AppTheme.accent.opacity(isDark ? 0.45 : 0.35),
+                                lineWidth: 1.0
+                            )
+                            .frame(width: 11.5, height: 11.5)
+
+                        Circle()
+                            .stroke(
+                                isDark ? Color.white.opacity(0.85) : AppTheme.textPrimary.opacity(0.75),
+                                style: StrokeStyle(lineWidth: 1.1, lineCap: .round, dash: [1.8, 1.8])
+                            )
+                            .frame(width: 7.5, height: 7.5)
+                            .rotationEffect(.degrees(ringSpinAngle))
+
+                        Circle()
+                            .fill(AppTheme.accent)
+                            .frame(width: 3.2, height: 3.2)
+                    }
+                }
+                .frame(width: 18, height: 18)
+                .scaleEffect(reduceMotion ? 1.0 : 1.0 + 0.06 * chargeRatio)
+                .offset(
+                    x: 1.6 + (reduceMotion ? 0 : 1.6 * chargeRatio),
+                    y: 1.2 + (reduceMotion ? 0 : 1.6 * chargeRatio)
+                )
+                .rotationEffect(.degrees(6))
+            }
+            .rotation3DEffect(
+                .degrees(reduceMotion ? 0 : cardFlipAngle),
+                axis: (x: 0, y: 1, z: 0),
+                perspective: 0.6
+            )
+        }
+        .frame(width: 24, height: 24)
+        .overlay {
+            Color.clear
+                .frame(width: 40, height: 40)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+private struct BrandPulseWaveOverlay: View {
+    let reduceMotion: Bool
+    @State private var isAnimating = false
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                Circle()
+                    .fill(AppTheme.accent.opacity(isAnimating ? 0 : 0.6))
+                    .frame(width: 26, height: 26)
+                    .blur(radius: 4)
+            } else {
+                ZStack {
+                    Circle()
+                        .stroke(AppTheme.accent.opacity(isAnimating ? 0 : 0.9), lineWidth: 1.6)
+                        .frame(width: 22, height: 22)
+                        .scaleEffect(isAnimating ? 3.0 : 0.6)
+
+                    Circle()
+                        .stroke(AppTheme.accent.opacity(isAnimating ? 0 : 0.55), lineWidth: 1.0)
+                        .frame(width: 22, height: 22)
+                        .scaleEffect(isAnimating ? 2.2 : 0.7)
+                        .animation(.easeOut(duration: 0.55).delay(0.08), value: isAnimating)
+                }
+            }
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.68)) {
+                isAnimating = true
+            }
+        }
+    }
+}
+
+private struct HeroDeckShockwaveRing: View {
+    let reduceMotion: Bool
+    @State private var isAnimating = false
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                Circle()
+                    .fill(AppTheme.accent.opacity(isAnimating ? 0 : 0.25))
+                    .frame(width: 220, height: 220)
+                    .blur(radius: 28)
+            } else {
                 ZStack {
                     Circle()
                         .stroke(
-                            AppTheme.accent.opacity(isDark ? 0.45 : 0.35),
-                            lineWidth: 1.0
+                            AppTheme.accent.opacity(isAnimating ? 0 : 0.75),
+                            lineWidth: isAnimating ? 1.5 : 4.5
                         )
-                        .frame(width: 11.5, height: 11.5)
+                        .frame(width: 180, height: 180)
+                        .scaleEffect(isAnimating ? 2.35 : 0.45)
 
                     Circle()
                         .stroke(
-                            isDark ? Color.white.opacity(0.85) : AppTheme.textPrimary.opacity(0.75),
-                            style: StrokeStyle(lineWidth: 1.1, lineCap: .round, dash: [1.8, 1.8])
+                            AppTheme.accent.opacity(isAnimating ? 0 : 0.40),
+                            lineWidth: 2.0
                         )
-                        .frame(width: 7.5, height: 7.5)
-
-                    Circle()
-                        .fill(AppTheme.accent)
-                        .frame(width: 3.2, height: 3.2)
+                        .frame(width: 180, height: 180)
+                        .scaleEffect(isAnimating ? 1.85 : 0.55)
+                        .animation(.easeOut(duration: 0.58).delay(0.08), value: isAnimating)
                 }
             }
-            .frame(width: 18, height: 18)
-            .offset(x: 1.6, y: 1.2)
-            .rotationEffect(.degrees(6))
         }
-        .frame(width: 24, height: 24)
-        .accessibilityHidden(true)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.72)) {
+                isAnimating = true
+            }
+        }
     }
 }
 
