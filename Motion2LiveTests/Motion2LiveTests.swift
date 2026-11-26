@@ -318,6 +318,151 @@ final class Motion2LiveTests: XCTestCase {
         XCTAssertTrue(store.entries.isEmpty)
     }
 
+    @MainActor
+    func testRecentConversionStoreCachesAndEvictsMutedPreviewVideos() async throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("recent_video_test_\(UUID().uuidString)", isDirectory: true)
+        let srcMP4 = FileManager.default.temporaryDirectory.appendingPathComponent("recent_src_\(UUID().uuidString).mp4")
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+            try? FileManager.default.removeItem(at: srcMP4)
+        }
+
+        let data = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let xmpInfo = XMPParser.extractAndParse(from: data)
+        let processor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data))
+        let extracted = try XCTUnwrap(processor.processMotionPhoto(data: data, xmpInfo: xmpInfo).data)
+        try extracted.videoData.write(to: srcMP4)
+
+        let store = RecentConversionStore(directory: tempDir)
+        for i in 1...4 {
+            await store.recordConversion(
+                imageData: extracted.imageData,
+                videoURL: srcMP4,
+                durationSeconds: Double(i)
+            )
+        }
+
+        XCTAssertEqual(store.entries.count, 3)
+        for entry in store.entries {
+            let cachedVideoURL = try XCTUnwrap(store.videoURL(for: entry))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: cachedVideoURL.path))
+            let tracks = try await AVURLAsset(url: cachedVideoURL).load(.tracks)
+            XCTAssertFalse(tracks.contains(where: { $0.mediaType == .audio }), "Cached preview video must be muted")
+        }
+
+        // Verify evicted entry's .mp4 was removed from disk (only 3 .mp4 files remain)
+        let filesInDir = try FileManager.default.contentsOfDirectory(atPath: tempDir.path)
+        let mp4Files = filesInDir.filter { $0.hasSuffix(".mp4") }
+        XCTAssertEqual(mp4Files.count, 3)
+
+        // Verify backward compatibility with legacy index.json without videoFileName
+        let legacyJSON = """
+        [
+          {
+            "id": "\(UUID().uuidString)",
+            "fileName": "\(try XCTUnwrap(store.entries.first?.fileName))",
+            "durationSeconds": 2.0,
+            "createdAt": 0
+          }
+        ]
+        """
+        let decodedLegacy = try JSONDecoder().decode([RecentConversionEntry].self, from: Data(legacyJSON.utf8))
+        XCTAssertEqual(decodedLegacy.count, 1)
+        XCTAssertNil(decodedLegacy[0].videoFileName)
+
+        store.clearHistory()
+        XCTAssertTrue(store.entries.isEmpty)
+    }
+
+    @MainActor
+    func testRecentConversionStoreClearHistoryDuringRecordDoesNotResurrectEntry() async throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("recent_race_test_\(UUID().uuidString)", isDirectory: true)
+        let srcMP4 = FileManager.default.temporaryDirectory.appendingPathComponent("recent_race_src_\(UUID().uuidString).mp4")
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+            try? FileManager.default.removeItem(at: srcMP4)
+        }
+
+        let data = try Data(contentsOf: try sampleURL(named: "Pixel"))
+        let xmpInfo = XMPParser.extractAndParse(from: data)
+        let processor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data))
+        let extracted = try XCTUnwrap(processor.processMotionPhoto(data: data, xmpInfo: xmpInfo).data)
+        try extracted.videoData.write(to: srcMP4)
+
+        let store = RecentConversionStore(directory: tempDir)
+        let recordTask = Task {
+            await store.recordConversion(
+                imageData: extracted.imageData,
+                videoURL: srcMP4,
+                durationSeconds: 2.0
+            )
+        }
+
+        // Yield so `recordTask` enters its background export before `clearHistory()` runs
+        try await Task.sleep(nanoseconds: 20_000_000)
+        store.clearHistory()
+        await recordTask.value
+
+        XCTAssertTrue(store.entries.isEmpty, "In-flight recordConversion must not resurrect entries after clearHistory()")
+    }
+
+    func testHeroDeckCyclicRelativeSlot() {
+        // Initial activeIndex = 0: [0] -> 0, [1] -> +1, [2] -> -1
+        XCTAssertEqual(HeroDeckMath.cyclicRelativeSlot(for: 0, activeIndex: 0), 0, accuracy: 0.001)
+        XCTAssertEqual(HeroDeckMath.cyclicRelativeSlot(for: 1, activeIndex: 0), 1, accuracy: 0.001)
+        XCTAssertEqual(HeroDeckMath.cyclicRelativeSlot(for: 2, activeIndex: 0), -1, accuracy: 0.001)
+
+        // activeIndex = 1: [0] -> -1, [1] -> 0, [2] -> +1
+        XCTAssertEqual(HeroDeckMath.cyclicRelativeSlot(for: 0, activeIndex: 1), -1, accuracy: 0.001)
+        XCTAssertEqual(HeroDeckMath.cyclicRelativeSlot(for: 1, activeIndex: 1), 0, accuracy: 0.001)
+        XCTAssertEqual(HeroDeckMath.cyclicRelativeSlot(for: 2, activeIndex: 1), 1, accuracy: 0.001)
+
+        // Dragging right past +1.5 wraps slot +1 to -1.4 (e.g. dragProgress = +0.6 -> +1.6 -> -1.4)
+        XCTAssertEqual(
+            HeroDeckMath.cyclicRelativeSlot(for: 1, activeIndex: 0, dragProgress: 0.6),
+            -1.4,
+            accuracy: 0.001
+        )
+        // Dragging left past -1.5 wraps slot -1 to +1.4 (e.g. dragProgress = -0.6 -> -1.6 -> +1.4)
+        XCTAssertEqual(
+            HeroDeckMath.cyclicRelativeSlot(for: 2, activeIndex: 0, dragProgress: -0.6),
+            1.4,
+            accuracy: 0.001
+        )
+    }
+
+    func testHeroDeckPredictedTargetIndex() {
+        // Small drag stays on current index
+        XCTAssertEqual(
+            HeroDeckMath.predictedTargetIndex(currentActiveIndex: 0, translationX: 20, predictedEndTranslationX: 25),
+            0
+        )
+
+        // Drag right past threshold brings index 2 (left card) to center
+        XCTAssertEqual(
+            HeroDeckMath.predictedTargetIndex(currentActiveIndex: 0, translationX: 70, predictedEndTranslationX: 80),
+            2
+        )
+
+        // Drag left past threshold brings index 1 (right card) to center
+        XCTAssertEqual(
+            HeroDeckMath.predictedTargetIndex(currentActiveIndex: 0, translationX: -70, predictedEndTranslationX: -80),
+            1
+        )
+
+        // Fast left flick with modest translation but large predicted end translation advances index
+        XCTAssertEqual(
+            HeroDeckMath.predictedTargetIndex(currentActiveIndex: 1, translationX: -24, predictedEndTranslationX: -140),
+            2
+        )
+
+        // Fast right flick wraps from 0 to 2
+        XCTAssertEqual(
+            HeroDeckMath.predictedTargetIndex(currentActiveIndex: 0, translationX: 24, predictedEndTranslationX: 140),
+            2
+        )
+    }
+
     // MARK: - Local Samples Verification (samples/local)
     private struct LocalManifest: Decodable {
         struct FileItem: Decodable {
