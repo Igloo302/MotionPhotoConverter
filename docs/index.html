@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motion2Live — 安卓动态照片与 Apple 实况照片离线互转（iPhone / iPad / Mac）</title>
+  <meta name="description" content="纯离线原生应用，在 iPhone、iPad 与 Mac 上解析小米、Pixel、三星、华为、OPPO 与 vivo 动态照片，导出为原生 Apple 实况照片、MP4 视频或 GIF，并支持将 Apple 实况逆向封装回安卓动态照片。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F4F6F9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B0D0F" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Motion2Live — Turn Android Motion Photos into native Apple Live Photos">
+  <meta property="og:description" content="Offline iPhone, iPad, and Mac app that converts Xiaomi, Pixel, Samsung, Huawei, OPPO, and vivo Motion Photos to Apple Live Photos, MP4, or GIF, and back again.">
+  <meta property="og:image" content="https://igloo302.github.io/MotionPhotoConverter/site/assets/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Cg transform='translate(14 14)'%3E%3Crect x='-8.5' y='-8.5' width='17' height='17' rx='5' fill='%23E1E6EE' stroke='%23D4DBE5' stroke-width='0.9' transform='translate(-2.2 -1.4) rotate(-10)'/%3E%3Cg transform='translate(1.6 1.2) rotate(6)'%3E%3Crect x='-9' y='-9' width='18' height='18' rx='5.5' fill='%23FFFFFF' stroke='%23D4DBE5' stroke-width='0.95'/%3E%3Ccircle r='5.75' fill='none' stroke='%230284C7' stroke-opacity='0.45' stroke-width='1'/%3E%3Ccircle r='3.75' fill='none' stroke='%230F1419' stroke-opacity='0.8' stroke-width='1.1' stroke-dasharray='1.8 1.8' stroke-linecap='round'/%3E%3Ccircle r='1.6' fill='%230284C7'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./site/styles.css">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Motion2Live",
+      "applicationCategory": "PhotographyApplication",
+      "operatingSystem": "iOS 16.0+, iPadOS 16.0+, macOS 14.4+",
+      "license": "https://www.mozilla.org/en-US/MPL/2.0/",
+      "url": "https://igloo302.github.io/MotionPhotoConverter/",
+      "codeRepository": "https://github.com/Igloo302/MotionPhotoConverter",
+      "author": {
+        "@type": "Person",
+        "name": "Larry Shen"
+      },
+      "description": "Offline native iPhone, iPad, and Mac tool that converts Android Motion Photos (Xiaomi, Pixel, Samsung, Huawei, OPPO, vivo) to native Apple Live Photos, MP4, or GIF, and encodes Apple Live Photos back into Android Motion Photos."
+    }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content" data-i18n="skipToContent">跳至正文</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="Motion2Live">
+        <!-- Motion2LiveBrandMark: exact geometry from Motion2Live/HomeView.swift -->
+        <svg class="brand-mark" width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="brand-front-grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--brand-front-start)"/>
+              <stop offset="100%" stop-color="var(--brand-front-end)"/>
+            </linearGradient>
+          </defs>
+          <g transform="translate(14 14)">
+            <rect
+              x="-8.5" y="-8.5" width="17" height="17" rx="5"
+              fill="var(--brand-rear-fill)"
+              stroke="var(--brand-rear-stroke)"
+              stroke-width="0.85"
+              transform="translate(-2.2 -1.4) rotate(-10)"
+            />
+            <g transform="translate(1.6 1.2) rotate(6)">
+              <rect
+                x="-9" y="-9" width="18" height="18" rx="5.5"
+                fill="url(#brand-front-grad)"
+                stroke="var(--brand-front-stroke)"
+                stroke-width="0.9"
+              />
+              <circle r="5.75" stroke="var(--optical-cyan)" stroke-opacity="0.45" stroke-width="1"/>
+              <circle r="3.75" stroke="var(--brand-ring-ink)" stroke-opacity="0.82" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="1.8 1.8"/>
+              <circle r="1.6" fill="var(--optical-cyan)"/>
+            </g>
+          </g>
+        </svg>
+        <span class="brand-name">Motion2Live</span>
+      </a>
+
+      <nav class="site-nav" aria-label="主导航" data-i18n-aria="navAria">
+        <a href="#workbench" data-i18n="navFormats">格式工作台</a>
+        <a href="#tools" data-i18n="navTools">精细工具</a>
+        <a href="#privacy" data-i18n="navPrivacy">隐私规格</a>
+        <a href="#faq" data-i18n="navFaq">常见问题</a>
+      </nav>
+
+      <div class="lang-switch" role="group" aria-label="切换语言" data-i18n-aria="langAria">
+        <button type="button" class="lang-btn is-active" data-lang-btn="zh" aria-pressed="true">中文</button>
+        <button type="button" class="lang-btn" data-lang-btn="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- BAND 1: ASYMMETRIC HERO -->
+    <section id="top" class="band band-hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <h1 class="hero-title" data-i18n="heroTitle">让安卓动态照片，在 iPhone 相册里重新动起来</h1>
+          <p class="hero-lead" data-i18n="heroLead">从安卓传到 iPhone 的动态照片，视频其实还在原图里。Motion2Live 在本机解析小米、Pixel、三星、华为、OPPO 与 vivo 的文件结构，导出为原生 Apple 实况照片、独立视频或 GIF，也能把 Apple 实况转回各品牌安卓动态照片。</p>
+
+          <div class="cta-row">
+            <a
+              class="btn btn-primary"
+              data-primary-cta
+              href="https://apps.apple.com/cn/app/motion2live/id6705126412"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n="ctaPrimaryStore"
+            >在 App Store 下载 Motion2Live</a>
+            <a
+              class="btn btn-secondary"
+              href="https://github.com/Igloo302/MotionPhotoConverter"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n="ctaSecondaryGithub"
+            >查看 GitHub 源码</a>
+          </div>
+
+          <p class="hero-microcopy" data-hero-microcopy data-i18n="heroMicrocopyStore">支持 iPhone、iPad 与 Mac（iOS 16+ / macOS 14.4+），以 MPL-2.0 协议开源，纯离线运行且无需注册账号。</p>
+        </div>
+
+        <!-- INTERACTIVE OBSIDIAN LIVE STAGE -->
+        <div class="hero-stage-shell" aria-label="交互式动态照片预览舞台" data-i18n-aria="stageAria">
+          <div class="stage-topbar">
+            <div class="stage-mode-switch" role="tablist" aria-label="切换舞台视图" data-i18n-aria="stageModeAria">
+              <button
+                type="button"
+                class="stage-mode-btn is-active"
+                id="stage-tab-preview"
+                role="tab"
+                tabindex="0"
+                aria-selected="true"
+                aria-controls="stage-panel-preview"
+                data-stage-mode="preview"
+                data-i18n="stageTabPreview"
+              >画面预览</button>
+              <button
+                type="button"
+                class="stage-mode-btn"
+                id="stage-tab-bytes"
+                role="tab"
+                tabindex="-1"
+                aria-selected="false"
+                aria-controls="stage-panel-bytes"
+                data-stage-mode="bytes"
+                data-i18n="stageTabBytes"
+              >透视文件字节</button>
+            </div>
+            <span class="mono-tag stage-total-size" aria-label="容器总大小" data-i18n-aria="stageTotalSizeAria">600 KB</span>
+          </div>
+
+          <!-- Panel 1: Live Preview -->
+          <div
+            class="stage-panel is-active"
+            id="stage-panel-preview"
+            role="tabpanel"
+            aria-labelledby="stage-tab-preview"
+          >
+            <div class="deck-viewport" id="live-deck" data-playing="false">
+              <img
+                class="deck-side deck-left"
+                src="./site/assets/hero-left.jpg"
+                alt="火花动态照片样例"
+                data-i18n-alt="heroLeftAlt"
+                width="537"
+                height="720"
+                decoding="async"
+              >
+              <img
+                class="deck-side deck-right"
+                src="./site/assets/hero-right.jpg"
+                alt="树叶与小猫动态照片样例"
+                data-i18n-alt="heroRightAlt"
+                width="537"
+                height="720"
+                decoding="async"
+              >
+
+              <div class="deck-center" id="live-card">
+                <img
+                  class="deck-poster"
+                  src="./site/assets/hero-center.jpg"
+                  alt="海岸日落动态照片"
+                  data-i18n-alt="heroCenterAlt"
+                  width="731"
+                  height="980"
+                  fetchpriority="high"
+                >
+                <video
+                  class="deck-video"
+                  id="hero-video"
+                  src="./site/assets/hero-center.mp4"
+                  poster="./site/assets/hero-center.jpg"
+                  muted
+                  playsinline
+                  loop
+                  preload="metadata"
+                  aria-hidden="true"
+                ></video>
+
+                <div class="stage-hud-top">
+                  <span class="live-badge" id="live-badge">
+                    <svg class="live-ring-svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <circle class="ring-outer" cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2" stroke-opacity="0.48"/>
+                      <circle class="ring-dash" cx="8" cy="8" r="4.2" stroke="currentColor" stroke-width="1.25" stroke-dasharray="1.8 1.8" stroke-linecap="round"/>
+                      <circle cx="8" cy="8" r="1.7" fill="currentColor"/>
+                    </svg>
+                    <span class="mono-text">LIVE</span>
+                  </span>
+                  <span class="duration-badge mono-text" id="hero-duration">2.42s</span>
+                </div>
+
+                <div class="stage-hud-bottom">
+                  <div class="waveform" aria-hidden="true">
+                    <span style="--h: 30%"></span>
+                    <span style="--h: 55%"></span>
+                    <span style="--h: 40%"></span>
+                    <span style="--h: 82%"></span>
+                    <span style="--h: 65%"></span>
+                    <span style="--h: 96%"></span>
+                    <span style="--h: 50%"></span>
+                    <span style="--h: 72%"></span>
+                    <span style="--h: 42%"></span>
+                    <span style="--h: 60%"></span>
+                    <span style="--h: 35%"></span>
+                    <span style="--h: 48%"></span>
+                    <span style="--h: 28%"></span>
+                  </div>
+                  <button
+                    type="button"
+                    class="stage-play-trigger"
+                    id="hero-play-btn"
+                    aria-pressed="false"
+                  >
+                    <span class="stage-play-dot" aria-hidden="true"></span>
+                    <span data-stage-hint data-i18n="stageHintHold">按住预览动态</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 2: Byte Inspector -->
+          <div
+            class="stage-panel"
+            id="stage-panel-bytes"
+            role="tabpanel"
+            aria-labelledby="stage-tab-bytes"
+            hidden
+          >
+            <div class="byte-stage">
+              <div class="byte-file-head">
+                <span class="mono-text byte-filename">MVIMG_coast_demo.jpg</span>
+                <span class="byte-verified">
+                  <span class="status-dot" aria-hidden="true"></span>
+                  <span class="mono-text" data-i18n="byteVerified">ftyp 偏移校验通过</span>
+                </span>
+              </div>
+
+              <div class="byte-map-bar" role="group" aria-label="动态照片容器字节分段" data-i18n-aria="byteMapAria">
+                <button type="button" class="byte-seg byte-seg-jpeg is-selected" data-byte-seg="jpeg" style="flex: 24 1 78px" aria-pressed="true">
+                  <span class="mono-text">JPEG 24%</span>
+                </button>
+                <button type="button" class="byte-seg byte-seg-xmp" data-byte-seg="xmp" style="flex: 5 0 40px" aria-pressed="false">
+                  <span class="mono-text">XMP</span>
+                </button>
+                <button type="button" class="byte-seg byte-seg-mp4" data-byte-seg="mp4" style="flex: 75 1 88px" aria-pressed="false">
+                  <span class="mono-text">MP4 75%</span>
+                </button>
+              </div>
+
+              <div class="byte-metrics-grid">
+                <button type="button" class="byte-metric-card is-selected" data-byte-card="jpeg" aria-pressed="true">
+                  <span class="byte-metric-label" data-i18n="byteJpegLabel">JPEG 静图</span>
+                  <span class="byte-metric-val mono-text">143 KB</span>
+                  <span class="byte-metric-sub mono-text">0x000000</span>
+                </button>
+                <button type="button" class="byte-metric-card" data-byte-card="xmp" aria-pressed="false">
+                  <span class="byte-metric-label" data-i18n="byteXmpLabel">XMP 元数据</span>
+                  <span class="byte-metric-val mono-text">4 KB</span>
+                  <span class="byte-metric-sub mono-text">0x000014</span>
+                </button>
+                <button type="button" class="byte-metric-card" data-byte-card="mp4" aria-pressed="false">
+                  <span class="byte-metric-label" data-i18n="byteMp4Label">内嵌 MP4</span>
+                  <span class="byte-metric-val mono-text">453 KB</span>
+                  <span class="byte-metric-sub mono-text">0x024C1E</span>
+                </button>
+              </div>
+
+              <div class="byte-detail-box" aria-live="polite">
+                <div class="byte-detail-head">
+                  <span class="mono-text byte-detail-marker" id="byte-detail-marker">FF D8 FF E0 · 146,462 B</span>
+                  <span class="mono-text byte-detail-range" id="byte-detail-range">731×980 · EXIF</span>
+                </div>
+                <p class="byte-detail-desc" id="byte-detail-desc" data-i18n="byteDescJpeg">前半段标准 JPEG 负责静态显示并保存 EXIF 拍摄参数、方向与 GPS 坐标。转换时原样保留。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="stage-footnote mono-text" aria-label="示范照片字节构成摘要" data-i18n-aria="stageFootnoteAria">
+            <span>JPEG 143 KB</span>
+            <span class="sep" aria-hidden="true">/</span>
+            <span>XMP 4 KB</span>
+            <span class="sep" aria-hidden="true">/</span>
+            <span>MP4 453 KB</span>
+            <span class="sep" aria-hidden="true">/</span>
+            <span>H.264 24fps</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BAND 2: PROBLEM & MECHANISM -->
+    <section class="band band-mechanism">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="mechTitle">同一张照片，为什么在 iOS 相册里变成了静态图</h2>
+          <p class="section-body" data-i18n="mechBody">小米、Google Pixel、三星等安卓手机把动态视频直接拼接在 JPEG 文件末尾，并用 XMP 字段或 SEF 尾部标记记录偏移位置。Apple 相册只认配对的静图与 QuickTime 媒体标识符，因此直接导入时只会显示前半段静态画面。Motion2Live 读取原文件中的视频字节，写入 Apple Maker "17" 与配对标识，让系统相册把它识别为真正的实况照片。</p>
+        </div>
+
+        <div class="compare-grid">
+          <article class="compare-card compare-card-before">
+            <div class="compare-visual" aria-hidden="true">
+              <div class="compare-bar">
+                <span class="compare-chunk chunk-jpeg">
+                  <span class="mono-text">JPEG 143 KB</span>
+                </span>
+                <span class="compare-chunk chunk-ignored">
+                  <span class="mono-text" data-i18n="compareIgnoredChunk">MP4 453 KB (忽略)</span>
+                </span>
+              </div>
+              <span class="compare-state mono-text" data-i18n="compareStateStatic">静态图片</span>
+            </div>
+            <h3 class="card-title" data-i18n="compareLeftTitle">直接导入 iOS 相册</h3>
+            <p class="card-body" data-i18n="compareLeftBody">前半段 JPEG 正常显示，尾部 MP4 数据被系统忽略，长按无反应。</p>
+          </article>
+
+          <article class="compare-card compare-card-after">
+            <div class="compare-visual" aria-hidden="true">
+              <div class="compare-pair">
+                <span class="compare-pill-node">
+                  <span class="mono-text">JPEG + Maker "17"</span>
+                </span>
+                <span class="pair-link" aria-hidden="true"></span>
+                <span class="compare-pill-node node-accent">
+                  <span class="mono-text">MOV + content.id</span>
+                </span>
+              </div>
+              <span class="compare-state state-ok mono-text" data-i18n="compareStateLive">原生实况照片</span>
+            </div>
+            <h3 class="card-title" data-i18n="compareRightTitle">经 Motion2Live 转换</h3>
+            <p class="card-body" data-i18n="compareRightBody">提取原视频流并按 Apple 规范配对封装，长按直接播放，拍摄时间与 GPS 原样保留。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- BAND 3: TWO-WAY FORMAT WORKBENCH -->
+    <section id="workbench" class="band band-workbench">
+      <div class="container">
+        <div class="workbench-header">
+          <div class="section-head">
+            <h2 class="section-title" data-i18n="wbTitle">双向转换，按各品牌规范解析与封装</h2>
+            <p class="section-body" data-i18n="wbIntro">换机迁移、跨系统互传原图，或者把 iPhone 拍的实况发回安卓相册，都在同一个工具里完成。</p>
+          </div>
+
+          <div class="direction-tabs" role="tablist" aria-label="切换转换方向" data-i18n-aria="wbTabsAria">
+            <button
+              type="button"
+              class="dir-tab is-active"
+              id="wb-tab-forward"
+              role="tab"
+              tabindex="0"
+              aria-selected="true"
+              aria-controls="wb-panel-forward"
+              data-wb-tab="forward"
+            >
+              <span data-i18n="wbTabForwardLeft">安卓动态照片</span>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2.5 7H11.5M8 3.5L11.5 7L8 10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="wbTabForwardRight">Apple 格式</span>
+            </button>
+            <button
+              type="button"
+              class="dir-tab"
+              id="wb-tab-reverse"
+              role="tab"
+              tabindex="-1"
+              aria-selected="false"
+              aria-controls="wb-panel-reverse"
+              data-wb-tab="reverse"
+            >
+              <span data-i18n="wbTabReverseLeft">Apple 实况照片</span>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2.5 7H11.5M8 3.5L11.5 7L8 10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-i18n="wbTabReverseRight">安卓动态照片</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="workbench-panel">
+          <!-- Forward Panel -->
+          <div
+            class="wb-grid is-active"
+            id="wb-panel-forward"
+            role="tabpanel"
+            aria-labelledby="wb-tab-forward"
+          >
+            <div class="wb-col">
+              <div class="wb-col-head">
+                <h3 class="wb-col-title" data-i18n="wbFwdInputTitle">识别来源</h3>
+                <span class="mono-tag">7</span>
+              </div>
+              <p class="wb-col-intro" data-i18n="wbFwdInputBody">小米（含 HyperOS 2 与早期 MicroVideo）、Google Pixel、三星（含 SEF 容器）、华为、OPPO 与一加、vivo，以及通用 MP4 拼接格式。</p>
+              <ul class="brand-matrix">
+                <li>
+                  <span data-i18n="brandXiaomi">小米</span>
+                  <span class="mono-meta">HyperOS 2 / MicroVideo</span>
+                </li>
+                <li>
+                  <span>Google Pixel</span>
+                  <span class="mono-meta">Motion Photo v1 / v2</span>
+                </li>
+                <li>
+                  <span data-i18n="brandSamsung">三星</span>
+                  <span class="mono-meta">SEF / MotionPhoto_Data</span>
+                </li>
+                <li>
+                  <span data-i18n="brandHuawei">华为</span>
+                  <span class="mono-meta">XMP / MP4 Trailer</span>
+                </li>
+                <li>
+                  <span data-i18n="brandOppo">OPPO 与一加</span>
+                  <span class="mono-meta">GCamera / Container</span>
+                </li>
+                <li>
+                  <span>vivo</span>
+                  <span class="mono-meta">XMP / Trailer</span>
+                </li>
+                <li>
+                  <span data-i18n="brandUniversal">通用拼接格式</span>
+                  <span class="mono-meta">EOI + ftyp</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="wb-col wb-col-pipeline">
+              <div class="wb-col-head">
+                <h3 class="wb-col-title" data-i18n="wbFwdPipeTitle">本地解析管线</h3>
+              </div>
+              <ol class="pipeline-steps">
+                <li>
+                  <span class="step-code mono-text">01</span>
+                  <span data-i18n="wbFwdStep1">只读二进制探测，不修改原始照片文件</span>
+                </li>
+                <li>
+                  <span class="step-code mono-text">02</span>
+                  <span data-i18n="wbFwdStep2">校验尾部 ftyp 签名与字节偏移边界</span>
+                </li>
+                <li>
+                  <span class="step-code mono-text">03</span>
+                  <span data-i18n="wbFwdStep3">按原流提取视频，保留 EXIF、拍摄时间与 GPS</span>
+                </li>
+                <li>
+                  <span class="step-code mono-text">04</span>
+                  <span data-i18n="wbFwdStep4">写入 Apple Maker "17" 与 QuickTime 配对标识</span>
+                </li>
+              </ol>
+            </div>
+
+            <div class="wb-col">
+              <div class="wb-col-head">
+                <h3 class="wb-col-title" data-i18n="wbFwdOutTitle">导出选项</h3>
+              </div>
+              <div class="output-list">
+                <div class="output-item">
+                  <h4 data-i18n="wbOutLiveTitle">原生 Apple 实况照片</h4>
+                  <p data-i18n="wbOutLiveBody">写入系统相册即可长按播放，保留原图 EXIF、拍摄时间与地理坐标。</p>
+                </div>
+                <div class="output-item">
+                  <h4 data-i18n="wbOutVideoTitle">独立 MP4 / MOV 视频</h4>
+                  <p data-i18n="wbOutVideoBody">直接提取内嵌视频片段，便于剪辑或发送给不支持实况的聊天软件。</p>
+                </div>
+                <div class="output-item">
+                  <h4 data-i18n="wbOutGifTitle">GIF 动图</h4>
+                  <p data-i18n="wbOutGifBody">按设定帧率与尺寸采样输出，方便直接贴进文档或社交评论区。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reverse Panel -->
+          <div
+            class="wb-grid"
+            id="wb-panel-reverse"
+            role="tabpanel"
+            aria-labelledby="wb-tab-reverse"
+            hidden
+          >
+            <div class="wb-col">
+              <div class="wb-col-head">
+                <h3 class="wb-col-title" data-i18n="wbRevInputTitle">识别来源</h3>
+              </div>
+              <p class="wb-col-intro" data-i18n="wbRevInputBody">直接从系统相册选取任意 Apple Live Photo。</p>
+              <div class="reverse-source-card">
+                <div class="mono-text reverse-source-tag">PHLivePhoto</div>
+                <p data-i18n="wbRevSourceDetail">读取配对静图（HEIC / JPEG）与 QuickTime MOV 视频轨道，以及原始拍摄时间戳与地理位置。</p>
+              </div>
+            </div>
+
+            <div class="wb-col wb-col-pipeline">
+              <div class="wb-col-head">
+                <h3 class="wb-col-title" data-i18n="wbRevPipeTitle">封装方式</h3>
+              </div>
+              <p class="wb-col-intro" data-i18n="wbRevPipeBody">非 JPEG 静图（如 HEIC）在保留方向与 EXIF 的前提下转为高质量 JPEG 并清理冲突旧标签；配对视频优先通过 Passthrough 直接混流为 MP4，按你指定的目标品牌结构封装为单个 .jpg 文件，并在导出前完成容器自校验。</p>
+              <ol class="pipeline-steps">
+                <li>
+                  <span class="step-code mono-text">01</span>
+                  <span data-i18n="wbRevStep1">HEIC 静图以 0.95 质量转 JPEG，保留方向与 EXIF</span>
+                </li>
+                <li>
+                  <span class="step-code mono-text">02</span>
+                  <span data-i18n="wbRevStep2">剥离冲突旧 XMP 块，优先 Passthrough 混流 MOV 为 MP4</span>
+                </li>
+                <li>
+                  <span class="step-code mono-text">03</span>
+                  <span data-i18n="wbRevStep3">按目标品牌写入容器标签并自校验输出字节</span>
+                </li>
+              </ol>
+            </div>
+
+            <div class="wb-col">
+              <div class="wb-col-head">
+                <h3 class="wb-col-title" data-i18n="wbRevOutTitle">导出方式</h3>
+              </div>
+              <p class="wb-col-intro" data-i18n="wbRevOutBody">同步文件拍摄时间戳，通过系统分享面板或「文件」App 保留原始字节导出。</p>
+              <ul class="target-chips">
+                <li><span class="mono-text">Xiaomi .jpg</span></li>
+                <li><span class="mono-text">Pixel .jpg</span></li>
+                <li><span class="mono-text">Samsung SEF .jpg</span></li>
+                <li><span class="mono-text">Huawei .jpg</span></li>
+                <li><span class="mono-text">OPPO / OnePlus .jpg</span></li>
+                <li><span class="mono-text">vivo .jpg</span></li>
+                <li><span class="mono-text">Universal .jpg</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BAND 4: PRECISION CRAFT (ASYMMETRIC DARKROOM GRID) -->
+    <section id="tools" class="band band-tools">
+      <div class="container">
+        <h2 class="sr-only" data-i18n="toolsSectionTitle">精细工具</h2>
+        <article class="craft-primary">
+          <div class="craft-primary-text">
+            <h3 class="craft-title" data-i18n="craftMainTitle">挑一帧更好的封面，看清文件里的每一段字节</h3>
+            <p class="craft-body" data-i18n="craftMainBody">很多动态照片的默认封面恰好落在眨眼或晃动的那一瞬。拖动胶卷时间轴到毫秒级位置，选定清晰的静态帧作为新的实况封面，同时保留原图拍摄参数与位置信息。打开元数据检查器，还能查看静图与视频的体积占比、编码规格与原始 XMP 字段，一键复制摘要用于排查问题。</p>
+          </div>
+
+          <div class="craft-studio-grid">
+            <!-- Interactive Keyframe Scrubber (Obsidian Darkroom) -->
+            <div class="keyframe-stage">
+              <div class="keyframe-viewport">
+                <video
+                  id="keyframe-video"
+                  class="keyframe-video"
+                  src="./site/assets/hero-center.mp4"
+                  poster="./site/assets/hero-center.jpg"
+                  muted
+                  playsinline
+                  preload="auto"
+                  aria-label="关键帧封面预览视频"
+                  data-i18n-aria="kfVideoAria"
+                ></video>
+                <div class="keyframe-overlay-top">
+                  <span class="kf-pill mono-text" id="kf-timecode">00:01.18</span>
+                  <span class="kf-pill kf-pill-accent" id="kf-cover-status" data-i18n="kfStatusDefault">默认封面帧</span>
+                </div>
+                <div class="keyframe-overlay-bottom">
+                  <span class="mono-text" id="kf-frame-index">Frame 28 / 58</span>
+                  <span class="kf-exif-badge">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span data-i18n="kfExifKept">EXIF / GPS 保留</span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="filmstrip-control">
+                <div class="filmstrip-track" aria-hidden="true">
+                  <img
+                    class="filmstrip-img"
+                    src="./site/assets/keyframe-strip.jpg"
+                    alt=""
+                    width="1120"
+                    height="186"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                  <div class="filmstrip-playhead" id="kf-playhead" style="left: 48.8%"></div>
+                </div>
+                <label class="sr-only" for="keyframe-slider" data-i18n="kfSliderLabel">选择封面关键帧时间点</label>
+                <input
+                  id="keyframe-slider"
+                  class="keyframe-slider"
+                  type="range"
+                  min="0"
+                  max="2417"
+                  step="10"
+                  value="1180"
+                  aria-valuemin="0"
+                  aria-valuemax="2417"
+                  aria-valuenow="1180"
+                  aria-valuetext="00:01.18"
+                >
+                <div class="filmstrip-scale mono-text">
+                  <span>00:00.00</span>
+                  <button type="button" class="kf-reset-btn" id="kf-reset-btn" data-i18n="kfResetBtn">回到默认帧</button>
+                  <span>00:02.42</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Metadata Inspector Panel -->
+            <div class="inspector-panel">
+              <div class="inspector-head">
+                <h4 class="inspector-title" data-i18n="inspTitle">容器结构与元数据</h4>
+                <button type="button" class="copy-summary-btn" id="copy-summary-btn" data-i18n="inspCopyBtn">复制摘要</button>
+              </div>
+
+              <div class="inspector-bar-wrap">
+                <div class="inspector-bar" aria-hidden="true">
+                  <span class="insp-seg-jpeg" style="width: 24%"></span>
+                  <span class="insp-seg-xmp" style="width: 1.5%"></span>
+                  <span class="insp-seg-mp4" style="width: 74.5%"></span>
+                </div>
+                <div class="inspector-legend mono-text">
+                  <span><i class="swatch swatch-jpeg"></i>JPEG 24% (143 KB)</span>
+                  <span><i class="swatch swatch-xmp"></i>XMP 1% (4 KB)</span>
+                  <span><i class="swatch swatch-mp4"></i>MP4 75% (453 KB)</span>
+                </div>
+              </div>
+
+              <dl class="inspector-kv">
+                <div>
+                  <dt data-i18n="inspCodec">视频编码</dt>
+                  <dd class="mono-text">H.264 (avc1) / yuv420p</dd>
+                </div>
+                <div>
+                  <dt data-i18n="inspResolution">画面与帧率</dt>
+                  <dd class="mono-text">720×960 / 24 fps / 2.42s</dd>
+                </div>
+                <div>
+                  <dt>GCamera:MotionPhoto</dt>
+                  <dd class="mono-text">1 (v2 Container)</dd>
+                </div>
+                <div>
+                  <dt>Container:Item:Length</dt>
+                  <dd class="mono-text">463934 bytes</dd>
+                </div>
+                <div>
+                  <dt>ftyp Offset</dt>
+                  <dd class="mono-text">0x024C1E (verified)</dd>
+                </div>
+              </dl>
+
+              <p class="copy-feedback" id="copy-feedback" role="status" aria-live="polite"></p>
+            </div>
+          </div>
+        </article>
+
+        <div class="craft-secondary-grid">
+          <article class="craft-card craft-batch">
+            <div class="craft-card-copy">
+              <h3 class="craft-title" data-i18n="batchTitle">一次选几十张，自动筛掉普通静图</h3>
+              <p class="craft-body" data-i18n="batchBody">批量导入相册照片时，Motion2Live 会先逐张探测容器结构，自动跳过不含视频流的普通静态图片。导出过程采用串行管线控制内存占用，整批转换为实况照片、视频或 GIF。</p>
+            </div>
+            <figure class="batch-shot-wrap">
+              <img
+                class="batch-shot"
+                src="./site/assets/screen-iphone-batch.jpg"
+                alt="Motion2Live 批量转换界面，展示自动忽略普通静图与缩略图网格"
+                data-i18n-alt="batchShotAlt"
+                width="640"
+                height="1391"
+                loading="lazy"
+                decoding="async"
+              >
+            </figure>
+          </article>
+
+          <article class="craft-card craft-share-lab">
+            <div class="craft-card-copy">
+              <h3 class="craft-title" data-i18n="shareLabTitle">从系统分享菜单直达，也能自定义合成</h3>
+              <p class="craft-body" data-i18n="shareLabBody">在相册、「文件」或聊天软件里点一下分享，即可在扩展面板中原地预览并保存为实况、视频或 GIF。想把任意一张照片和一段短视频合成为 Apple 实况或安卓动态照片，打开顶部「实验室」即可双向拼装。</p>
+            </div>
+
+            <div class="workflow-cards">
+              <div class="mini-flow-card">
+                <div class="mini-flow-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 3V12.5M10 3L6.5 6.5M10 3L13.5 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.5 10.5V15C4.5 15.83 5.17 16.5 6 16.5H14C14.83 16.5 15.5 15.83 15.5 15V10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4 data-i18n="shareCardTitle">Share Extension</h4>
+                  <p data-i18n="shareCardDesc">无需切回主应用，在系统分享表单中直接识别并保存为实况、视频或 GIF。</p>
+                </div>
+              </div>
+
+              <div class="mini-flow-card">
+                <div class="mini-flow-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M8 3.5H12M8.75 3.5V7.6L4.9 14.3C4.42 15.13 5.02 16.2 5.98 16.2H14.02C14.98 16.2 15.58 15.13 15.1 14.3L11.25 7.6V3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6.7 12.2H13.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4 data-i18n="labCardTitle">自定义合成实验室</h4>
+                  <p data-i18n="labCardDesc">将任意静图与短视频封装为 Apple Live Photo，或指定品牌格式的安卓动态照片。</p>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- BAND 5: NATIVE ON IPHONE, IPAD & MAC -->
+    <section class="band band-platforms">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="platTitle">iPhone、iPad 与 Mac，同一套本地引擎</h2>
+          <p class="section-body" data-i18n="platBody">全部界面基于 SwiftUI 与 Apple 原生媒体框架构建。在 iPhone 与 iPad 上可直接从相册或分享菜单处理；在 Mac 上支持从访达直接拖入动态照片或批量导入本地文件夹。界面支持简体中文、英文、日文、韩文、法文、德文与西班牙文 7 种语言。</p>
+        </div>
+
+        <div class="device-showcase">
+          <figure class="device-frame device-mac">
+            <img
+              src="./site/assets/screen-mac-home.jpg"
+              alt="Motion2Live macOS 主界面窗口，支持拖放动态照片文件"
+              data-i18n-alt="macShotAlt"
+              width="1440"
+              height="1039"
+              loading="lazy"
+              decoding="async"
+            >
+            <figcaption class="device-caption">
+              <span class="mono-text">macOS 14.4+</span>
+              <span data-i18n="platMacCap">支持访达文件拖放与原生看片舞台</span>
+            </figcaption>
+          </figure>
+
+          <figure class="device-frame device-iphone">
+            <img
+              src="./site/assets/screen-iphone-detail.jpg"
+              alt="Motion2Live iPhone 深色暗房详情播放与导出界面"
+              data-i18n-alt="iphoneShotAlt"
+              width="640"
+              height="1391"
+              loading="lazy"
+              decoding="async"
+            >
+            <figcaption class="device-caption">
+              <span class="mono-text">iOS / iPadOS 16.0+</span>
+              <span data-i18n="platIosCap">适配系统相册选择器与全屏暗房预览</span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- BAND 6: PRIVACY & ARCHITECTURE SPEC SHEET -->
+    <section id="privacy" class="band band-privacy">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="privTitle">照片始终留在你的设备上</h2>
+          <p class="section-body" data-i18n="privIntro">Motion2Live 依赖系统原生框架完成所有二进制解析与音视频混流，不接入任何第三方 SDK，代码以 MPL-2.0 协议开源。</p>
+        </div>
+
+        <dl class="spec-sheet">
+          <div class="spec-row">
+            <dt data-i18n="privKey1">网络连接</dt>
+            <dd data-i18n="privVal1">0 次请求。离线可用，不设后端服务器，不接入统计、广告或崩溃上报框架。</dd>
+          </div>
+          <div class="spec-row">
+            <dt data-i18n="privKey2">选图权限</dt>
+            <dd data-i18n="privVal2">调用系统 PHPickerViewController，应用仅能接触你主动勾选的照片，不请求读取整个图库。</dd>
+          </div>
+          <div class="spec-row">
+            <dt data-i18n="privKey3">保存权限</dt>
+            <dd data-i18n="privVal3">仅在写入结果时请求 Add-Only 权限，无法读取、修改或删除相册中的其他内容。</dd>
+          </div>
+          <div class="spec-row">
+            <dt data-i18n="privKey4">临时缓存</dt>
+            <dd data-i18n="privVal4">解析产生的临时媒体仅存于 NSTemporaryDirectory，导出完成或离开页面后立即清除。首页最近转换最多缓存 3 张缩略图，可随时关闭或清空。</dd>
+          </div>
+          <div class="spec-row">
+            <dt data-i18n="privKey5">首次试玩</dt>
+            <dd data-i18n="privVal5">内置 3 张示范动态照片，安装打开就能体验预览与关键帧调整，确认好用再授予保存权限。</dd>
+          </div>
+          <div class="spec-row">
+            <dt data-i18n="privKey6">合规与源码</dt>
+            <dd><span data-i18n="privVal6Prefix">内置 Apple PrivacyInfo.xcprivacy 隐私清单，可查阅完整</span><a class="inline-link" data-privacy-link href="./privacy-policy.html?lang=zh" data-i18n="privPolicyLink">隐私政策</a><span data-i18n="privVal6Mid">，或在 </span><a class="inline-link" href="https://github.com/Igloo302/MotionPhotoConverter" target="_blank" rel="noopener noreferrer" data-i18n="privGithubLink">GitHub</a><span data-i18n="privVal6Suffix"> 审查全部源码。</span></dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- BAND 7: FAQ -->
+    <section id="faq" class="band band-faq">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="faqTitle">常见问题</h2>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <h3 class="faq-heading">
+              <button type="button" class="faq-trigger" aria-expanded="true" aria-controls="faq-panel-1" id="faq-btn-1">
+                <span data-i18n="faqQ1">换了 iPhone 后，旧安卓手机里的动态照片怎么导进来最好？</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-panel" id="faq-panel-1" role="region" aria-labelledby="faq-btn-1">
+              <p data-i18n="faqA1">请尽量通过「文件」传输、AirDrop/局域网原图传输、数据线或云盘原文件下载，避免经过会自动压缩图片的聊天渠道。只要原 .jpg 文件尾部还保留 MP4 数据，Motion2Live 就能识别。</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-heading">
+              <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-panel-2" id="faq-btn-2">
+                <span data-i18n="faqQ2">转换后照片的拍摄时间和定位信息会丢失吗？</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-panel" id="faq-panel-2" role="region" aria-labelledby="faq-btn-2" hidden>
+              <p data-i18n="faqA2">不会。导出 Apple 实况照片、更换关键帧封面以及逆向导出安卓动态照片时，都会保留原始 EXIF 拍摄时间、设备信息与 GPS 元数据，并同步文件时间戳。</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-heading">
+              <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-panel-3" id="faq-btn-3">
+                <span data-i18n="faqQ3">为什么某些动态照片导入后提示未检测到动态视频？</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-panel" id="faq-panel-3" role="region" aria-labelledby="faq-btn-3" hidden>
+              <p data-i18n="faqA3">常见原因是图片在传输途中被社交软件或网盘重新压缩，导致拼接在 JPEG 末尾的 MP4 字节被剥离。你可以用 App 内的「元数据检查器」确认原文件是否仍包含视频流。</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-heading">
+              <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-panel-4" id="faq-btn-4">
+                <span data-i18n="faqQ4">支持哪些手机品牌的动态照片？</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-panel" id="faq-panel-4" role="region" aria-labelledby="faq-btn-4" hidden>
+              <p data-i18n="faqA4">专门适配小米（含 HyperOS 2 与早期格式）、Google Pixel、三星（含 SEF 格式）、华为、OPPO/一加与 vivo，并提供通用 MP4 拼接兜底识别器。</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-heading">
+              <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-panel-5" id="faq-btn-5">
+                <span data-i18n="faqQ5">把 Apple 实况转回安卓动态照片后，发给安卓手机能直接播放吗？</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-panel" id="faq-panel-5" role="region" aria-labelledby="faq-btn-5" hidden>
+              <p data-i18n="faqA5">在导出时选择对方手机对应的品牌格式（如小米、三星或 Pixel），并通过「文件」或发送原图传给对方，即可在对应品牌的系统相册中按原生动态照片识别。</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-heading">
+              <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-panel-6" id="faq-btn-6">
+                <span data-i18n="faqQ6">软件开源吗？需要联网或注册账号吗？</span>
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-panel" id="faq-panel-6" role="region" aria-labelledby="faq-btn-6" hidden>
+              <p data-faq-a6 data-i18n="faqA6Store">项目以 Mozilla Public License 2.0 协议在 GitHub 开源，纯离线运行、无需注册账号，可在 App Store 获取。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BAND 8: QUIET CLOSING CTA -->
+    <section class="band band-closing">
+      <div class="container closing-inner">
+        <h2 class="closing-title" data-i18n="closingTitle">把相册里静止的动态照片整理回来</h2>
+        <p class="closing-sub" data-i18n="closingSub">适用于 iPhone、iPad 与 Mac，内置 3 张示范图，打开即可上手体验。</p>
+        <div class="cta-row cta-row-centered">
+          <a
+            class="btn btn-primary"
+            data-primary-cta
+            href="https://apps.apple.com/cn/app/motion2live/id6705126412"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-i18n="ctaPrimaryStore"
+          >在 App Store 下载 Motion2Live</a>
+          <a
+            class="btn btn-secondary"
+            href="https://github.com/Igloo302/MotionPhotoConverter"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-i18n="closingGithub"
+          >访问 GitHub 仓库</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span class="footer-copy">© 2024–2026 Motion2Live · Larry Shen</span>
+      <div class="footer-links">
+        <a data-privacy-link href="./privacy-policy.html?lang=zh" data-i18n="footerPrivacy">隐私政策</a>
+        <a href="https://github.com/Igloo302/MotionPhotoConverter" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="mailto:shenjy302@live.com" data-i18n="footerContact">联系开发者</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./site/app.js" defer></script>
+</body>
+</html>
