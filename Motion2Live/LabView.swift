@@ -175,6 +175,10 @@ struct CustomLivePhotoView: View {
 
     @State private var isShowingImagePicker = false
     @State private var isShowingVideoPicker = false
+    @State private var isShowingImageFileImporter = false
+    @State private var isShowingVideoFileImporter = false
+    @State private var isImageDropTargeted = false
+    @State private var isVideoDropTargeted = false
     @State private var isProcessing = false
     @State private var hasDisappeared = false
     @State private var showAlert = false
@@ -337,6 +341,42 @@ struct CustomLivePhotoView: View {
                 }
             )
         }
+        .fileImporter(
+            isPresented: $isShowingImageFileImporter,
+            allowedContentTypes: [.image],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    loadImageFromLocalURL(url)
+                }
+            case .failure(let error):
+                if (error as NSError).code != NSUserCancelledError {
+                    alertIsSuccess = false
+                    alertMessage = error.localizedDescription
+                    showAlert = true
+                }
+            }
+        }
+        .fileImporter(
+            isPresented: $isShowingVideoFileImporter,
+            allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    loadVideoFromLocalURL(url)
+                }
+            case .failure(let error):
+                if (error as NSError).code != NSUserCancelledError {
+                    alertIsSuccess = false
+                    alertMessage = error.localizedDescription
+                    showAlert = true
+                }
+            }
+        }
         .motionPhotoExportSheets(
             coordinator: motionExport,
             onSavedToFiles: {
@@ -401,31 +441,63 @@ struct CustomLivePhotoView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
 
-            Button {
-                AppHaptics.lightImpact()
-                isShowingImagePicker = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "photo")
-                        .font(.system(size: 15, weight: .medium))
-                    Text(selectedImage == nil ? Localizable.string(.selectImage) : Localizable.string(.changeImage))
+            HStack(spacing: 8) {
+                Button {
+                    AppHaptics.lightImpact()
+                    isShowingImagePicker = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "photo")
+                            .font(.system(size: 15, weight: .medium))
+                        Text(selectedImage == nil ? Localizable.string(.selectImage) : Localizable.string(.changeImage))
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
+                .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+                .disabled(isProcessing)
+
+                Button {
+                    AppHaptics.lightImpact()
+                    isShowingImageFileImporter = true
+                } label: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(width: 24)
+                }
+                .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+                .disabled(isProcessing)
+                .accessibilityLabel(Localizable.string(.selectFromFiles))
             }
-            .buttonStyle(StudioSecondaryCapsuleButtonStyle())
-            .disabled(isProcessing)
         }
         .padding(.top, 14)
         .padding(.bottom, 16)
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
-                .fill(AppTheme.surface0)
+                .fill(isImageDropTargeted ? AppTheme.accent.opacity(0.08) : AppTheme.surface0)
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
-                        .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
+                        .strokeBorder(
+                            isImageDropTargeted ? AppTheme.accent : AppTheme.borderSubtle,
+                            style: isImageDropTargeted ? StrokeStyle(lineWidth: 2, dash: [7, 5]) : StrokeStyle(lineWidth: 0.8)
+                        )
                 )
         )
+        .overlay {
+            if isImageDropTargeted {
+                Text(Localizable.string(.dropImageHereHint))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppTheme.accent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule(style: .continuous).fill(AppTheme.surface0.opacity(0.95)))
+                    .allowsHitTesting(false)
+            }
+        }
+        .onDrop(of: [.fileURL, .image], isTargeted: $isImageDropTargeted) { providers in
+            handleDroppedImageProviders(providers)
+            return true
+        }
         .frame(maxWidth: .infinity)
     }
 
@@ -456,31 +528,63 @@ struct CustomLivePhotoView: View {
                 }
             }
 
-            Button {
-                AppHaptics.lightImpact()
-                isShowingVideoPicker = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "video")
-                        .font(.system(size: 15, weight: .medium))
-                    Text(selectedVideo == nil ? Localizable.string(.selectVideo) : Localizable.string(.changeVideo))
+            HStack(spacing: 8) {
+                Button {
+                    AppHaptics.lightImpact()
+                    isShowingVideoPicker = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "video")
+                            .font(.system(size: 15, weight: .medium))
+                        Text(selectedVideo == nil ? Localizable.string(.selectVideo) : Localizable.string(.changeVideo))
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
+                .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+                .disabled(isProcessing)
+
+                Button {
+                    AppHaptics.lightImpact()
+                    isShowingVideoFileImporter = true
+                } label: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(width: 24)
+                }
+                .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+                .disabled(isProcessing)
+                .accessibilityLabel(Localizable.string(.selectFromFiles))
             }
-            .buttonStyle(StudioSecondaryCapsuleButtonStyle())
-            .disabled(isProcessing)
         }
         .padding(.top, 14)
         .padding(.bottom, 16)
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
-                .fill(AppTheme.surface0)
+                .fill(isVideoDropTargeted ? AppTheme.accent.opacity(0.08) : AppTheme.surface0)
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
-                        .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
+                        .strokeBorder(
+                            isVideoDropTargeted ? AppTheme.accent : AppTheme.borderSubtle,
+                            style: isVideoDropTargeted ? StrokeStyle(lineWidth: 2, dash: [7, 5]) : StrokeStyle(lineWidth: 0.8)
+                        )
                 )
         )
+        .overlay {
+            if isVideoDropTargeted {
+                Text(Localizable.string(.dropVideoHereHint))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppTheme.accent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule(style: .continuous).fill(AppTheme.surface0.opacity(0.95)))
+                    .allowsHitTesting(false)
+            }
+        }
+        .onDrop(of: [.fileURL, .movie, .mpeg4Movie, .quickTimeMovie], isTargeted: $isVideoDropTargeted) { providers in
+            handleDroppedVideoProviders(providers)
+            return true
+        }
         .frame(maxWidth: .infinity)
     }
 
@@ -630,6 +734,89 @@ struct CustomLivePhotoView: View {
                 alertMessage = error.localizedDescription
                 showAlert = true
             }
+        }
+    }
+
+    private func loadImageFromLocalURL(_ url: URL) {
+        Task {
+            do {
+                let loaded = try await Task.detached(priority: .userInitiated) {
+                    try LocalMediaImportHelper.loadStillImageData(from: url)
+                }.value
+                selectedImage = loaded.image
+                selectedImageData = loaded.data
+                selectedImagePixelSize = loaded.pixelSize
+            } catch {
+                alertIsSuccess = false
+                alertMessage = Localizable.string(.imageLoadFailed)
+                showAlert = true
+            }
+        }
+    }
+
+    private func loadVideoFromLocalURL(_ url: URL) {
+        Task {
+            do {
+                let loaded = try await LocalMediaImportHelper.loadVideoToTemp(from: url)
+                let oldURL = selectedVideo
+                selectedVideo = loaded.tempURL
+                selectedVideoDuration = loaded.duration
+                MediaExportService.removeIfInTemporaryDirectory(oldURL)
+            } catch {
+                alertIsSuccess = false
+                alertMessage = Localizable.string(.videoLoadFailed)
+                showAlert = true
+            }
+        }
+    }
+
+    private func handleDroppedImageProviders(_ providers: [NSItemProvider]) {
+        guard let first = providers.first else { return }
+        Task {
+            let copied = await LocalMediaImportHelper.copyDroppedProvidersToTemp([first], acceptedTypes: [.image])
+            guard let tempURL = copied.first else {
+                alertIsSuccess = false
+                alertMessage = Localizable.string(.imageLoadFailed)
+                showAlert = true
+                return
+            }
+            defer { MediaExportService.removeIfInTemporaryDirectory(tempURL) }
+            do {
+                let loaded = try await Task.detached(priority: .userInitiated) {
+                    try LocalMediaImportHelper.loadStillImageData(from: tempURL)
+                }.value
+                selectedImage = loaded.image
+                selectedImageData = loaded.data
+                selectedImagePixelSize = loaded.pixelSize
+            } catch {
+                alertIsSuccess = false
+                alertMessage = Localizable.string(.imageLoadFailed)
+                showAlert = true
+            }
+        }
+    }
+
+    private func handleDroppedVideoProviders(_ providers: [NSItemProvider]) {
+        guard let first = providers.first else { return }
+        Task {
+            let copied = await LocalMediaImportHelper.copyDroppedProvidersToTemp(
+                [first],
+                acceptedTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
+                defaultExtension: "mov"
+            )
+            guard let tempURL = copied.first else {
+                alertIsSuccess = false
+                alertMessage = Localizable.string(.videoLoadFailed)
+                showAlert = true
+                return
+            }
+            let asset = AVAsset(url: tempURL)
+            let duration = try? await asset.load(.duration)
+            let seconds = duration.map { CMTimeGetSeconds($0) }
+            let oldURL = selectedVideo
+            selectedVideo = tempURL
+            selectedVideoDuration = (seconds?.isFinite == true && (seconds ?? 0) > 0) ? seconds : nil
+            MediaExportService.removeIfInTemporaryDirectory(oldURL)
         }
     }
 }

@@ -10,6 +10,28 @@ import Combine
 import Photos
 import AVFoundation
 import ImageIO
+import UniformTypeIdentifiers
+
+enum BatchExportDestination: String, CaseIterable, Identifiable {
+    case photos
+    case folder
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .photos: return Localizable.string(.batchExportDestinationPhotos)
+        case .folder: return Localizable.string(.batchExportDestinationFolder)
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .photos: return "photo.on.rectangle"
+        case .folder: return "folder"
+        }
+    }
+}
 
 // MARK: - Batch Item Status
 enum BatchItemStatus: Equatable {
@@ -118,6 +140,59 @@ enum MotionPhotoBatchService {
             )
         }
     }
+
+    static func processSingleItemToFolder(url: URL, format: BatchExportFormat, folderURL: URL) async throws {
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        let xmpInfo = XMPParser.extractAndParse(from: data)
+        guard let processor = MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data) else {
+            throw NSError(domain: "BatchConvert", code: 1, userInfo: [NSLocalizedDescriptionKey: Localizable.string(.invalidMotionPhotoOrUnsupportedFormat)])
+        }
+
+        let result = processor.processMotionPhoto(data: data, xmpInfo: xmpInfo)
+        guard result.success, let motionPhotoData = result.data else {
+            throw NSError(domain: "BatchConvert", code: 2, userInfo: [NSLocalizedDescriptionKey: result.errorMessage ?? Localizable.string(.conversionFailed)])
+        }
+
+        let rawBase = url.deletingPathExtension().lastPathComponent
+        let baseName = rawBase.isEmpty ? "Motion2Live" : rawBase
+
+        switch format {
+        case .video:
+            let destURL = uniqueDestinationURL(in: folderURL, baseName: baseName, ext: "mp4")
+            try motionPhotoData.videoData.write(to: destURL, options: .atomic)
+        case .gif:
+            let tempMP4 = FileManager.default.temporaryDirectory
+                .appendingPathComponent("batch_gif_\(UUID().uuidString).mp4")
+            let tempGIF = FileManager.default.temporaryDirectory
+                .appendingPathComponent("batch_gif_\(UUID().uuidString).gif")
+            defer {
+                MediaExportService.removeIfInTemporaryDirectory(tempMP4)
+                MediaExportService.removeIfInTemporaryDirectory(tempGIF)
+            }
+            try motionPhotoData.videoData.write(to: tempMP4, options: .atomic)
+            let asset = AVAsset(url: tempMP4)
+            try await MediaExportService.createGIFFile(from: asset, outputURL: tempGIF)
+            let destURL = uniqueDestinationURL(in: folderURL, baseName: baseName, ext: "gif")
+            try FileManager.default.copyItem(at: tempGIF, to: destURL)
+        case .livePhoto:
+            try await MediaExportService.exportLivePhoto(
+                motionPhotoData: motionPhotoData,
+                originalData: data,
+                fallbackURL: url,
+                processor: processor
+            )
+        }
+    }
+
+    private static func uniqueDestinationURL(in folderURL: URL, baseName: String, ext: String) -> URL {
+        var candidate = folderURL.appendingPathComponent("\(baseName).\(ext)")
+        var suffix = 1
+        while FileManager.default.fileExists(atPath: candidate.path) {
+            candidate = folderURL.appendingPathComponent("\(baseName)_\(suffix).\(ext)")
+            suffix += 1
+        }
+        return candidate
+    }
 }
 
 // MARK: - Batch Convert View Model
@@ -125,6 +200,8 @@ enum MotionPhotoBatchService {
 final class BatchConvertViewModel: ObservableObject {
     @Published var items: [BatchPhotoItem] = []
     @Published var selectedFormat: BatchExportFormat = .livePhoto
+    @Published var exportDestination: BatchExportDestination = .photos
+    @Published var isShowingFolderImporter = false
     @Published var isProcessing = false
     @Published var currentIndex = 0
     @Published var isCancelled = false
@@ -162,7 +239,7 @@ final class BatchConvertViewModel: ObservableObject {
         }
     }
 
-    func startBatchConversion() {
+    func startBatchConversion(toFolder folderURL: URL? = nil) {
         guard !isProcessing && !isTaskRunning else { return }
         isProcessing = true
         isTaskRunning = true
@@ -173,7 +250,9 @@ final class BatchConvertViewModel: ObservableObject {
         successCount = 0
         failureCount = 0
 
+        #if !targetEnvironment(macCatalyst)
         UIApplication.shared.isIdleTimerDisabled = true
+        #endif
 
         for i in 0..<items.count {
             items[i].status = .pending
@@ -182,6 +261,13 @@ final class BatchConvertViewModel: ObservableObject {
 
         let format = selectedFormat
         conversionTask = Task {
+            let accessedFolder = folderURL?.startAccessingSecurityScopedResource() ?? false
+            defer {
+                if accessedFolder {
+                    folderURL?.stopAccessingSecurityScopedResource()
+                }
+            }
+
             for index in 0..<self.items.count {
                 if Task.isCancelled || self.isCancelled {
                     break
@@ -192,7 +278,15 @@ final class BatchConvertViewModel: ObservableObject {
 
                 let itemURL = self.items[index].url
                 do {
-                    try await MotionPhotoBatchService.processSingleItem(url: itemURL, format: format)
+                    if let folderURL, format != .livePhoto {
+                        try await MotionPhotoBatchService.processSingleItemToFolder(
+                            url: itemURL,
+                            format: format,
+                            folderURL: folderURL
+                        )
+                    } else {
+                        try await MotionPhotoBatchService.processSingleItem(url: itemURL, format: format)
+                    }
                     self.items[index].status = .success
                     self.successCount += 1
                 } catch is CancellationError {
@@ -213,15 +307,17 @@ final class BatchConvertViewModel: ObservableObject {
             self.isTaskRunning = false
             self.isProcessing = false
             self.isFinished = true
+            #if !targetEnvironment(macCatalyst)
             UIApplication.shared.isIdleTimerDisabled = false
+            #endif
 
             if self.shouldCleanupOnFinish {
                 self.performTempFileCleanup()
             } else if !self.isCancelled {
                 if self.failureCount == 0 {
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    AppHaptics.success()
                 } else {
-                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    AppHaptics.warning()
                 }
             }
         }
@@ -231,7 +327,9 @@ final class BatchConvertViewModel: ObservableObject {
         isCancelled = true
         conversionTask?.cancel()
         isProcessing = false
+        #if !targetEnvironment(macCatalyst)
         UIApplication.shared.isIdleTimerDisabled = false
+        #endif
     }
 
     func cleanupTempFiles() {
@@ -258,6 +356,7 @@ struct BatchConvertView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.colorScheme) private var colorScheme
     @Namespace private var formatAnimation
+    @State private var folderErrorMessage: String?
     var onDismiss: (() -> Void)? = nil
 
     init(motionPhotoURLs: [URL], ignoredCount: Int, onDismiss: (() -> Void)? = nil) {
@@ -310,6 +409,30 @@ struct BatchConvertView: View {
                     message: Text(item.errorMessage ?? Localizable.string(.unknownError)),
                     dismissButton: .default(Text(Localizable.string(.ok)))
                 )
+            }
+            .fileImporter(
+                isPresented: $viewModel.isShowingFolderImporter,
+                allowedContentTypes: [.folder],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    if let folderURL = urls.first {
+                        viewModel.startBatchConversion(toFolder: folderURL)
+                    }
+                case .failure(let error):
+                    if (error as NSError).code != NSUserCancelledError {
+                        folderErrorMessage = error.localizedDescription
+                    }
+                }
+            }
+            .alert(Localizable.string(.error), isPresented: Binding(
+                get: { folderErrorMessage != nil },
+                set: { if !$0 { folderErrorMessage = nil } }
+            )) {
+                Button(Localizable.string(.ok), role: .cancel) {}
+            } message: {
+                Text(folderErrorMessage ?? "")
             }
         }
     }
@@ -434,6 +557,39 @@ struct BatchConvertView: View {
                 .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
+
+            if viewModel.selectedFormat != .livePhoto {
+                HStack(spacing: 6) {
+                    ForEach(BatchExportDestination.allCases) { destination in
+                        let isSelected = viewModel.exportDestination == destination
+                        Button {
+                            AppHaptics.selection()
+                            viewModel.exportDestination = destination
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: destination.icon)
+                                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                                Text(destination.displayName)
+                                    .font(.system(size: 11, weight: isSelected ? .semibold : .medium))
+                            }
+                            .foregroundColor(isSelected ? AppTheme.accent : AppTheme.textSecondary)
+                            .padding(.horizontal, 12)
+                            .frame(height: 30)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(isSelected ? AppTheme.accent.opacity(0.14) : AppTheme.surface1)
+                                    .overlay(
+                                        Capsule(style: .continuous)
+                                            .strokeBorder(isSelected ? AppTheme.accent.opacity(0.45) : AppTheme.borderSubtle, lineWidth: 0.7)
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(viewModel.isProcessing)
+                    }
+                }
+                .padding(.top, 2)
+            }
         }
         .frame(maxWidth: metrics.isExpandedCanvas ? 520 : .infinity)
         .padding(.horizontal, max(16, metrics.horizontalPadding - 4))
@@ -541,12 +697,18 @@ struct BatchConvertView: View {
             } else {
                 Button {
                     AppHaptics.mediumImpact()
-                    viewModel.startBatchConversion()
+                    if viewModel.selectedFormat != .livePhoto && viewModel.exportDestination == .folder {
+                        viewModel.isShowingFolderImporter = true
+                    } else {
+                        viewModel.startBatchConversion()
+                    }
                 } label: {
                     HStack(spacing: 9) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Image(systemName: viewModel.selectedFormat != .livePhoto && viewModel.exportDestination == .folder ? "folder" : "arrow.triangle.2.circlepath")
                             .font(.system(size: 17, weight: .semibold))
-                        Text(Localizable.string(.startBatchConversionWithCount, viewModel.items.count))
+                        Text(viewModel.selectedFormat != .livePhoto && viewModel.exportDestination == .folder
+                             ? Localizable.string(.chooseExportFolder)
+                             : Localizable.string(.startBatchConversionWithCount, viewModel.items.count))
                     }
                 }
                 .buttonStyle(StudioPrimaryButtonStyle(height: 54))

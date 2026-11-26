@@ -232,6 +232,18 @@ enum LocalizableKey {
     case xmpAndDeviceMetadata
     case brandAndExifLabel
     case noXmpMetadataNotice
+    case selectFromFiles
+    case dropPhotoHereHint
+    case dropImageHereHint
+    case dropVideoHereHint
+    case exportToLocalFile
+    case savedToLocalFile
+    case batchExportDestinationPhotos
+    case batchExportDestinationFolder
+    case chooseExportFolder
+    case menuOpenFromFiles
+    case menuOpenLab
+    case menuSelectFromPhotos
     
     var english: String {
         switch self {
@@ -424,6 +436,18 @@ enum LocalizableKey {
         case .xmpAndDeviceMetadata: return "XMP & Device Metadata"
         case .brandAndExifLabel: return "Brand / EXIF"
         case .noXmpMetadataNotice: return "No XMP metadata detected; identified via binary container signature"
+        case .selectFromFiles: return "Select from Files"
+        case .dropPhotoHereHint: return "Drop Motion Photo to import"
+        case .dropImageHereHint: return "Drop image to import"
+        case .dropVideoHereHint: return "Drop video to import"
+        case .exportToLocalFile: return "Export to Local File"
+        case .savedToLocalFile: return "Saved to local file"
+        case .batchExportDestinationPhotos: return "Photos Library"
+        case .batchExportDestinationFolder: return "Local Folder"
+        case .chooseExportFolder: return "Choose Export Folder"
+        case .menuOpenFromFiles: return "Open from Files..."
+        case .menuOpenLab: return "Open Lab"
+        case .menuSelectFromPhotos: return "Select from Photos..."
         }
     }
     
@@ -618,6 +642,18 @@ enum LocalizableKey {
         case .xmpAndDeviceMetadata: return "XMP 与设备元数据"
         case .brandAndExifLabel: return "Brand / EXIF"
         case .noXmpMetadataNotice: return "未检测到 XMP 元数据，已通过二进制容器特征识别"
+        case .selectFromFiles: return "从文件选择"
+        case .dropPhotoHereHint: return "释放即可导入动态照片"
+        case .dropImageHereHint: return "释放即可导入图片"
+        case .dropVideoHereHint: return "释放即可导入视频"
+        case .exportToLocalFile: return "导出到本地文件"
+        case .savedToLocalFile: return "已保存到本地文件"
+        case .batchExportDestinationPhotos: return "照片图库"
+        case .batchExportDestinationFolder: return "本地文件夹"
+        case .chooseExportFolder: return "选择导出文件夹"
+        case .menuOpenFromFiles: return "从文件打开..."
+        case .menuOpenLab: return "打开实验室"
+        case .menuSelectFromPhotos: return "从照片图库选择..."
         }
     }
     
@@ -812,6 +848,18 @@ enum LocalizableKey {
         case .xmpAndDeviceMetadata: return "XMP et métadonnées"
         case .brandAndExifLabel: return "Marque / EXIF"
         case .noXmpMetadataNotice: return "Aucune métadonnée XMP détectée ; identifié par signature binaire"
+        case .selectFromFiles: return "Choisir depuis Fichiers"
+        case .dropPhotoHereHint: return "Déposez une Photo animée pour l'importer"
+        case .dropImageHereHint: return "Déposez une image pour l'importer"
+        case .dropVideoHereHint: return "Déposez une vidéo pour l'importer"
+        case .exportToLocalFile: return "Exporter vers un fichier local"
+        case .savedToLocalFile: return "Enregistré dans un fichier local"
+        case .batchExportDestinationPhotos: return "Photothèque"
+        case .batchExportDestinationFolder: return "Dossier local"
+        case .chooseExportFolder: return "Choisir le dossier d'exportation"
+        case .menuOpenFromFiles: return "Ouvrir depuis Fichiers..."
+        case .menuOpenLab: return "Ouvrir le Labo"
+        case .menuSelectFromPhotos: return "Choisir depuis Photos..."
         }
     }
     
@@ -1006,6 +1054,18 @@ enum LocalizableKey {
         case .xmpAndDeviceMetadata: return "XMP & Gerätemetadaten"
         case .brandAndExifLabel: return "Marke / EXIF"
         case .noXmpMetadataNotice: return "Keine XMP-Metadaten erkannt; über Binärsignatur identifiziert"
+        case .selectFromFiles: return "Aus Dateien wählen"
+        case .dropPhotoHereHint: return "Bewegungsfoto zum Importieren ablegen"
+        case .dropImageHereHint: return "Bild zum Importieren ablegen"
+        case .dropVideoHereHint: return "Video zum Importieren ablegen"
+        case .exportToLocalFile: return "In lokale Datei exportieren"
+        case .savedToLocalFile: return "In lokaler Datei gespeichert"
+        case .batchExportDestinationPhotos: return "Fotomediathek"
+        case .batchExportDestinationFolder: return "Lokaler Ordner"
+        case .chooseExportFolder: return "Exportordner wählen"
+        case .menuOpenFromFiles: return "Aus Dateien öffnen..."
+        case .menuOpenLab: return "Labor öffnen"
+        case .menuSelectFromPhotos: return "Aus Fotos wählen..."
         }
     }
     
@@ -1200,6 +1260,18 @@ enum LocalizableKey {
         case .xmpAndDeviceMetadata: return "XMP y metadatos"
         case .brandAndExifLabel: return "Marca / EXIF"
         case .noXmpMetadataNotice: return "No se detectaron metadatos XMP; identificado por firma binaria"
+        case .selectFromFiles: return "Seleccionar desde Archivos"
+        case .dropPhotoHereHint: return "Suelta una Foto en movimiento para importar"
+        case .dropImageHereHint: return "Suelta una imagen para importar"
+        case .dropVideoHereHint: return "Suelta un video para importar"
+        case .exportToLocalFile: return "Exportar a archivo local"
+        case .savedToLocalFile: return "Guardado en archivo local"
+        case .batchExportDestinationPhotos: return "Fototeca"
+        case .batchExportDestinationFolder: return "Carpeta local"
+        case .chooseExportFolder: return "Elegir carpeta de exportación"
+        case .menuOpenFromFiles: return "Abrir desde Archivos..."
+        case .menuOpenLab: return "Abrir Laboratorio"
+        case .menuSelectFromPhotos: return "Seleccionar desde Fotos..."
         }
     }
     
@@ -1394,6 +1466,18 @@ enum LocalizableKey {
         case .xmpAndDeviceMetadata: return "XMP とデバイスメタデータ"
         case .brandAndExifLabel: return "ブランド / EXIF"
         case .noXmpMetadataNotice: return "XMP メタデータは未検出ですが、バイナリ構造から識別されました"
+        case .selectFromFiles: return "ファイルから選択"
+        case .dropPhotoHereHint: return "モーションフォトをドロップして読み込む"
+        case .dropImageHereHint: return "画像をドロップして読み込む"
+        case .dropVideoHereHint: return "ビデオをドロップして読み込む"
+        case .exportToLocalFile: return "ローカルファイルに書き出す"
+        case .savedToLocalFile: return "ローカルファイルに保存しました"
+        case .batchExportDestinationPhotos: return "写真ライブラリ"
+        case .batchExportDestinationFolder: return "ローカルフォルダ"
+        case .chooseExportFolder: return "書き出し先フォルダを選択"
+        case .menuOpenFromFiles: return "ファイルから開く..."
+        case .menuOpenLab: return "ラボを開く"
+        case .menuSelectFromPhotos: return "写真から選択..."
         }
     }
     
@@ -1588,6 +1672,18 @@ enum LocalizableKey {
         case .xmpAndDeviceMetadata: return "XMP 및 기기 메타데이터"
         case .brandAndExifLabel: return "브랜드 / EXIF"
         case .noXmpMetadataNotice: return "XMP 메타데이터가 감지되지 않았으며 바이너리 컨테이너 시그니처로 식별되었습니다"
+        case .selectFromFiles: return "파일에서 선택"
+        case .dropPhotoHereHint: return "모션 포토를 놓아 가져오기"
+        case .dropImageHereHint: return "이미지를 놓아 가져오기"
+        case .dropVideoHereHint: return "비디오를 놓아 가져오기"
+        case .exportToLocalFile: return "로컬 파일로 내보내기"
+        case .savedToLocalFile: return "로컬 파일에 저장되었습니다"
+        case .batchExportDestinationPhotos: return "사진 보관함"
+        case .batchExportDestinationFolder: return "로컬 폴더"
+        case .chooseExportFolder: return "내보낼 폴더 선택"
+        case .menuOpenFromFiles: return "파일에서 열기..."
+        case .menuOpenLab: return "실험실 열기"
+        case .menuSelectFromPhotos: return "사진에서 선택..."
         }
     }
 }
