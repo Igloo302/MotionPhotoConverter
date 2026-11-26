@@ -391,33 +391,45 @@ struct AdaptiveLayoutMetrics: Equatable {
 @MainActor
 enum AppHaptics {
     static func selection() {
+        #if !targetEnvironment(macCatalyst)
         let generator = UISelectionFeedbackGenerator()
         generator.selectionChanged()
+        #endif
     }
 
     static func lightImpact() {
+        #if !targetEnvironment(macCatalyst)
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
+        #endif
     }
 
     static func mediumImpact() {
+        #if !targetEnvironment(macCatalyst)
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
+        #endif
     }
 
     static func success() {
+        #if !targetEnvironment(macCatalyst)
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
+        #endif
     }
 
     static func warning() {
+        #if !targetEnvironment(macCatalyst)
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.warning)
+        #endif
     }
 
     static func error() {
+        #if !targetEnvironment(macCatalyst)
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.error)
+        #endif
     }
 }
 

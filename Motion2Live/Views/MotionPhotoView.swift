@@ -8,6 +8,7 @@
 
 import SwiftUI
 import AVKit
+import UniformTypeIdentifiers
 
 @MainActor
 struct MotionPhotoView: View {
@@ -47,6 +48,11 @@ struct MotionPhotoView: View {
     // 资源生命周期追踪
     @State private var previewVideoURL: URL?
     @State private var playerEndObserver: NSObjectProtocol?
+    @State private var localExportDocument: LocalMediaExportDocument?
+    @State private var localExportContentType: UTType = .mpeg4Movie
+    @State private var localExportFilename: String = "Motion2Live"
+    @State private var localExportTempURL: URL?
+    @State private var isShowingLocalFileExporter = false
     @State private var hingeState: HingeStateSnapshot = .unavailable
     @State private var lastMetrics = AdaptiveLayoutMetrics(
         containerSize: CGSize(width: 390, height: 844),
@@ -73,8 +79,12 @@ struct MotionPhotoView: View {
                 verticalSizeClass: verticalSizeClass,
                 hinge: hingeState
             )
+            #if targetEnvironment(macCatalyst)
+            let isSplitStudioMode = false
+            #else
             let isSplitStudioMode = metrics.layoutMode == .hingeFlexSplit
                 || (metrics.isWideSplit && metrics.isCompactShortScreen)
+            #endif
 
             let stageLayout: AnyLayout = {
                 if !isSplitStudioMode {
@@ -87,7 +97,7 @@ struct MotionPhotoView: View {
 
             ZStack {
                 // 1. 柔和环境模糊衬底（始终保留在底层，避免切换布局时重建）
-                ambientBackdrop(size: proxy.size)
+                ambientBackdrop
 
                 // 2. 上下光学渐变护航层（仅全屏叠层模式启用，分屏模式下淡出）
                 opticalGradients
@@ -101,6 +111,8 @@ struct MotionPhotoView: View {
                     inspectorControlsPanel(metrics: metrics, isSplitStudioMode: isSplitStudioMode)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .padding(.horizontal, isSplitStudioMode ? 12 : 0)
+                .padding(.vertical, isSplitStudioMode ? 8 : 0)
             }
             .onAdaptiveChange(of: metrics) { newMetrics in
                 lastMetrics = newMetrics
@@ -135,35 +147,62 @@ struct MotionPhotoView: View {
                 keyframeSheet(videoURL: videoURL)
             }
         }
+        #if !targetEnvironment(macCatalyst)
         .sheet(isPresented: $isShowingMetadataInspector) {
             if let report = inspectionReport {
                 metadataInspectorSheet(report: report)
             }
         }
+        #endif
         .alert(Localizable.string(.tip), isPresented: $showAlert) {
             if isPermissionDeniedAlert {
                 Button(Localizable.string(.openSettings)) {
+                    #if targetEnvironment(macCatalyst)
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") {
+                        UIApplication.shared.open(url)
+                    }
+                    #else
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
+                    #endif
                 }
             }
             Button(Localizable.string(.ok), role: .cancel) {}
         } message: {
             Text(alertMessage)
         }
+        .fileExporter(
+            isPresented: $isShowingLocalFileExporter,
+            document: localExportDocument,
+            contentType: localExportContentType,
+            defaultFilename: localExportFilename
+        ) { result in
+            cleanupLocalExportTempFile()
+            switch result {
+            case .success:
+                AppHaptics.success()
+                showAlert(message: Localizable.string(.savedToLocalFile))
+            case .failure(let error):
+                if (error as NSError).code != NSUserCancelledError {
+                    AppHaptics.error()
+                    showAlert(message: error.localizedDescription)
+                }
+            }
+        }
         .task {
             await extractVideoFromMotionPhoto(url: sourceURL)
         }
         .onDisappear {
             cleanupPlaybackResources()
+            cleanupLocalExportTempFile()
             MediaExportService.removeIfInTemporaryDirectory(sourceURL)
         }
     }
 
     @ViewBuilder
     private func keyframeSheet(videoURL: URL) -> some View {
-        let sheet = KeyframePickerSheet(
+        let base = KeyframePickerSheet(
             videoURL: videoURL,
             videoDuration: videoDuration,
             initialSeconds: selectedCoverSeconds,
@@ -177,18 +216,29 @@ struct MotionPhotoView: View {
                 restoreOriginalCoverFrame()
             }
         )
-        .presentationDetents(lastMetrics.preferredKeyframeDetents)
-        .presentationDragIndicator(.visible)
+
+        #if targetEnvironment(macCatalyst)
+        base
+            .frame(minWidth: 540, idealWidth: 600, minHeight: 420, idealHeight: 480)
+        #else
+        let sheet = base
+            .presentationDetents(lastMetrics.preferredKeyframeDetents)
+            .presentationDragIndicator(.visible)
 
         if #available(iOS 16.4, *) {
             sheet.presentationCornerRadius(AppTheme.Radius.sheet)
         } else {
             sheet
         }
+        #endif
     }
 
     @ViewBuilder
     private func metadataInspectorSheet(report: MotionPhotoInspectionReport) -> some View {
+        #if targetEnvironment(macCatalyst)
+        MetadataInspectorSheet(report: report)
+            .frame(minWidth: 520, idealWidth: 580, minHeight: 460, idealHeight: 580)
+        #else
         let sheet = MetadataInspectorSheet(report: report)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
@@ -198,28 +248,29 @@ struct MotionPhotoView: View {
         } else {
             sheet
         }
+        #endif
     }
 
     // MARK: - Full-Bleed Photo & Video Stage
 
-    private func ambientBackdrop(size: CGSize) -> some View {
-        ZStack {
-            Color(red: 0.063, green: 0.075, blue: 0.086)
-                .ignoresSafeArea()
-
-            if let image = selectedImage {
-                // 柔和环境模糊衬底（在 iPad / Duo 宽屏下让留白边缘自然过渡）
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size.width, height: size.height)
-                    .blur(radius: 36)
-                    .overlay(Color.black.opacity(0.45))
-                    .clipped()
-                    .ignoresSafeArea()
+    private var ambientBackdrop: some View {
+        Color(red: 0.063, green: 0.075, blue: 0.086)
+            .overlay {
+                if let image = selectedImage {
+                    // 柔和环境模糊衬底（在 iPad / Duo / Mac 宽屏下让留白边缘自然过渡）
+                    GeometryReader { geo in
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .blur(radius: 36)
+                            .overlay(Color.black.opacity(0.45))
+                            .clipped()
+                    }
+                }
             }
-        }
-        .allowsHitTesting(false)
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
     }
 
     private var opticalGradients: some View {
@@ -404,6 +455,14 @@ struct MotionPhotoView: View {
             .disabled(inspectionReport == nil)
             .accessibilityLabel(metadataLabelText)
             .accessibilityHint(Localizable.string(.fileStructureAccessibilityHint))
+            #if targetEnvironment(macCatalyst)
+            .popover(isPresented: $isShowingMetadataInspector, arrowEdge: .top) {
+                if let report = inspectionReport {
+                    MetadataInspectorSheet(report: report)
+                        .frame(width: 560, height: 540)
+                }
+            }
+            #endif
 
             if customCoverImageData != nil {
                 HStack(spacing: 4) {
@@ -511,21 +570,35 @@ struct MotionPhotoView: View {
                 }
             }
 
-            // 主导出行动按钮（.glassProminent）
-            Button(action: performPrimaryExport) {
-                HStack(spacing: 9) {
-                    if isProcessing {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: selectedExportFormat.icon)
-                            .font(.system(size: 17, weight: .semibold))
+            // 主导出行动按钮（.glassProminent）+ 本地文件导出按钮
+            HStack(spacing: 10) {
+                Button(action: performPrimaryExport) {
+                    HStack(spacing: 9) {
+                        if isProcessing {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: selectedExportFormat.icon)
+                                .font(.system(size: 17, weight: .semibold))
+                        }
+                        Text(primaryCTATitle)
                     }
-                    Text(primaryCTATitle)
                 }
+                .buttonStyle(StudioPrimaryButtonStyle(isDisabled: selectedImage == nil || isProcessing, height: 54))
+                .disabled(selectedImage == nil || isProcessing)
+
+                Button(action: performLocalFileExport) {
+                    Image(systemName: "folder")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 54, height: 54)
+                        .contentShape(Circle())
+                        .liquidGlassControl(in: Circle(), interactive: true, overDarkMedia: true)
+                }
+                .buttonStyle(.plain)
+                .disabled(selectedImage == nil || isProcessing)
+                .accessibilityLabel(Localizable.string(.exportToLocalFile))
             }
-            .buttonStyle(StudioPrimaryButtonStyle(isDisabled: selectedImage == nil || isProcessing, height: 54))
-            .disabled(selectedImage == nil || isProcessing)
         }
         .frame(maxWidth: metrics.floatingDockMaxWidth)
         .padding(.horizontal, metrics.horizontalPadding)
@@ -861,5 +934,90 @@ struct MotionPhotoView: View {
         self.alertMessage = message
         self.isPermissionDeniedAlert = isPermissionDenied
         self.showAlert = true
+    }
+
+    private func cleanupLocalExportTempFile() {
+        localExportDocument = nil
+        MediaExportService.removeIfInTemporaryDirectory(localExportTempURL)
+        localExportTempURL = nil
+    }
+
+    private func performLocalFileExport() {
+        guard let extracted = motionPhotoData else {
+            showAlert(message: Localizable.string(.missingData))
+            return
+        }
+
+        AppHaptics.mediumImpact()
+        isProcessing = true
+        cleanupLocalExportTempFile()
+
+        let baseName = sourceURL.deletingPathExtension().lastPathComponent
+        let cleanBaseName = baseName.isEmpty ? "Motion2Live" : baseName
+
+        Task {
+            defer { isProcessing = false }
+            do {
+                switch selectedExportFormat {
+                case .video:
+                    let tempURL = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("export_\(UUID().uuidString).mp4")
+                    try extracted.videoData.write(to: tempURL, options: .atomic)
+                    localExportTempURL = tempURL
+                    localExportDocument = LocalMediaExportDocument(fileURL: tempURL)
+                    localExportContentType = .mpeg4Movie
+                    localExportFilename = cleanBaseName
+                    isShowingLocalFileExporter = true
+
+                case .gif:
+                    let tempMP4 = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("gif_src_\(UUID().uuidString).mp4")
+                    let tempGIF = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("export_\(UUID().uuidString).gif")
+                    defer { MediaExportService.removeIfInTemporaryDirectory(tempMP4) }
+                    try extracted.videoData.write(to: tempMP4, options: .atomic)
+                    let asset = AVAsset(url: tempMP4)
+                    try await MediaExportService.createGIFFile(from: asset, outputURL: tempGIF)
+                    localExportTempURL = tempGIF
+                    localExportDocument = LocalMediaExportDocument(fileURL: tempGIF)
+                    localExportContentType = .gif
+                    localExportFilename = cleanBaseName
+                    isShowingLocalFileExporter = true
+
+                case .livePhoto:
+                    let tempJPEG = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("export_\(UUID().uuidString).jpg")
+                    let coverData = customCoverImageData ?? extracted.imageData
+                    try coverData.write(to: tempJPEG, options: .atomic)
+                    localExportTempURL = tempJPEG
+                    localExportDocument = LocalMediaExportDocument(fileURL: tempJPEG)
+                    localExportContentType = .jpeg
+                    localExportFilename = "\(cleanBaseName)_cover"
+                    isShowingLocalFileExporter = true
+                }
+            } catch {
+                cleanupLocalExportTempFile()
+                AppHaptics.error()
+                showAlert(message: error.localizedDescription)
+            }
+        }
+    }
+}
+
+private struct LocalMediaExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.mpeg4Movie, .gif, .jpeg] }
+
+    let fileURL: URL
+
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        throw CocoaError(.fileReadUnsupportedScheme)
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        try FileWrapper(url: fileURL, options: .immediate)
     }
 }

@@ -201,6 +201,19 @@ struct ActivityShareSheet: UIViewControllerRepresentable {
         controller.completionWithItemsHandler = { _, _, _, _ in
             onComplete?()
         }
+        #if targetEnvironment(macCatalyst)
+        if let popover = controller.popoverPresentationController {
+            let keyWindow = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap(\.windows)
+                .first(where: \.isKeyWindow)
+            if let rootView = keyWindow?.rootViewController?.view {
+                popover.sourceView = rootView
+                popover.sourceRect = CGRect(x: rootView.bounds.midX, y: rootView.bounds.midY, width: 1, height: 1)
+                popover.permittedArrowDirections = []
+            }
+        }
+        #endif
         return controller
     }
 

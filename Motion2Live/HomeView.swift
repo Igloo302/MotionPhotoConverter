@@ -8,18 +8,25 @@
 
 import SwiftUI
 import AVFoundation
+import UniformTypeIdentifiers
 
 struct HomeView: View {
-    @StateObject private var viewModel = HomeViewModel()
+    @ObservedObject var viewModel: HomeViewModel
     @ObservedObject private var recentStore = RecentConversionStore.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var showingLabView = false
     @State private var showingAboutView = false
+    @State private var isShowingMorePopover = false
+    @State private var isDropTargeted = false
     @State private var hingeState: HingeStateSnapshot = .unavailable
+
+    @MainActor
+    init(viewModel: HomeViewModel) {
+        _viewModel = ObservedObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
         NavigationStack {
@@ -90,8 +97,36 @@ struct HomeView: View {
                     }
                 )
             }
-            .sheet(isPresented: $showingLabView) {
+            .sheet(isPresented: $viewModel.isShowingLabView) {
                 LabView()
+            }
+            .fileImporter(
+                isPresented: $viewModel.isShowingFileImporter,
+                allowedContentTypes: [.image],
+                allowsMultipleSelection: true
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    viewModel.handleIncomingURLs(urls)
+                case .failure(let error):
+                    if (error as NSError).code != NSUserCancelledError {
+                        self.showAlert(message: error.localizedDescription)
+                    }
+                }
+            }
+            .onDrop(of: [.fileURL, .image], isTargeted: $isDropTargeted) { providers in
+                viewModel.handleDroppedProviders(providers)
+                return true
+            }
+            .onAdaptiveChange(of: viewModel.pendingAlertMessage) { message in
+                guard let message else { return }
+                viewModel.pendingAlertMessage = nil
+                self.showAlert(message: message)
+            }
+            .overlay {
+                if isDropTargeted {
+                    dropTargetOverlay
+                }
             }
             .overlay {
                 if viewModel.isAnalyzingPhotos {
@@ -104,6 +139,7 @@ struct HomeView: View {
             )) {
                 if let url = viewModel.selectedImageURL {
                     MotionPhotoView(sourceURL: url)
+                        .id(url)
                 }
             }
         }
@@ -128,7 +164,7 @@ struct HomeView: View {
                 HStack(spacing: 8) {
                     Button {
                         AppHaptics.lightImpact()
-                        showingLabView = true
+                        viewModel.isShowingLabView = true
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "flask")
@@ -145,7 +181,69 @@ struct HomeView: View {
                     }
                     .buttonStyle(.plain)
 
+                    #if targetEnvironment(macCatalyst)
+                    Button {
+                        AppHaptics.lightImpact()
+                        isShowingMorePopover.toggle()
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(AppTheme.textPrimary)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Circle())
+                            .liquidGlassControl(in: Circle(), interactive: true)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Localizable.string(.about))
+                    .popover(isPresented: $isShowingMorePopover, arrowEdge: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Button {
+                                isShowingMorePopover = false
+                                viewModel.isShowingFileImporter = true
+                            } label: {
+                                Label(Localizable.string(.selectFromFiles), systemImage: "folder")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+
+                            Divider()
+
+                            Toggle(isOn: $recentStore.showRecentOnHome) {
+                                Label(Localizable.string(.homeShowRecentConversions), systemImage: "clock.arrow.circlepath")
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+
+                            Divider()
+
+                            Button {
+                                isShowingMorePopover = false
+                                showingAboutView = true
+                            } label: {
+                                Label(Localizable.string(.about), systemImage: "info.circle")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.vertical, 8)
+                        .frame(minWidth: 220)
+                    }
+                    #else
                     Menu {
+                        Button {
+                            viewModel.isShowingFileImporter = true
+                        } label: {
+                            Label(Localizable.string(.selectFromFiles), systemImage: "folder")
+                        }
+
+                        Divider()
+
                         Toggle(isOn: $recentStore.showRecentOnHome) {
                             Label(Localizable.string(.homeShowRecentConversions), systemImage: "clock.arrow.circlepath")
                         }
@@ -199,7 +297,11 @@ struct HomeView: View {
                             .contentShape(Circle())
                             .liquidGlassControl(in: Circle(), interactive: true)
                     }
+                    .menuStyle(.button)
+                    .buttonStyle(.plain)
+                    .menuIndicator(.hidden)
                     .accessibilityLabel(Localizable.string(.about))
+                    #endif
                 }
             }
         }
@@ -258,6 +360,22 @@ struct HomeView: View {
                 primarySelectButton
                     .frame(maxWidth: isHorizontalSplit ? 360 : metrics.floatingDockMaxWidth)
 
+                #if targetEnvironment(macCatalyst)
+                Button {
+                    AppHaptics.lightImpact()
+                    viewModel.isShowingFileImporter = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "folder")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(Localizable.string(.selectFromFiles))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(StudioSecondaryCapsuleButtonStyle())
+                .frame(maxWidth: isHorizontalSplit ? 360 : metrics.floatingDockMaxWidth)
+                #endif
+
                 Text(Localizable.string(.homeBrandFootnote))
                     .font(.system(size: isHorizontalSplit ? 12 : 11, weight: .medium))
                     .foregroundColor(AppTheme.textTertiary)
@@ -301,6 +419,31 @@ struct HomeView: View {
             }
         }
         .buttonStyle(StudioPrimaryButtonStyle(height: 54))
+    }
+
+    private var dropTargetOverlay: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                .strokeBorder(AppTheme.accent, style: StrokeStyle(lineWidth: 2.5, dash: [8, 6]))
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                        .fill(AppTheme.accent.opacity(0.08))
+                )
+                .padding(16)
+
+            VStack(spacing: 10) {
+                Image(systemName: "arrow.down.doc")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(AppTheme.accent)
+                Text(Localizable.string(.dropPhotoHereHint))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(AppTheme.textPrimary)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 18)
+            .liquidGlassControl(in: RoundedRectangle(cornerRadius: 20, style: .continuous), interactive: false)
+        }
+        .allowsHitTesting(false)
     }
 
     private var analyzingOverlay: some View {
@@ -628,6 +771,14 @@ private struct HeroPhotoDeckStage: View {
                 centerOverlayChrome(item: item, isPlayingLive: isCenterSlot && isPlayingLive)
                     .opacity(centerVisibility)
             }
+
+            if absSlot > 0.4 {
+                Color.clear
+                    .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                    .onTapGesture {
+                        switchToCard(index: index)
+                    }
+            }
         }
         .frame(width: 233, height: 326)
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
@@ -658,11 +809,6 @@ private struct HeroPhotoDeckStage: View {
         .zIndex(zOrder)
         .animation(.spring(response: 0.24, dampingFraction: 0.82), value: isPressing)
         .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isPlayingLive)
-        .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .onTapGesture {
-            guard absSlot > 0.4 else { return }
-            switchToCard(index: index)
-        }
         .simultaneousGesture(
             isCenterSlot ? centerLongPressGesture() : nil
         )
@@ -1147,5 +1293,5 @@ private struct Motion2LiveBrandMark: View {
 }
 
 #Preview {
-    HomeView()
+    HomeView(viewModel: HomeViewModel())
 }
