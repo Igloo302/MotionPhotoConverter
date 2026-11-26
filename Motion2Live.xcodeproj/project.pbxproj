@@ -25,6 +25,7 @@
 		A10000062E20000100000001 /* MotionPhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000052E20000100000001 /* MotionPhotoView.swift */; };
 		A10000082E20000100000001 /* PhotoPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000072E20000100000001 /* PhotoPicker.swift */; };
 		A100000A2E20000100000001 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000092E20000100000001 /* PlayerView.swift */; };
+		A10000612E20000100000001 /* HeroLivePlayerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000602E20000100000001 /* HeroLivePlayerController.swift */; };
 		A10000312E20000100000001 /* ObsidianTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000302E20000100000001 /* ObsidianTheme.swift */; };
 		A10000332E20000100000001 /* KeyframePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000322E20000100000001 /* KeyframePickerSheet.swift */; };
 		A10000352E20000100000001 /* RecentConversionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000362E20000100000001 /* RecentConversionStore.swift */; };
@@ -56,6 +57,9 @@
 		B10000372E30000100000001 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000092E20000100000001 /* PlayerView.swift */; };
 		B10000382E30000100000001 /* Localizable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0329E0CC2C9ED90C0099759B /* Localizable.swift */; };
 		B10000422E30000100000001 /* Motion2LiveShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B10000402E30000100000001 /* Motion2LiveShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10000632E20000100000001 /* HeroDemoCenter.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A10000622E20000100000001 /* HeroDemoCenter.mp4 */; };
+		A10000652E20000100000001 /* HeroDemoLeft.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A10000642E20000100000001 /* HeroDemoLeft.mp4 */; };
+		A10000672E20000100000001 /* HeroDemoRight.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A10000662E20000100000001 /* HeroDemoRight.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,6 +124,7 @@
 		A10000052E20000100000001 /* MotionPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPhotoView.swift; sourceTree = "<group>"; };
 		A10000072E20000100000001 /* PhotoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoPicker.swift; sourceTree = "<group>"; };
 		A10000092E20000100000001 /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
+		A10000602E20000100000001 /* HeroLivePlayerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroLivePlayerController.swift; sourceTree = "<group>"; };
 		A10000302E20000100000001 /* ObsidianTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianTheme.swift; sourceTree = "<group>"; };
 		A10000322E20000100000001 /* KeyframePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyframePickerSheet.swift; sourceTree = "<group>"; };
 		A10000362E20000100000001 /* RecentConversionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentConversionStore.swift; sourceTree = "<group>"; };
@@ -132,6 +137,9 @@
 		A10000242E20000100000001 /* XiaomiNew.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = XiaomiNew.jpg; path = samples/XiaomiNew.jpg; sourceTree = SOURCE_ROOT; };
 		A10000262E20000100000001 /* XiaomiOld.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = XiaomiOld.jpg; path = samples/XiaomiOld.jpg; sourceTree = SOURCE_ROOT; };
 		A10000372E20000100000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A10000622E20000100000001 /* HeroDemoCenter.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HeroDemoCenter.mp4; path = Resources/HeroDemo/HeroDemoCenter.mp4; sourceTree = "<group>"; };
+		A10000642E20000100000001 /* HeroDemoLeft.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HeroDemoLeft.mp4; path = Resources/HeroDemo/HeroDemoLeft.mp4; sourceTree = "<group>"; };
+		A10000662E20000100000001 /* HeroDemoRight.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HeroDemoRight.mp4; path = Resources/HeroDemo/HeroDemoRight.mp4; sourceTree = "<group>"; };
 		A10000412E20000100000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		A10000422E20000100000001 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		A10000432E20000100000001 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -216,6 +224,9 @@
 				61A0CA592C958E6A0080EF64 /* Info.plist */,
 				A10000402E20000100000001 /* InfoPlist.strings */,
 				A10000372E20000100000001 /* PrivacyInfo.xcprivacy */,
+				A10000622E20000100000001 /* HeroDemoCenter.mp4 */,
+				A10000642E20000100000001 /* HeroDemoLeft.mp4 */,
+				A10000662E20000100000001 /* HeroDemoRight.mp4 */,
 				61A0CA2E2C9589550080EF64 /* Motion2LiveApp.swift */,
 				03BDAC1E2C9EDE5000F363ED /* HomeView.swift */,
 				61A0CA6A2C95A0100080EF64 /* BatchConvertView.swift */,
@@ -303,6 +314,7 @@
 				6196846B2E17C58B0025BE5D /* SupportedBrandsView.swift */,
 				A10000072E20000100000001 /* PhotoPicker.swift */,
 				A10000092E20000100000001 /* PlayerView.swift */,
+				A10000602E20000100000001 /* HeroLivePlayerController.swift */,
 				A10000322E20000100000001 /* KeyframePickerSheet.swift */,
 				A10000562E20000100000001 /* MotionPhotoExportComponents.swift */,
 			);
@@ -472,6 +484,9 @@
 				61A0CA332C9589590080EF64 /* Assets.xcassets in Resources */,
 				A10000382E20000100000001 /* PrivacyInfo.xcprivacy in Resources */,
 				A10000392E20000100000001 /* InfoPlist.strings in Resources */,
+				A10000632E20000100000001 /* HeroDemoCenter.mp4 in Resources */,
+				A10000652E20000100000001 /* HeroDemoLeft.mp4 in Resources */,
+				A10000672E20000100000001 /* HeroDemoRight.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -522,6 +537,7 @@
 				A10000062E20000100000001 /* MotionPhotoView.swift in Sources */,
 				A10000082E20000100000001 /* PhotoPicker.swift in Sources */,
 				A100000A2E20000100000001 /* PlayerView.swift in Sources */,
+				A10000612E20000100000001 /* HeroLivePlayerController.swift in Sources */,
 				A10000312E20000100000001 /* ObsidianTheme.swift in Sources */,
 				A10000332E20000100000001 /* KeyframePickerSheet.swift in Sources */,
 				A10000352E20000100000001 /* RecentConversionStore.swift in Sources */,

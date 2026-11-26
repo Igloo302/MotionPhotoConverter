@@ -18,8 +18,23 @@ import UniformTypeIdentifiers
 struct RecentConversionEntry: Codable, Identifiable, Equatable {
     let id: UUID
     let fileName: String
+    let videoFileName: String?
     let durationSeconds: Double?
     let createdAt: Date
+
+    init(
+        id: UUID,
+        fileName: String,
+        videoFileName: String? = nil,
+        durationSeconds: Double?,
+        createdAt: Date
+    ) {
+        self.id = id
+        self.fileName = fileName
+        self.videoFileName = videoFileName
+        self.durationSeconds = durationSeconds
+        self.createdAt = createdAt
+    }
 }
 
 @MainActor
@@ -38,6 +53,7 @@ final class RecentConversionStore: ObservableObject {
 
     private let cacheDirectory: URL
     private let indexURL: URL
+    private var historyGeneration: UInt64 = 0
 
     init(directory: URL? = nil) {
         if let directory {
@@ -65,8 +81,17 @@ final class RecentConversionStore: ObservableObject {
         return UIImage(data: data)
     }
 
-    /// Records a converted item's downsampled thumbnail from image data.
-    func recordConversion(imageData: Data, durationSeconds: Double? = nil) async {
+    /// Returns a cached muted preview video URL for the given entry, or nil if unavailable.
+    func videoURL(for entry: RecentConversionEntry) -> URL? {
+        guard let videoFileName = entry.videoFileName else { return nil }
+        let fileURL = cacheDirectory.appendingPathComponent(videoFileName)
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
+        return fileURL
+    }
+
+    /// Records a converted item's downsampled thumbnail and optional muted preview video from image data.
+    func recordConversion(imageData: Data, videoURL: URL? = nil, durationSeconds: Double? = nil) async {
+        let generation = historyGeneration
         let dir = cacheDirectory
         let idxURL = indexURL
 
@@ -74,11 +99,19 @@ final class RecentConversionStore: ObservableObject {
             Self.makeThumbnailJPEGData(fromImageData: imageData)
         }.value
         guard let jpegData else { return }
-        await persistEntry(jpegData: jpegData, durationSeconds: durationSeconds, directory: dir, indexURL: idxURL)
+        await persistEntry(
+            jpegData: jpegData,
+            sourceVideoURL: videoURL,
+            durationSeconds: durationSeconds,
+            generation: generation,
+            directory: dir,
+            indexURL: idxURL
+        )
     }
 
-    /// Records a converted item's downsampled thumbnail from a video URL when no still image data is available.
+    /// Records a converted item's downsampled thumbnail and muted preview video from a video URL.
     func recordConversion(videoURL: URL, durationSeconds: Double? = nil) async {
+        let generation = historyGeneration
         let dir = cacheDirectory
         let idxURL = indexURL
 
@@ -97,11 +130,19 @@ final class RecentConversionStore: ObservableObject {
         }.value
 
         guard let (jpegData, resolvedDuration) = result else { return }
-        await persistEntry(jpegData: jpegData, durationSeconds: resolvedDuration, directory: dir, indexURL: idxURL)
+        await persistEntry(
+            jpegData: jpegData,
+            sourceVideoURL: videoURL,
+            durationSeconds: resolvedDuration,
+            generation: generation,
+            directory: dir,
+            indexURL: idxURL
+        )
     }
 
     /// Clears all cached recent conversion thumbnails and restores the default demo deck.
     func clearHistory() {
+        historyGeneration &+= 1
         entries = []
         let dir = cacheDirectory
         Task.detached(priority: .utility) {
@@ -123,12 +164,51 @@ final class RecentConversionStore: ObservableObject {
         }
     }
 
-    private func persistEntry(jpegData: Data, durationSeconds: Double?, directory: URL, indexURL: URL) async {
+    private func persistEntry(
+        jpegData: Data,
+        sourceVideoURL: URL?,
+        durationSeconds: Double?,
+        generation: UInt64,
+        directory: URL,
+        indexURL: URL
+    ) async {
         let id = UUID()
         let fileName = "\(id.uuidString).jpg"
+        let candidateVideoFileName = "\(id.uuidString).mp4"
+
+        // Detached task only writes media artifacts and never reads or mutates `entries` / `index.json`.
+        let resolvedVideoFileName: String? = await Task.detached(priority: .utility) {
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let fileURL = directory.appendingPathComponent(fileName)
+            try? jpegData.write(to: fileURL, options: .atomic)
+
+            guard let sourceVideoURL else { return nil }
+            let videoDestURL = directory.appendingPathComponent(candidateVideoFileName)
+            if await Self.makeMutedPreviewVideo(from: sourceVideoURL, to: videoDestURL) {
+                return candidateVideoFileName
+            } else {
+                try? FileManager.default.removeItem(at: videoDestURL)
+                return nil
+            }
+        }.value
+
+        // If `clearHistory()` ran while exporting, discard newly created artifacts and abort.
+        guard generation == historyGeneration else {
+            let orphanedImageURL = directory.appendingPathComponent(fileName)
+            let orphanedVideoURL = resolvedVideoFileName.map { directory.appendingPathComponent($0) }
+            Task.detached(priority: .utility) {
+                try? FileManager.default.removeItem(at: orphanedImageURL)
+                if let orphanedVideoURL {
+                    try? FileManager.default.removeItem(at: orphanedVideoURL)
+                }
+            }
+            return
+        }
+
         let newEntry = RecentConversionEntry(
             id: id,
             fileName: fileName,
+            videoFileName: resolvedVideoFileName,
             durationSeconds: durationSeconds,
             createdAt: Date()
         )
@@ -138,23 +218,75 @@ final class RecentConversionStore: ObservableObject {
         let evicted = Array(updated.dropFirst(Self.maxEntries))
         let kept = Array(updated.prefix(Self.maxEntries))
 
-        // Persist thumbnail and index before publishing `entries` so the UI
-        // never reads an un-written file path on re-render.
-        await Task.detached(priority: .utility) {
-            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            let fileURL = directory.appendingPathComponent(fileName)
-            try? jpegData.write(to: fileURL, options: .atomic)
-
-            for old in evicted {
-                try? FileManager.default.removeItem(at: directory.appendingPathComponent(old.fileName))
-            }
-
-            if let encoded = try? JSONEncoder().encode(kept) {
-                try? encoded.write(to: indexURL, options: .atomic)
-            }
-        }.value
-
         entries = kept
+
+        if let encoded = try? JSONEncoder().encode(kept) {
+            try? encoded.write(to: indexURL, options: .atomic)
+        }
+
+        if !evicted.isEmpty {
+            Task.detached(priority: .utility) {
+                for old in evicted {
+                    try? FileManager.default.removeItem(at: directory.appendingPathComponent(old.fileName))
+                    if let oldVideo = old.videoFileName {
+                        try? FileManager.default.removeItem(at: directory.appendingPathComponent(oldVideo))
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Lightweight Muted Preview Video Generation
+
+    private nonisolated static func makeMutedPreviewVideo(from sourceURL: URL, to outputURL: URL) async -> Bool {
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else { return false }
+        try? FileManager.default.removeItem(at: outputURL)
+
+        let asset = AVURLAsset(url: sourceURL)
+        guard let tracks = try? await asset.load(.tracks),
+              let sourceVideoTrack = tracks.first(where: { $0.mediaType == .video }),
+              let duration = try? await asset.load(.duration),
+              duration.isValid,
+              CMTimeGetSeconds(duration) > 0 else {
+            return false
+        }
+
+        let composition = AVMutableComposition()
+        guard let compVideoTrack = composition.addMutableTrack(
+            withMediaType: .video,
+            preferredTrackID: kCMPersistentTrackID_Invalid
+        ) else {
+            return false
+        }
+
+        do {
+            try compVideoTrack.insertTimeRange(
+                CMTimeRange(start: .zero, duration: duration),
+                of: sourceVideoTrack,
+                at: .zero
+            )
+            if let transform = try? await sourceVideoTrack.load(.preferredTransform) {
+                compVideoTrack.preferredTransform = transform
+            }
+        } catch {
+            return false
+        }
+
+        let preset = AVAssetExportSession.exportPresets(compatibleWith: composition)
+            .contains(AVAssetExportPresetMediumQuality)
+            ? AVAssetExportPresetMediumQuality
+            : AVAssetExportPresetPassthrough
+
+        guard let exportSession = AVAssetExportSession(asset: composition, presetName: preset) else {
+            return false
+        }
+
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = .mp4
+        exportSession.shouldOptimizeForNetworkUse = true
+
+        await exportSession.export()
+        return exportSession.status == .completed && FileManager.default.fileExists(atPath: outputURL.path)
     }
 
     // MARK: - Low-Memory Thumbnail Generation

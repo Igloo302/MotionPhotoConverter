@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
@@ -326,150 +327,301 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Hero Photo Deck Stage (Figma 3-Card Fanned Showcase + Recent Conversions)
+// MARK: - Hero Deck Math & Models
+
+enum HeroDeckMath {
+    /// Computes the continuous cyclic relative slot in `[-count/2, +count/2]` for a card at `index`.
+    static func cyclicRelativeSlot(
+        for index: Int,
+        activeIndex: Int,
+        dragProgress: CGFloat = 0,
+        count: Int = 3
+    ) -> CGFloat {
+        guard count > 0 else { return 0 }
+        let normalizedActive = ((activeIndex % count) + count) % count
+        let normalizedIndex = ((index % count) + count) % count
+        var diff = normalizedIndex - normalizedActive
+        let halfInt = count / 2
+        if diff > halfInt {
+            diff -= count
+        } else if diff < -halfInt {
+            diff += count
+        }
+
+        let half = CGFloat(count) / 2.0
+        var slot = CGFloat(diff) + dragProgress
+        while slot > half { slot -= CGFloat(count) }
+        while slot < -half { slot += CGFloat(count) }
+        return slot
+    }
+
+    /// Predicts the next active card index from drag translation and velocity-predicted end translation.
+    static func predictedTargetIndex(
+        currentActiveIndex: Int,
+        translationX: CGFloat,
+        predictedEndTranslationX: CGFloat,
+        cardStepDistance: CGFloat = 110,
+        count: Int = 3
+    ) -> Int {
+        guard count > 0 else { return 0 }
+        let threshold = cardStepDistance * 0.45
+        let effectiveDelta: CGFloat
+        if abs(predictedEndTranslationX) > abs(translationX) {
+            effectiveDelta = translationX * 0.35 + predictedEndTranslationX * 0.65
+        } else {
+            effectiveDelta = translationX
+        }
+
+        let stepDelta: Int
+        if effectiveDelta > threshold {
+            // Dragging right brings the left card (slot = -1) to center
+            stepDelta = -1
+        } else if effectiveDelta < -threshold {
+            // Dragging left brings the right card (slot = +1) to center
+            stepDelta = 1
+        } else {
+            stepDelta = 0
+        }
+
+        return ((currentActiveIndex + stepDelta) % count + count) % count
+    }
+}
+
+private enum HeroPressPhase: Equatable {
+    case idle
+    case pressing
+    case active
+}
+
+private struct HeroDeckCardItem: Identifiable {
+    let id: String
+    let image: Image
+    let videoURL: URL?
+    let durationLabel: String
+}
+
+// MARK: - Hero Photo Deck Stage (Interactive 3-Card Fanned Showcase + Long-Press Live)
 private struct HeroPhotoDeckStage: View {
     let scale: CGFloat
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var recentStore = RecentConversionStore.shared
+    @StateObject private var livePlayerController = HeroLivePlayerController()
 
+    @State private var activeIndex: Int = 0
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDragging: Bool = false
+    @GestureState private var pressPhase: HeroPressPhase = .idle
+    @State private var isPlayingLive: Bool = false
+
+    private var isPressing: Bool {
+        pressPhase == .pressing && !isDragging
+    }
+
+    private let cardStepDistance: CGFloat = 110
     private let waveformHeights: [CGFloat] = [5, 10, 15, 9, 18, 13, 20, 11, 16, 8, 13, 17, 10, 7, 11, 6]
 
     private var activeEntries: [RecentConversionEntry] {
         recentStore.showRecentOnHome ? recentStore.entries : []
     }
 
-    private func cardImage(at index: Int, fallbackAsset: String) -> Image {
-        if index < activeEntries.count, let cached = recentStore.image(for: activeEntries[index]) {
-            return Image(uiImage: cached)
+    private var deckItems: [HeroDeckCardItem] {
+        // Order: [0] Center, [1] Right (slot +1), [2] Left (slot -1)
+        let mappings: [(entryIndex: Int, assetName: String)] = [
+            (0, "HeroDemoCenter"),
+            (2, "HeroDemoRight"),
+            (1, "HeroDemoLeft")
+        ]
+
+        return mappings.map { mapping in
+            if mapping.entryIndex < activeEntries.count {
+                let entry = activeEntries[mapping.entryIndex]
+                let img = recentStore.image(for: entry).map { Image(uiImage: $0) } ?? Image(mapping.assetName)
+                let duration: String = {
+                    if let sec = entry.durationSeconds, sec > 0 {
+                        return String(format: "%.1fs", sec)
+                    }
+                    return "2.4s"
+                }()
+                let videoURL = recentStore.videoURL(for: entry)
+                return HeroDeckCardItem(
+                    id: "recent_\(entry.id.uuidString)",
+                    image: img,
+                    videoURL: videoURL,
+                    durationLabel: duration
+                )
+            } else {
+                let bundleVideoURL = Bundle.main.url(forResource: mapping.assetName, withExtension: "mp4")
+                return HeroDeckCardItem(
+                    id: "demo_\(mapping.assetName)",
+                    image: Image(mapping.assetName),
+                    videoURL: bundleVideoURL,
+                    durationLabel: "2.4s"
+                )
+            }
         }
-        return Image(fallbackAsset)
     }
 
-    private var centerDurationLabel: String {
-        if let first = activeEntries.first, let duration = first.durationSeconds, duration > 0 {
-            return String(format: "%.1fs", duration)
-        }
-        return "2.4s"
+    private var currentCenterItem: HeroDeckCardItem {
+        let items = deckItems
+        let safeIdx = ((activeIndex % items.count) + items.count) % items.count
+        return items[safeIdx]
     }
 
     var body: some View {
+        let items = deckItems
+        let dragProgress = dragOffset / cardStepDistance
+        let parallaxMultiplier: CGFloat = reduceMotion ? 0.02 : 0.08
+
         ZStack {
-            // Ambient Cyan & Indigo Halos
+            // Ambient Cyan & Indigo Halos with subtle drag parallax
             Circle()
                 .fill(Color(red: 0.220, green: 0.737, blue: 0.878).opacity(colorScheme == .dark ? 0.22 : 0.16))
                 .frame(width: 220, height: 220)
                 .blur(radius: 62)
-                .offset(x: -44, y: -42)
+                .offset(x: -44 + dragOffset * parallaxMultiplier, y: -42)
 
             Circle()
                 .fill(Color(red: 0.349, green: 0.341, blue: 0.922).opacity(colorScheme == .dark ? 0.18 : 0.12))
                 .frame(width: 200, height: 200)
                 .blur(radius: 66)
-                .offset(x: 54, y: 36)
+                .offset(x: 54 - dragOffset * parallaxMultiplier, y: 36)
 
-            // Back Card Left (-8 deg)
-            fanSideCard(image: cardImage(at: 1, fallbackAsset: "HeroDemoLeft"))
-                .rotationEffect(.degrees(-8))
-                .offset(x: -78, y: 6)
-                .opacity(0.88)
-
-            // Back Card Right (+8 deg)
-            fanSideCard(image: cardImage(at: 2, fallbackAsset: "HeroDemoRight"))
-                .rotationEffect(.degrees(8))
-                .offset(x: 78, y: 10)
-                .opacity(0.88)
-
-            // Hero Center Card (233×326, r=30)
-            centerHeroCard
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                let slot = HeroDeckMath.cyclicRelativeSlot(
+                    for: index,
+                    activeIndex: activeIndex,
+                    dragProgress: dragProgress,
+                    count: items.count
+                )
+                deckCardView(item: item, index: index, slot: slot)
+            }
         }
         .frame(width: 351, height: 358)
+        .contentShape(Rectangle())
+        .simultaneousGesture(horizontalDeckDragGesture(count: items.count))
         .scaleEffect(scale)
         .frame(width: 351 * scale, height: 358 * scale)
         .animation(.easeInOut(duration: 0.25), value: activeEntries.map(\.id))
+        .onAppear {
+            prepareCurrentCenterVideo()
+        }
+        .onChange(of: pressPhase) { newPhase in
+            switch newPhase {
+            case .active:
+                guard !isDragging else { return }
+                if !isPlayingLive {
+                    isPlayingLive = true
+                    AppHaptics.mediumImpact()
+                    livePlayerController.startPlayback()
+                }
+            case .idle, .pressing:
+                if isPlayingLive {
+                    isPlayingLive = false
+                    livePlayerController.stopAndReset()
+                }
+            }
+        }
+        .onChange(of: activeIndex) { _ in
+            prepareCurrentCenterVideo()
+        }
+        .onChange(of: activeEntries.map(\.id)) { _ in
+            cancelPressAndResetLive()
+            activeIndex = 0
+            prepareCurrentCenterVideo()
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase != .active {
+                cancelPressAndResetLive()
+                livePlayerController.teardown()
+            } else {
+                prepareCurrentCenterVideo()
+            }
+        }
+        .onDisappear {
+            cancelPressAndResetLive()
+            livePlayerController.teardown()
+        }
     }
 
-    private func fanSideCard(image: Image) -> some View {
-        image
-            .resizable()
-            .scaledToFill()
-            .frame(width: 164, height: 236)
-            .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(AppTheme.borderSubtle, lineWidth: 0.8)
-            )
-            .shadow(
-                color: Color.black.opacity(colorScheme == .dark ? 0.40 : 0.14),
-                radius: 16,
-                y: 10
-            )
-    }
+    @ViewBuilder
+    private func deckCardView(item: HeroDeckCardItem, index: Int, slot: CGFloat) -> some View {
+        let absSlot = abs(slot)
+        let t = min(absSlot, 1.0)
+        let sign: CGFloat = slot >= 0 ? 1 : -1
 
-    private var centerHeroCard: some View {
+        let baseX: CGFloat = absSlot <= 1.0
+            ? slot * 78
+            : (2.0 - absSlot) * 78 * sign
+        let arcOutward: CGFloat = reduceMotion ? 0 : sin(t * .pi) * 14 * sign
+        let xOffset = baseX + arcOutward
+
+        let targetSideY: CGFloat = slot >= 0 ? 10 : 6
+        let yOffset = targetSideY * t
+
+        let baseRotation: CGFloat = absSlot <= 1.0
+            ? slot * 8.0
+            : (2.0 - absSlot) * 8.0 * sign
+        let rotation = reduceMotion ? baseRotation * 0.5 : baseRotation
+
+        let baseScale: CGFloat = absSlot <= 1.0
+            ? 1.0 - (1.0 - 0.704) * t
+            : max(0.64, 0.704 - (absSlot - 1.0) * 0.12)
+
+        let isCenterSlot = absSlot < 0.08 && !isDragging
+        let pressScale: CGFloat = {
+            guard isCenterSlot else { return 1.0 }
+            if isPlayingLive {
+                return reduceMotion ? 1.01 : 1.035
+            }
+            if isPressing {
+                return reduceMotion ? 0.99 : 0.975
+            }
+            return 1.0
+        }()
+
+        let cardOpacity: Double = absSlot <= 1.0
+            ? 1.0 - 0.12 * Double(t)
+            : max(0.72, 0.88 - Double(absSlot - 1.0) * 0.32)
+
+        let zOrder: Double = 10.0 - Double(absSlot) - (slot > 0 ? 0.01 : 0.0)
+        let centerVisibility = max(0.0, 1.0 - Double(absSlot) * 2.4)
+        let shadowRadius: CGFloat = isCenterSlot && isPlayingLive ? 32 : (28 - 12 * t)
+        let shadowY: CGFloat = isCenterSlot && isPlayingLive ? 20 : (18 - 8 * t)
+
         ZStack {
-            cardImage(at: 0, fallbackAsset: "HeroDemoCenter")
+            item.image
                 .resizable()
                 .scaledToFill()
                 .frame(width: 233, height: 326)
+                .scaleEffect(isCenterSlot && isPlayingLive && !livePlayerController.isVideoVisible ? (reduceMotion ? 1.02 : 1.06) : 1.0)
+                .animation(.easeInOut(duration: 1.6), value: isPlayingLive)
                 .clipped()
 
-            // Bottom optical vignette
-            VStack {
-                Spacer()
-                LinearGradient(
-                    colors: [Color.clear, Color(red: 0.03, green: 0.04, blue: 0.05).opacity(0.72)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 118)
+            if isCenterSlot, livePlayerController.hasVideoSource {
+                PlayerView(player: livePlayerController.player, videoGravity: .resizeAspectFill)
+                    .frame(width: 233, height: 326)
+                    .opacity(livePlayerController.isVideoVisible && isPlayingLive ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.16), value: livePlayerController.isVideoVisible && isPlayingLive)
+                    .allowsHitTesting(false)
             }
 
-            // Content-layer quiet photo badges (no Liquid Glass per Apple HIG)
-            VStack {
-                HStack {
-                    HStack(spacing: 5) {
-                        Image(systemName: "livephoto")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(red: 0.220, green: 0.737, blue: 0.878))
-                        Text("LIVE")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.96))
-                    }
-                    .padding(.leading, 10)
-                    .padding(.trailing, 11)
-                    .frame(height: 28)
-                    .quietPhotoBadge(cornerRadius: 14)
-
+            // Bottom optical vignette (scales smoothly with C-slot visibility)
+            if centerVisibility > 0.01 {
+                VStack {
                     Spacer()
-
-                    Text(centerDurationLabel)
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.94))
-                        .padding(.horizontal, 10)
-                        .frame(height: 28)
-                        .quietPhotoBadge(cornerRadius: 14)
+                    LinearGradient(
+                        colors: [Color.clear, Color(red: 0.03, green: 0.04, blue: 0.05).opacity(0.72)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 118)
                 }
-                .padding(14)
+                .opacity(centerVisibility)
 
-                Spacer()
-
-                // Quiet Waveform Pill
-                HStack(spacing: 4.5) {
-                    ForEach(Array(waveformHeights.enumerated()), id: \.offset) { idx, barHeight in
-                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                            .fill(
-                                idx < 10
-                                    ? Color(red: 0.220, green: 0.780, blue: 0.961).opacity(0.96)
-                                    : Color.white.opacity(0.36)
-                            )
-                            .frame(width: 2.5, height: barHeight)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .frame(width: 201, height: 34)
-                .quietPhotoBadge(cornerRadius: 14)
-                .padding(.bottom, 16)
+                centerOverlayChrome(item: item, isPlayingLive: isCenterSlot && isPlayingLive)
+                    .opacity(centerVisibility)
             }
         }
         .frame(width: 233, height: 326)
@@ -478,7 +630,11 @@ private struct HeroPhotoDeckStage: View {
             RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .strokeBorder(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.45), Color.white.opacity(0.08), Color.white.opacity(0.22)],
+                        colors: [
+                            Color.white.opacity(0.45 - 0.25 * Double(t)),
+                            Color.white.opacity(0.08),
+                            Color.white.opacity(0.22 - 0.10 * Double(t))
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
@@ -486,10 +642,164 @@ private struct HeroPhotoDeckStage: View {
                 )
         )
         .shadow(
-            color: Color.black.opacity(colorScheme == .dark ? 0.62 : 0.24),
-            radius: 28,
-            y: 18
+            color: Color.black.opacity((colorScheme == .dark ? 0.62 : 0.24) * (1.0 - 0.35 * Double(t))),
+            radius: shadowRadius,
+            y: shadowY
         )
+        .scaleEffect(baseScale * pressScale)
+        .rotationEffect(.degrees(rotation))
+        .offset(x: xOffset, y: yOffset)
+        .opacity(cardOpacity)
+        .zIndex(zOrder)
+        .animation(.spring(response: 0.24, dampingFraction: 0.82), value: isPressing)
+        .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isPlayingLive)
+        .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .onTapGesture {
+            guard absSlot > 0.4 else { return }
+            switchToCard(index: index)
+        }
+        .simultaneousGesture(
+            isCenterSlot ? centerLongPressGesture() : nil
+        )
+    }
+
+    private func centerOverlayChrome(item: HeroDeckCardItem, isPlayingLive: Bool) -> some View {
+        VStack {
+            HStack {
+                HStack(spacing: 5) {
+                    Image(systemName: "livephoto")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color(red: 0.220, green: 0.737, blue: 0.878))
+                        .scaleEffect(isPlayingLive && !reduceMotion ? 1.12 : 1.0)
+                        .animation(
+                            isPlayingLive && !reduceMotion
+                                ? .easeInOut(duration: 0.55).repeatForever(autoreverses: true)
+                                : .default,
+                            value: isPlayingLive
+                        )
+                    Text("LIVE")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.96))
+                }
+                .padding(.leading, 10)
+                .padding(.trailing, 11)
+                .frame(height: 28)
+                .quietPhotoBadge(cornerRadius: 14)
+
+                Spacer()
+
+                Text(item.durationLabel)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.94))
+                    .padding(.horizontal, 10)
+                    .frame(height: 28)
+                    .quietPhotoBadge(cornerRadius: 14)
+            }
+            .padding(14)
+
+            Spacer()
+
+            // Quiet Waveform Pill (live animated during playback)
+            if isPlayingLive && !reduceMotion {
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                    waveformRow(phase: timeline.date.timeIntervalSinceReferenceDate, active: true)
+                }
+            } else {
+                waveformRow(phase: 0, active: false)
+            }
+        }
+    }
+
+    private func waveformRow(phase: TimeInterval, active: Bool) -> some View {
+        HStack(spacing: 4.5) {
+            ForEach(Array(waveformHeights.enumerated()), id: \.offset) { idx, baseHeight in
+                let barHeight: CGFloat = {
+                    guard active else { return baseHeight }
+                    let wave = sin(phase * 7.5 + Double(idx) * 0.65)
+                    let harmonic = cos(phase * 4.2 - Double(idx) * 0.4)
+                    let dynamic = baseHeight + CGFloat((wave * 4.5) + (harmonic * 2.5))
+                    return min(22, max(4, dynamic))
+                }()
+                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    .fill(
+                        idx < 10
+                            ? Color(red: 0.220, green: 0.780, blue: 0.961).opacity(0.96)
+                            : Color.white.opacity(0.36)
+                    )
+                    .frame(width: 2.5, height: barHeight)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(width: 201, height: 34)
+        .quietPhotoBadge(cornerRadius: 14)
+        .padding(.bottom, 16)
+    }
+
+    // MARK: - Gestures & Playback Lifecycle
+
+    private func horizontalDeckDragGesture(count: Int) -> some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                if !isDragging {
+                    isDragging = true
+                    cancelPressAndResetLive()
+                }
+                dragOffset = value.translation.width
+            }
+            .onEnded { value in
+                let targetIndex = HeroDeckMath.predictedTargetIndex(
+                    currentActiveIndex: activeIndex,
+                    translationX: value.translation.width,
+                    predictedEndTranslationX: value.predictedEndTranslation.width,
+                    cardStepDistance: cardStepDistance,
+                    count: count
+                )
+                let didChange = targetIndex != activeIndex
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.80)) {
+                    activeIndex = targetIndex
+                    dragOffset = 0
+                    isDragging = false
+                }
+                if didChange {
+                    AppHaptics.selection()
+                }
+            }
+    }
+
+    private func centerLongPressGesture() -> some Gesture {
+        LongPressGesture(minimumDuration: 0.22, maximumDistance: 14)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .updating($pressPhase) { value, state, _ in
+                switch value {
+                case .first(true):
+                    state = .pressing
+                case .second(true, _):
+                    state = .active
+                default:
+                    state = .idle
+                }
+            }
+    }
+
+    private func switchToCard(index: Int) {
+        guard index != activeIndex else { return }
+        cancelPressAndResetLive()
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.80)) {
+            activeIndex = index
+            dragOffset = 0
+        }
+        AppHaptics.selection()
+    }
+
+    private func cancelPressAndResetLive() {
+        if isPlayingLive {
+            isPlayingLive = false
+        }
+        livePlayerController.stopAndReset()
+    }
+
+    private func prepareCurrentCenterVideo() {
+        livePlayerController.prepare(url: currentCenterItem.videoURL)
     }
 }
 

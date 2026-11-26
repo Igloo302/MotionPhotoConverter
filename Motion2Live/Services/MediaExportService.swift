@@ -305,6 +305,7 @@ enum MediaExportService {
             let validDuration = (videoDurationSec?.isFinite == true && (videoDurationSec ?? 0) > 0) ? videoDurationSec : nil
             await RecentConversionStore.shared.recordConversion(
                 imageData: motionPhotoData.imageData,
+                videoURL: tempMP4URL,
                 durationSeconds: validDuration
             )
         }
@@ -336,6 +337,7 @@ enum MediaExportService {
         let validDuration = (videoDurationSec?.isFinite == true && (videoDurationSec ?? 0) > 0) ? videoDurationSec : nil
         await RecentConversionStore.shared.recordConversion(
             imageData: imageData,
+            videoURL: videoURL,
             durationSeconds: validDuration
         )
     }
