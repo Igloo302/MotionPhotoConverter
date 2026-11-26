@@ -146,6 +146,14 @@ struct ISOBMFFHelper {
         return formatter
     }()
 
+    /// 检查数据是否为 JPEG 容器 (SOI `0xFF 0xD8`)
+    static func isJPEG(data: Data) -> Bool {
+        guard data.count >= 2 else { return false }
+        let first = data[data.startIndex]
+        let second = data[data.index(after: data.startIndex)]
+        return first == 0xFF && second == 0xD8
+    }
+
     /// 检查给定偏移处是否为合法的 MP4 `ftyp` Box
     static func hasFtypSignature(in data: Data, at videoStart: Int) -> Bool {
         guard videoStart >= 0, videoStart + 8 <= data.count else { return false }
@@ -201,8 +209,14 @@ struct ISOBMFFHelper {
         return candidateOffsets.last
     }
 
-    /// 从图片数据中提取 EXIF 设备制造厂商与机型 (TIFF Make/Model，回退至 EXIF LensMake/LensModel)
+    /// 从图片数据中提取 EXIF 设备制造厂商与机型 (小写，用于品牌匹配)
     static func extractExifMakeAndModel(from data: Data) -> (make: String, model: String) {
+        let display = extractDisplayExifMakeAndModel(from: data)
+        return (display.make.lowercased(), display.model.lowercased())
+    }
+
+    /// 从图片数据中提取 EXIF 设备制造厂商与机型 (保留原始大小写，用于展示)
+    static func extractDisplayExifMakeAndModel(from data: Data) -> (make: String, model: String) {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else {
             return ("", "")
@@ -212,11 +226,11 @@ struct ISOBMFFHelper {
 
         let tiffMake = (tiff?[kCGImagePropertyTIFFMake as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let lensMake = (exif?[kCGImagePropertyExifLensMake as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let make = (tiffMake.isEmpty ? lensMake : tiffMake).lowercased()
+        let make = tiffMake.isEmpty ? lensMake : tiffMake
 
         let tiffModel = (tiff?[kCGImagePropertyTIFFModel as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let lensModel = (exif?[kCGImagePropertyExifLensModel as String] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let model = (tiffModel.isEmpty ? lensModel : tiffModel).lowercased()
+        let model = tiffModel.isEmpty ? lensModel : tiffModel
 
         return (make, model)
     }

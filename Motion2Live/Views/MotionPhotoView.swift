@@ -34,6 +34,8 @@ struct MotionPhotoView: View {
     @State private var selectedExportFormat: BatchExportFormat = .livePhoto
     @State private var isShowingPhotoPicker = false
     @State private var isShowingKeyframePicker = false
+    @State private var isShowingMetadataInspector = false
+    @State private var inspectionReport: MotionPhotoInspectionReport?
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var isPermissionDeniedAlert = false
@@ -133,6 +135,11 @@ struct MotionPhotoView: View {
                 keyframeSheet(videoURL: videoURL)
             }
         }
+        .sheet(isPresented: $isShowingMetadataInspector) {
+            if let report = inspectionReport {
+                metadataInspectorSheet(report: report)
+            }
+        }
         .alert(Localizable.string(.tip), isPresented: $showAlert) {
             if isPermissionDeniedAlert {
                 Button(Localizable.string(.openSettings)) {
@@ -172,6 +179,19 @@ struct MotionPhotoView: View {
         )
         .presentationDetents(lastMetrics.preferredKeyframeDetents)
         .presentationDragIndicator(.visible)
+
+        if #available(iOS 16.4, *) {
+            sheet.presentationCornerRadius(AppTheme.Radius.sheet)
+        } else {
+            sheet
+        }
+    }
+
+    @ViewBuilder
+    private func metadataInspectorSheet(report: MotionPhotoInspectionReport) -> some View {
+        let sheet = MetadataInspectorSheet(report: report)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
 
         if #available(iOS 16.4, *) {
             sheet.presentationCornerRadius(AppTheme.Radius.sheet)
@@ -350,24 +370,40 @@ struct MotionPhotoView: View {
 
     private func quietMetadataRow(metrics: AdaptiveLayoutMetrics) -> some View {
         HStack(spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "livephoto")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(isPlayingVideo ? .white : Color(red: 0.220, green: 0.737, blue: 0.878))
+            Button {
+                guard inspectionReport != nil else { return }
+                AppHaptics.lightImpact()
+                isShowingMetadataInspector = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "livephoto")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(isPlayingVideo ? .white : Color(red: 0.220, green: 0.737, blue: 0.878))
 
-                Text(metadataLabelText)
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.95))
-                    .lineLimit(1)
+                    Text(metadataLabelText)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.95))
+                        .lineLimit(1)
+
+                    if inspectionReport != nil {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white.opacity(0.72))
+                    }
+                }
+                .padding(.leading, 11)
+                .padding(.trailing, 12)
+                .frame(height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(isPlayingVideo ? AppTheme.accent.opacity(0.85) : AppTheme.quietPhotoBadgeFill)
+                )
+                .animation(.easeInOut(duration: 0.18), value: isPlayingVideo)
             }
-            .padding(.leading, 11)
-            .padding(.trailing, 12)
-            .frame(height: 30)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isPlayingVideo ? AppTheme.accent.opacity(0.85) : AppTheme.quietPhotoBadgeFill)
-            )
-            .animation(.easeInOut(duration: 0.18), value: isPlayingVideo)
+            .buttonStyle(.plain)
+            .disabled(inspectionReport == nil)
+            .accessibilityLabel(metadataLabelText)
+            .accessibilityHint(Localizable.string(.fileStructureAccessibilityHint))
 
             if customCoverImageData != nil {
                 HStack(spacing: 4) {
@@ -576,6 +612,7 @@ struct MotionPhotoView: View {
         let previewImage: UIImage?
         let tempVideoURL: URL
         let creationDate: Date?
+        let inspectionReport: MotionPhotoInspectionReport
     }
 
     private enum LoadError: Error {
@@ -602,6 +639,11 @@ struct MotionPhotoView: View {
 
         let previewImage = UIImage(data: extracted.imageData)
         let creationDate = MediaExportService.resolveCreationDate(originalData: data, fallbackURL: url)
+        let inspectionReport = MotionPhotoStructureAnalyzer.analyze(
+            data: data,
+            xmpInfo: xmpInfo,
+            extracted: extracted
+        )
 
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("preview_\(UUID().uuidString).mp4")
@@ -617,13 +659,15 @@ struct MotionPhotoView: View {
             processor: processor,
             previewImage: previewImage,
             tempVideoURL: tempURL,
-            creationDate: creationDate
+            creationDate: creationDate,
+            inspectionReport: inspectionReport
         )
     }
 
     func extractVideoFromMotionPhoto(url: URL) async {
         cleanupPlaybackResources()
         customCoverImageData = nil
+        inspectionReport = nil
         AppLogger.parser.info("Loading motion photo: \(url.lastPathComponent, privacy: .public)")
 
         let loaded: LoadedMotionPhoto
@@ -651,6 +695,7 @@ struct MotionPhotoView: View {
         self.originalPreviewImage = loaded.previewImage
         self.selectedImage = loaded.previewImage
         self.previewVideoURL = loaded.tempVideoURL
+        self.inspectionReport = loaded.inspectionReport
         if let resolvedDate = loaded.creationDate {
             self.creationDate = resolvedDate
         }
@@ -661,9 +706,17 @@ struct MotionPhotoView: View {
             let durationSec = CMTimeGetSeconds(duration)
             let tracks = try await asset.loadTracks(withMediaType: .video)
             let fps = Double(try await tracks.first?.load(.nominalFrameRate) ?? 30.0)
+            let specs = await MotionPhotoStructureAnalyzer.extractVideoSpecs(from: asset)
 
             self.videoDuration = durationSec.isFinite ? durationSec : 0
             self.videoFrameRate = fps > 0 ? fps : 30.0
+            self.inspectionReport?.videoSpecs = specs ?? MotionPhotoVideoSpecs(
+                codecName: "—",
+                width: 0,
+                height: 0,
+                frameRate: self.videoFrameRate,
+                durationSeconds: self.videoDuration
+            )
 
             let computedStillTime = loaded.processor.calculateStillImageTime(
                 videoDuration: self.videoDuration,

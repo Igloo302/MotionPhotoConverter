@@ -14,6 +14,8 @@
 		61A0CA6B2C95A0100080EF64 /* BatchConvertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A0CA6A2C95A0100080EF64 /* BatchConvertView.swift */; };
 		6196846C2E17C58B0025BE5D /* SupportedBrandsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6196846B2E17C58B0025BE5D /* SupportedBrandsView.swift */; };
 		6196846E2E17C5D50025BE5D /* MotionPhotoProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6196846D2E17C5D50025BE5D /* MotionPhotoProcessor.swift */; };
+		A10000412E40000100000001 /* MotionPhotoStructureAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000402E40000100000001 /* MotionPhotoStructureAnalyzer.swift */; };
+		A10000432E40000100000001 /* MetadataInspectorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000422E40000100000001 /* MetadataInspectorSheet.swift */; };
 		61A0CA2F2C9589550080EF64 /* Motion2LiveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A0CA2E2C9589550080EF64 /* Motion2LiveApp.swift */; };
 		61A0CA332C9589590080EF64 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 61A0CA322C9589590080EF64 /* Assets.xcassets */; };
 		61A0CA372C9589590080EF64 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 61A0CA362C9589590080EF64 /* Preview Assets.xcassets */; };
@@ -108,6 +110,8 @@
 		61A0CA6A2C95A0100080EF64 /* BatchConvertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchConvertView.swift; sourceTree = "<group>"; };
 		6196846B2E17C58B0025BE5D /* SupportedBrandsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportedBrandsView.swift; sourceTree = "<group>"; };
 		6196846D2E17C5D50025BE5D /* MotionPhotoProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPhotoProcessor.swift; sourceTree = "<group>"; };
+		A10000402E40000100000001 /* MotionPhotoStructureAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPhotoStructureAnalyzer.swift; sourceTree = "<group>"; };
+		A10000422E40000100000001 /* MetadataInspectorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataInspectorSheet.swift; sourceTree = "<group>"; };
 		61A0CA2B2C9589540080EF64 /* Motion2Live.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Motion2Live.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		61A0CA2E2C9589550080EF64 /* Motion2LiveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion2LiveApp.swift; sourceTree = "<group>"; };
 		61A0CA322C9589590080EF64 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -293,6 +297,7 @@
 			children = (
 				B10000012E30000100000001 /* ExportFormat.swift */,
 				6196846D2E17C5D50025BE5D /* MotionPhotoProcessor.swift */,
+				A10000402E40000100000001 /* MotionPhotoStructureAnalyzer.swift */,
 				A10000522E20000100000001 /* MotionPhotoEncoder.swift */,
 			);
 			path = Models;
@@ -316,6 +321,7 @@
 				A10000092E20000100000001 /* PlayerView.swift */,
 				A10000602E20000100000001 /* HeroLivePlayerController.swift */,
 				A10000322E20000100000001 /* KeyframePickerSheet.swift */,
+				A10000422E40000100000001 /* MetadataInspectorSheet.swift */,
 				A10000562E20000100000001 /* MotionPhotoExportComponents.swift */,
 			);
 			path = Components;
@@ -531,6 +537,7 @@
 				036968842C9F23CE001E1B13 /* HomeViewModel.swift in Sources */,
 				036968862C9FA036001E1B13 /* LabView.swift in Sources */,
 				6196846E2E17C5D50025BE5D /* MotionPhotoProcessor.swift in Sources */,
+				A10000412E40000100000001 /* MotionPhotoStructureAnalyzer.swift in Sources */,
 				6196846C2E17C58B0025BE5D /* SupportedBrandsView.swift in Sources */,
 				A10000022E20000100000001 /* XMPParser.swift in Sources */,
 				A10000042E20000100000001 /* MediaExportService.swift in Sources */,
@@ -540,6 +547,7 @@
 				A10000612E20000100000001 /* HeroLivePlayerController.swift in Sources */,
 				A10000312E20000100000001 /* ObsidianTheme.swift in Sources */,
 				A10000332E20000100000001 /* KeyframePickerSheet.swift in Sources */,
+				A10000432E40000100000001 /* MetadataInspectorSheet.swift in Sources */,
 				A10000352E20000100000001 /* RecentConversionStore.swift in Sources */,
 				A10000512E20000100000001 /* LivePhotoExtractor.swift in Sources */,
 				A10000532E20000100000001 /* MotionPhotoEncoder.swift in Sources */,
