@@ -1105,4 +1105,167 @@ final class Motion2LiveTests: XCTestCase {
         XCTAssertLessThan(abs(exifFileCreationDate.timeIntervalSince(expectedExifDate)), 1.0)
         XCTAssertLessThan(abs(exifFileModificationDate.timeIntervalSince(expectedExifDate)), 1.0)
     }
+
+    // MARK: - Structure Analyzer Tests
+
+    private func makeMinimalISOBMFF(payloadBytes: Int = 12_000) -> Data {
+        // 24-byte ftyp box + mdat box totaling >= 10,000 bytes
+        var data = Data()
+        var ftypSize = UInt32(24).bigEndian
+        data.append(Data(bytes: &ftypSize, count: 4))
+        data.append(Data("ftypmp42".utf8))
+        data.append(Data(repeating: 0, count: 12))
+
+        let mdatTotal = max(16, payloadBytes)
+        var mdatSize = UInt32(mdatTotal).bigEndian
+        data.append(Data(bytes: &mdatSize, count: 4))
+        data.append(Data("mdat".utf8))
+        data.append(Data(repeating: 0xAA, count: mdatTotal - 8))
+        return data
+    }
+
+    private func makeSyntheticJPEG(bodyByteCount: Int = 128) -> Data {
+        // SOI + SOS (0xFF 0xDA) + payload + EOI (0xFF 0xD9)
+        var jpeg = Data([0xFF, 0xD8, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00])
+        jpeg.append(Data(repeating: 0x11, count: bodyByteCount))
+        jpeg.append(contentsOf: [0xFF, 0xD9])
+        return jpeg
+    }
+
+    func testStructureAnalyzerSyntheticContainerLayouts() {
+        let primaryJPEG = makeSyntheticJPEG(bodyByteCount: 256)
+        let gainMapJPEG = makeSyntheticJPEG(bodyByteCount: 64)
+        let mp4 = makeMinimalISOBMFF(payloadBytes: 12_000)
+        let sefTrailer = Data("SEFH".utf8) + Data("MotionPhoto_Data".utf8) + Data(repeating: 0x01, count: 32)
+
+        // 1. JPEG + MP4
+        let jpegMP4 = primaryJPEG + mp4
+        let extracted1 = MotionPhotoData(
+            imageData: primaryJPEG,
+            videoData: mp4,
+            stillImageTime: 0,
+            brand: .pixel,
+            videoOffset: primaryJPEG.count,
+            presentationTimestamp: 1_240_000
+        )
+        let report1 = MotionPhotoStructureAnalyzer.analyze(
+            data: jpegMP4,
+            xmpInfo: ["GCamera:MotionPhoto": "1", "Item:Length": "\(mp4.count)"],
+            extracted: extracted1
+        )
+        XCTAssertEqual(report1.totalBytes, jpegMP4.count)
+        XCTAssertEqual(report1.segments.map(\.kind), [.primaryImage, .video])
+        XCTAssertEqual(report1.segments.map(\.byteCount), [primaryJPEG.count, mp4.count])
+        XCTAssertEqual(report1.segments.reduce(0) { $0 + $1.byteCount }, report1.totalBytes)
+        XCTAssertEqual(report1.xmpFields.first?.key, "GCamera:MotionPhoto")
+
+        // 2. JPEG + GainMap + MP4
+        let jpegGainMapMP4 = primaryJPEG + gainMapJPEG + mp4
+        let extracted2 = MotionPhotoData(
+            imageData: primaryJPEG + gainMapJPEG,
+            videoData: mp4,
+            stillImageTime: 0,
+            brand: .pixel,
+            videoOffset: primaryJPEG.count + gainMapJPEG.count,
+            presentationTimestamp: nil
+        )
+        let report2 = MotionPhotoStructureAnalyzer.analyze(
+            data: jpegGainMapMP4,
+            xmpInfo: ["hdrgm:Version": "1.0"],
+            extracted: extracted2
+        )
+        XCTAssertEqual(report2.totalBytes, jpegGainMapMP4.count)
+        XCTAssertEqual(report2.segments.map(\.kind), [.primaryImage, .gainMap, .video])
+        XCTAssertEqual(report2.segments.map(\.byteCount), [primaryJPEG.count, gainMapJPEG.count, mp4.count])
+        XCTAssertEqual(report2.segments.reduce(0) { $0 + $1.byteCount }, report2.totalBytes)
+
+        // 3. JPEG + MP4 + Samsung SEF
+        let jpegMP4SEF = primaryJPEG + mp4 + sefTrailer
+        let extracted3 = MotionPhotoData(
+            imageData: primaryJPEG,
+            videoData: mp4,
+            stillImageTime: 0,
+            brand: .samsung,
+            videoOffset: primaryJPEG.count,
+            presentationTimestamp: nil
+        )
+        let report3 = MotionPhotoStructureAnalyzer.analyze(
+            data: jpegMP4SEF,
+            xmpInfo: [:],
+            extracted: extracted3
+        )
+        XCTAssertEqual(report3.totalBytes, jpegMP4SEF.count)
+        XCTAssertEqual(report3.segments.map(\.kind), [.primaryImage, .video, .sefTrailer])
+        XCTAssertEqual(report3.segments.map(\.byteCount), [primaryJPEG.count, mp4.count, sefTrailer.count])
+        XCTAssertEqual(report3.segments.reduce(0) { $0 + $1.byteCount }, report3.totalBytes)
+        XCTAssertTrue(report3.xmpFields.isEmpty)
+    }
+
+    func testStructureAnalyzerBoundaryAndCorruptInputs() {
+        let primaryJPEG = makeSyntheticJPEG(bodyByteCount: 128)
+        let mp4 = makeMinimalISOBMFF(payloadBytes: 12_000)
+        let unknownTrailer = Data(repeating: 0x42, count: 48)
+        let combined = primaryJPEG + mp4 + unknownTrailer
+
+        // 越界 videoOffset 应安全回退并通过扫描或降级保持总字节守恒
+        let outOfBoundsExtracted = MotionPhotoData(
+            imageData: primaryJPEG,
+            videoData: mp4,
+            stillImageTime: 0,
+            brand: .universal,
+            videoOffset: combined.count + 9999,
+            presentationTimestamp: nil
+        )
+        let report = MotionPhotoStructureAnalyzer.analyze(
+            data: combined,
+            xmpInfo: ["xmlns:x": "adobe:ns:meta/", "CustomKey": "   "],
+            extracted: outOfBoundsExtracted
+        )
+        XCTAssertEqual(report.totalBytes, combined.count)
+        XCTAssertEqual(report.segments.reduce(0) { $0 + $1.byteCount }, report.totalBytes)
+        XCTAssertTrue(report.xmpFields.isEmpty, "Empty values and xmlns attributes should be filtered out")
+
+        // 空数据安全降级
+        let emptyExtracted = MotionPhotoData(
+            imageData: Data(),
+            videoData: Data(),
+            stillImageTime: 0,
+            brand: .unknown,
+            videoOffset: nil,
+            presentationTimestamp: nil
+        )
+        let emptyReport = MotionPhotoStructureAnalyzer.analyze(data: Data(), xmpInfo: [:], extracted: emptyExtracted)
+        XCTAssertEqual(emptyReport.totalBytes, 0)
+        XCTAssertTrue(emptyReport.segments.isEmpty)
+    }
+
+    func testStructureAnalyzerBundledSamplesSmoke() throws {
+        for sampleName in ["Pixel", "Samsung", "XiaomiNew", "XiaomiOld"] {
+            let data = try Data(contentsOf: try sampleURL(named: sampleName))
+            let xmpInfo = XMPParser.extractAndParse(from: data)
+            let processor = try XCTUnwrap(MotionPhotoProcessorFactory.getProcessor(for: xmpInfo, data: data))
+            let extracted = try XCTUnwrap(processor.processMotionPhoto(data: data, xmpInfo: xmpInfo).data)
+
+            let report = MotionPhotoStructureAnalyzer.analyze(
+                data: data,
+                xmpInfo: xmpInfo,
+                extracted: extracted
+            )
+            XCTAssertEqual(report.totalBytes, data.count, "\(sampleName) totalBytes mismatch")
+            XCTAssertEqual(
+                report.segments.reduce(0) { $0 + $1.byteCount },
+                report.totalBytes,
+                "\(sampleName) segment byte sum must equal totalBytes"
+            )
+            XCTAssertTrue(report.segments.contains(where: { $0.kind == .video }), "\(sampleName) should have a video segment")
+
+            if sampleName == "Samsung" {
+                XCTAssertTrue(report.segments.contains(where: { $0.kind == .sefTrailer }), "Samsung sample should detect SEF trailer")
+            }
+
+            let summary = report.formattedSummary()
+            XCTAssertFalse(summary.contains("/Users/"), "Summary must never leak local paths")
+            XCTAssertFalse(summary.isEmpty)
+        }
+    }
 }

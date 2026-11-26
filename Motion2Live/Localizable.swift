@@ -218,6 +218,20 @@ enum LocalizableKey {
     case shareTapToPlay
     case shareTapToPause
     case close
+    case fileStructureTitle
+    case fileStructureAccessibilityHint
+    case copySummary
+    case copied
+    case containerComposition
+    case totalSize
+    case videoStreamSpecs
+    case videoCodec
+    case videoResolution
+    case videoFrameRate
+    case videoDuration
+    case xmpAndDeviceMetadata
+    case brandAndExifLabel
+    case noXmpMetadataNotice
     
     var english: String {
         switch self {
@@ -396,6 +410,20 @@ enum LocalizableKey {
         case .shareTapToPlay: return "Tap to play motion"
         case .shareTapToPause: return "Tap to pause"
         case .close: return "Close"
+        case .fileStructureTitle: return "File Structure"
+        case .fileStructureAccessibilityHint: return "Opens container byte breakdown and metadata details"
+        case .copySummary: return "Copy Summary"
+        case .copied: return "Copied"
+        case .containerComposition: return "Container Layout"
+        case .totalSize: return "Total"
+        case .videoStreamSpecs: return "Video Stream"
+        case .videoCodec: return "Codec"
+        case .videoResolution: return "Resolution"
+        case .videoFrameRate: return "Frame Rate"
+        case .videoDuration: return "Duration"
+        case .xmpAndDeviceMetadata: return "XMP & Device Metadata"
+        case .brandAndExifLabel: return "Brand / EXIF"
+        case .noXmpMetadataNotice: return "No XMP metadata detected; identified via binary container signature"
         }
     }
     
@@ -576,6 +604,20 @@ enum LocalizableKey {
         case .shareTapToPlay: return "轻点播放动态画面"
         case .shareTapToPause: return "轻点暂停"
         case .close: return "关闭"
+        case .fileStructureTitle: return "文件结构"
+        case .fileStructureAccessibilityHint: return "查看容器字节构成与元数据详情"
+        case .copySummary: return "复制摘要"
+        case .copied: return "已复制"
+        case .containerComposition: return "容器构成"
+        case .totalSize: return "总大小"
+        case .videoStreamSpecs: return "视频流规格"
+        case .videoCodec: return "编码格式"
+        case .videoResolution: return "分辨率"
+        case .videoFrameRate: return "帧率"
+        case .videoDuration: return "时长"
+        case .xmpAndDeviceMetadata: return "XMP 与设备元数据"
+        case .brandAndExifLabel: return "Brand / EXIF"
+        case .noXmpMetadataNotice: return "未检测到 XMP 元数据，已通过二进制容器特征识别"
         }
     }
     
@@ -756,6 +798,20 @@ enum LocalizableKey {
         case .shareTapToPlay: return "Toucher pour lire"
         case .shareTapToPause: return "Toucher pour mettre en pause"
         case .close: return "Fermer"
+        case .fileStructureTitle: return "Structure du fichier"
+        case .fileStructureAccessibilityHint: return "Affiche la répartition des octets et les métadonnées"
+        case .copySummary: return "Copier le résumé"
+        case .copied: return "Copié"
+        case .containerComposition: return "Structure du conteneur"
+        case .totalSize: return "Total"
+        case .videoStreamSpecs: return "Flux vidéo"
+        case .videoCodec: return "Codec"
+        case .videoResolution: return "Résolution"
+        case .videoFrameRate: return "Fréquence"
+        case .videoDuration: return "Durée"
+        case .xmpAndDeviceMetadata: return "XMP et métadonnées"
+        case .brandAndExifLabel: return "Marque / EXIF"
+        case .noXmpMetadataNotice: return "Aucune métadonnée XMP détectée ; identifié par signature binaire"
         }
     }
     
@@ -936,6 +992,20 @@ enum LocalizableKey {
         case .shareTapToPlay: return "Zum Abspielen tippen"
         case .shareTapToPause: return "Zum Pausieren tippen"
         case .close: return "Schließen"
+        case .fileStructureTitle: return "Dateistruktur"
+        case .fileStructureAccessibilityHint: return "Öffnet die Byte-Aufteilung und Metadaten"
+        case .copySummary: return "Zusammenfassung kopieren"
+        case .copied: return "Kopiert"
+        case .containerComposition: return "Container-Aufbau"
+        case .totalSize: return "Gesamt"
+        case .videoStreamSpecs: return "Videostream"
+        case .videoCodec: return "Codec"
+        case .videoResolution: return "Auflösung"
+        case .videoFrameRate: return "Bildrate"
+        case .videoDuration: return "Dauer"
+        case .xmpAndDeviceMetadata: return "XMP & Gerätemetadaten"
+        case .brandAndExifLabel: return "Marke / EXIF"
+        case .noXmpMetadataNotice: return "Keine XMP-Metadaten erkannt; über Binärsignatur identifiziert"
         }
     }
     
@@ -1116,6 +1186,20 @@ enum LocalizableKey {
         case .shareTapToPlay: return "Toca para reproducir"
         case .shareTapToPause: return "Toca para pausar"
         case .close: return "Cerrar"
+        case .fileStructureTitle: return "Estructura del archivo"
+        case .fileStructureAccessibilityHint: return "Abre el desglose de bytes y metadatos"
+        case .copySummary: return "Copiar resumen"
+        case .copied: return "Copiado"
+        case .containerComposition: return "Composición del contenedor"
+        case .totalSize: return "Total"
+        case .videoStreamSpecs: return "Flujo de vídeo"
+        case .videoCodec: return "Códec"
+        case .videoResolution: return "Resolución"
+        case .videoFrameRate: return "Fotogramas"
+        case .videoDuration: return "Duración"
+        case .xmpAndDeviceMetadata: return "XMP y metadatos"
+        case .brandAndExifLabel: return "Marca / EXIF"
+        case .noXmpMetadataNotice: return "No se detectaron metadatos XMP; identificado por firma binaria"
         }
     }
     
@@ -1296,6 +1380,20 @@ enum LocalizableKey {
         case .shareTapToPlay: return "タップして再生"
         case .shareTapToPause: return "タップして一時停止"
         case .close: return "閉じる"
+        case .fileStructureTitle: return "ファイル構造"
+        case .fileStructureAccessibilityHint: return "コンテナのバイト構成とメタデータを表示します"
+        case .copySummary: return "概要をコピー"
+        case .copied: return "コピー済み"
+        case .containerComposition: return "コンテナ構成"
+        case .totalSize: return "合計"
+        case .videoStreamSpecs: return "ビデオストリーム"
+        case .videoCodec: return "コーデック"
+        case .videoResolution: return "解像度"
+        case .videoFrameRate: return "フレームレート"
+        case .videoDuration: return "再生時間"
+        case .xmpAndDeviceMetadata: return "XMP とデバイスメタデータ"
+        case .brandAndExifLabel: return "ブランド / EXIF"
+        case .noXmpMetadataNotice: return "XMP メタデータは未検出ですが、バイナリ構造から識別されました"
         }
     }
     
@@ -1476,6 +1574,20 @@ enum LocalizableKey {
         case .shareTapToPlay: return "탭하여 재생"
         case .shareTapToPause: return "탭하여 일시정지"
         case .close: return "닫기"
+        case .fileStructureTitle: return "파일 구조"
+        case .fileStructureAccessibilityHint: return "컨테이너 바이트 구성 및 메타데이터 세부 정보를 엽니다"
+        case .copySummary: return "요약 복사"
+        case .copied: return "복사됨"
+        case .containerComposition: return "컨테이너 구성"
+        case .totalSize: return "전체 크기"
+        case .videoStreamSpecs: return "비디오 스트림"
+        case .videoCodec: return "코덱"
+        case .videoResolution: return "해상도"
+        case .videoFrameRate: return "프레임 레이트"
+        case .videoDuration: return "재생 시간"
+        case .xmpAndDeviceMetadata: return "XMP 및 기기 메타데이터"
+        case .brandAndExifLabel: return "브랜드 / EXIF"
+        case .noXmpMetadataNotice: return "XMP 메타데이터가 감지되지 않았으며 바이너리 컨테이너 시그니처로 식별되었습니다"
         }
     }
 }
