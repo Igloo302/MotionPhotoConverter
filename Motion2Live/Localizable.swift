@@ -208,6 +208,16 @@ enum LocalizableKey {
     case customPairTargetMotionPhoto
     case customPairTargetLiveDesc
     case customPairTargetMotionDesc
+    case shareLoadingPhoto
+    case shareExtensionSubtitle
+    case shareSaveToPhotos
+    case shareSavedSuccess
+    case shareNoSupportedImage
+    case shareMultipleItemsNotice
+    case sharePermissionGuidance
+    case shareTapToPlay
+    case shareTapToPause
+    case close
     
     var english: String {
         switch self {
@@ -266,7 +276,7 @@ enum LocalizableKey {
         case .errorProcessingVideoMetadata: return "Error processing video metadata"
         case .lab: return "Lab"
         case .about: return "About"
-        case .aboutDescription: return "Motion2Live\nVersion 1.2\n© 2024 Igloo. All rights reserved."
+        case .aboutDescription: return "Motion2Live\nVersion 1.3.0\n© 2024–2026 Igloo. All rights reserved."
         case .labTitle: return "Experimental Lab"
         case .labDescription: return "This is an experimental area for future features. Stay tuned!"
         case .customLivePhoto: return "Custom Live Photo"
@@ -332,7 +342,7 @@ enum LocalizableKey {
         case .exportLivePhotoCTA: return "Save as Live Photo"
         case .customCoverBadge: return "Custom Cover"
         case .openSettings: return "Open Settings"
-        case .homeHeroHeadline: return "Bring Motion Photos to Life"
+        case .homeHeroHeadline: return "Convert Motion Photo to Live"
         case .homeHeroSubtitle: return "Native Live Photo · MP4 · GIF Lossless"
         case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo"
         case .inspectorCoverShort: return "Cover"
@@ -376,6 +386,16 @@ enum LocalizableKey {
         case .customPairTargetMotionPhoto: return "Android Motion Photo (.jpg)"
         case .customPairTargetLiveDesc: return "Save directly to your iOS Photos library as a native Live Photo."
         case .customPairTargetMotionDesc: return "Mux into a single-file 7-brand Motion Photo (.jpg) for Share or Files."
+        case .shareLoadingPhoto: return "Reading Motion Photo..."
+        case .shareExtensionSubtitle: return "Quick Convert & Save"
+        case .shareSaveToPhotos: return "Save to Photos"
+        case .shareSavedSuccess: return "Saved to Photos"
+        case .shareNoSupportedImage: return "No supported Motion Photo found in shared items."
+        case .shareMultipleItemsNotice: return "Multiple items shared; previewing the first valid Motion Photo."
+        case .sharePermissionGuidance: return "Please allow Photo Library Add access in Settings > Motion2Live, then try again."
+        case .shareTapToPlay: return "Tap to play motion"
+        case .shareTapToPause: return "Tap to pause"
+        case .close: return "Close"
         }
     }
     
@@ -436,7 +456,7 @@ enum LocalizableKey {
         case .errorProcessingVideoMetadata: return "处理视频元数据时出错"
         case .lab: return "实验室"
         case .about: return "关于"
-        case .aboutDescription: return "Motion2Live\n版本 1.2\n© 2024 Igloo。保留所有权利。"
+        case .aboutDescription: return "Motion2Live\n版本 1.3.0\n© 2024–2026 Igloo。保留所有权利。"
         case .labTitle: return "实验室"
         case .labDescription: return "这是未来功能的实验区域。敬请期待！"
         case .customLivePhoto: return "自定义实况照片"
@@ -502,7 +522,7 @@ enum LocalizableKey {
         case .exportLivePhotoCTA: return "导出为实况照片"
         case .customCoverBadge: return "已自选封面"
         case .openSettings: return "前往设置"
-        case .homeHeroHeadline: return "让动态照片鲜活如初"
+        case .homeHeroHeadline: return "Convert Motion Photo to Live"
         case .homeHeroSubtitle: return "原生实况 · MP4 · GIF 无损转换"
         case .homeBrandFootnote: return "兼容小米 · Pixel · 三星 · 华为 · OPPO · vivo"
         case .inspectorCoverShort: return "封面"
@@ -546,6 +566,16 @@ enum LocalizableKey {
         case .customPairTargetMotionPhoto: return "安卓动态照片 (.jpg)"
         case .customPairTargetLiveDesc: return "直接封装为原生 iOS 实况照片并保存至系统相册。"
         case .customPairTargetMotionDesc: return "无损封装为兼容 7 类安卓品牌的单文件 Motion Photo (.jpg)，通过分享或文件导出。"
+        case .shareLoadingPhoto: return "正在解析动态照片..."
+        case .shareExtensionSubtitle: return "快速转换并保存"
+        case .shareSaveToPhotos: return "保存到相册"
+        case .shareSavedSuccess: return "已保存到相册"
+        case .shareNoSupportedImage: return "未在分享内容中检测到受支持的动态照片。"
+        case .shareMultipleItemsNotice: return "检测到多项内容，当前仅预览并转换首张有效动态照片。"
+        case .sharePermissionGuidance: return "请在“设置 > Motion2Live”中允许添加照片权限后重试。"
+        case .shareTapToPlay: return "轻点播放动态画面"
+        case .shareTapToPause: return "轻点暂停"
+        case .close: return "关闭"
         }
     }
     
@@ -606,7 +636,7 @@ enum LocalizableKey {
         case .errorProcessingVideoMetadata: return "Erreur lors du traitement des métadonnées vidéo"
         case .lab: return "Laboratoire"
         case .about: return "À propos"
-        case .aboutDescription: return "Motion2Live\nVersion 1.2\n© 2024 Igloo. Tous droits réservés."
+        case .aboutDescription: return "Motion2Live\nVersion 1.3.0\n© 2024–2026 Igloo. Tous droits réservés."
         case .labTitle: return "Laboratoire expérimental"
         case .labDescription: return "C'est une zone expérimentale pour les fonctionnalités futures. À suivre !"
         case .customLivePhoto: return "Photo Live personnalisée"
@@ -672,7 +702,7 @@ enum LocalizableKey {
         case .exportLivePhotoCTA: return "Enregistrer en Live Photo"
         case .customCoverBadge: return "Couverture personnalisée"
         case .openSettings: return "Ouvrir Réglages"
-        case .homeHeroHeadline: return "Donnez vie aux Motion Photos"
+        case .homeHeroHeadline: return "Convertissez Motion Photo en Live"
         case .homeHeroSubtitle: return "Live Photo · MP4 · GIF sans perte"
         case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo"
         case .inspectorCoverShort: return "Couverture"
@@ -716,6 +746,16 @@ enum LocalizableKey {
         case .customPairTargetMotionPhoto: return "Motion Photo Android (.jpg)"
         case .customPairTargetLiveDesc: return "Enregistrez directement dans Photos en tant que Live Photo iOS native."
         case .customPairTargetMotionDesc: return "Assemblez en Motion Photo (.jpg) compatible 7 marques via Partager ou Fichiers."
+        case .shareLoadingPhoto: return "Analyse de la Motion Photo..."
+        case .shareExtensionSubtitle: return "Conversion rapide"
+        case .shareSaveToPhotos: return "Enregistrer dans Photos"
+        case .shareSavedSuccess: return "Enregistré dans Photos"
+        case .shareNoSupportedImage: return "Aucune Motion Photo compatible trouvée dans les éléments partagés."
+        case .shareMultipleItemsNotice: return "Plusieurs éléments partagés ; aperçu de la première Motion Photo valide."
+        case .sharePermissionGuidance: return "Veuillez autoriser l'ajout à la photothèque dans Réglages > Motion2Live, puis réessayer."
+        case .shareTapToPlay: return "Toucher pour lire"
+        case .shareTapToPause: return "Toucher pour mettre en pause"
+        case .close: return "Fermer"
         }
     }
     
@@ -776,7 +816,7 @@ enum LocalizableKey {
         case .errorProcessingVideoMetadata: return "Fehler bei der Verarbeitung der Video-Metadaten"
         case .lab: return "Labor"
         case .about: return "Info"
-        case .aboutDescription: return "Motion2Live\nVersion 1.2\n© 2024 Igloo. Alle Rechte vorbehalten."
+        case .aboutDescription: return "Motion2Live\nVersion 1.3.0\n© 2024–2026 Igloo. Alle Rechte vorbehalten."
         case .labTitle: return "Experimentelles Labor"
         case .labDescription: return "Dies ist ein experimenteller Bereich für zukünftige Funktionen. Bleiben Sie dran!"
         case .customLivePhoto: return "Benutzerdefiniertes Live-Foto"
@@ -842,7 +882,7 @@ enum LocalizableKey {
         case .exportLivePhotoCTA: return "Als Live Photo sichern"
         case .customCoverBadge: return "Eigenes Cover"
         case .openSettings: return "Einstellungen öffnen"
-        case .homeHeroHeadline: return "Bewegungsfotos lebendig machen"
+        case .homeHeroHeadline: return "Motion Photo zu Live machen"
         case .homeHeroSubtitle: return "Live Photo · MP4 · GIF verlustfrei"
         case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo"
         case .inspectorCoverShort: return "Cover"
@@ -886,6 +926,16 @@ enum LocalizableKey {
         case .customPairTargetMotionPhoto: return "Android Motion Photo (.jpg)"
         case .customPairTargetLiveDesc: return "Direkt als natives iOS Live Photo in der Fotomediathek sichern."
         case .customPairTargetMotionDesc: return "Verlustfrei als Motion Photo (.jpg) für 7 Android-Marken über Teilen oder Dateien exportieren."
+        case .shareLoadingPhoto: return "Motion Photo wird gelesen..."
+        case .shareExtensionSubtitle: return "Schnell konvertieren & sichern"
+        case .shareSaveToPhotos: return "In Fotos sichern"
+        case .shareSavedSuccess: return "In Fotos gesichert"
+        case .shareNoSupportedImage: return "Kein unterstütztes Motion Photo in den geteilten Objekten gefunden."
+        case .shareMultipleItemsNotice: return "Mehrere Objekte geteilt; Vorschau zeigt das erste gültige Motion Photo."
+        case .sharePermissionGuidance: return "Bitte erlauben Sie das Hinzufügen zu Fotos unter Einstellungen > Motion2Live und versuchen Sie es erneut."
+        case .shareTapToPlay: return "Zum Abspielen tippen"
+        case .shareTapToPause: return "Zum Pausieren tippen"
+        case .close: return "Schließen"
         }
     }
     
@@ -946,7 +996,7 @@ enum LocalizableKey {
         case .errorProcessingVideoMetadata: return "Error al procesar los metadatos del video"
         case .lab: return "Laboratorio"
         case .about: return "Acerca de"
-        case .aboutDescription: return "Motion2Live\nVersión 1.2\n© 2024 Igloo. Todos los derechos reservados."
+        case .aboutDescription: return "Motion2Live\nVersión 1.3.0\n© 2024–2026 Igloo. Todos los derechos reservados."
         case .labTitle: return "Laboratorio Experimental"
         case .labDescription: return "Esta es una zona experimental para futuras características. ¡Manténgase atento!"
         case .customLivePhoto: return "Foto en vivo personalizada"
@@ -1012,7 +1062,7 @@ enum LocalizableKey {
         case .exportLivePhotoCTA: return "Guardar como Live Photo"
         case .customCoverBadge: return "Portada personalizada"
         case .openSettings: return "Abrir Ajustes"
-        case .homeHeroHeadline: return "Da vida a tus Motion Photos"
+        case .homeHeroHeadline: return "Convierte Motion Photo en Live"
         case .homeHeroSubtitle: return "Live Photo · MP4 · GIF sin pérdida"
         case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo"
         case .inspectorCoverShort: return "Portada"
@@ -1056,6 +1106,16 @@ enum LocalizableKey {
         case .customPairTargetMotionPhoto: return "Motion Photo Android (.jpg)"
         case .customPairTargetLiveDesc: return "Guarda directamente en Fotos como una Live Photo nativa de iOS."
         case .customPairTargetMotionDesc: return "Empaqueta en una Motion Photo (.jpg) para 7 marcas vía Compartir o Archivos."
+        case .shareLoadingPhoto: return "Leyendo Motion Photo..."
+        case .shareExtensionSubtitle: return "Conversión rápida"
+        case .shareSaveToPhotos: return "Guardar en Fotos"
+        case .shareSavedSuccess: return "Guardado en Fotos"
+        case .shareNoSupportedImage: return "No se encontró ninguna Motion Photo compatible en los elementos compartidos."
+        case .shareMultipleItemsNotice: return "Se compartieron varios elementos; previsualizando la primera Motion Photo válida."
+        case .sharePermissionGuidance: return "Permite añadir fotos en Ajustes > Motion2Live e inténtalo de nuevo."
+        case .shareTapToPlay: return "Toca para reproducir"
+        case .shareTapToPause: return "Toca para pausar"
+        case .close: return "Cerrar"
         }
     }
     
@@ -1116,7 +1176,7 @@ enum LocalizableKey {
         case .errorProcessingVideoMetadata: return "ビデオメタデータの処理中にエラーが発生しました"
         case .lab: return "実験室"
         case .about: return "情報"
-        case .aboutDescription: return "Motion2Live\nバージョン 1.2\n© 2024 Igloo。全著作権所有。"
+        case .aboutDescription: return "Motion2Live\nバージョン 1.3.0\n© 2024–2026 Igloo。全著作権所有。"
         case .labTitle: return "実験室"
         case .labDescription: return "これは将来の機能の実験エリアです。今後のアップデートをお楽しみに！"
         case .customLivePhoto: return "カスタムライブフォト"
@@ -1182,7 +1242,7 @@ enum LocalizableKey {
         case .exportLivePhotoCTA: return "Live Photoとして保存"
         case .customCoverBadge: return "カスタムカバー"
         case .openSettings: return "設定を開く"
-        case .homeHeroHeadline: return "モーションフォトを鮮やかに"
+        case .homeHeroHeadline: return "モーションフォトをライブに"
         case .homeHeroSubtitle: return "Live Photo · MP4 · GIF ロスレス変換"
         case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo 対応"
         case .inspectorCoverShort: return "カバー"
@@ -1226,6 +1286,16 @@ enum LocalizableKey {
         case .customPairTargetMotionPhoto: return "Android モーションフォト (.jpg)"
         case .customPairTargetLiveDesc: return "ネイティブの iOS Live Photo として写真ライブラリに直接保存します。"
         case .customPairTargetMotionDesc: return "7 ブランド対応の単一 Motion Photo (.jpg) に変換し、共有またはファイルに書き出します。"
+        case .shareLoadingPhoto: return "Motion Photo を読み込み中..."
+        case .shareExtensionSubtitle: return "クイック変換＆保存"
+        case .shareSaveToPhotos: return "写真に保存"
+        case .shareSavedSuccess: return "写真に保存しました"
+        case .shareNoSupportedImage: return "共有された項目に対応している Motion Photo が見つかりません。"
+        case .shareMultipleItemsNotice: return "複数の項目が共有されました。最初の有効な Motion Photo をプレビューします。"
+        case .sharePermissionGuidance: return "「設定 > Motion2Live」で写真への追加を許可してからもう一度お試しください。"
+        case .shareTapToPlay: return "タップして再生"
+        case .shareTapToPause: return "タップして一時停止"
+        case .close: return "閉じる"
         }
     }
     
@@ -1286,7 +1356,7 @@ enum LocalizableKey {
         case .errorProcessingVideoMetadata: return "비디오 메타데이터 처리 중 오류 발생"
         case .lab: return "실험실"
         case .about: return "정보"
-        case .aboutDescription: return "Motion2Live\n버전 1.2\n© 2024 Igloo. 모든 권리 보유."
+        case .aboutDescription: return "Motion2Live\n버전 1.3.0\n© 2024–2026 Igloo. 모든 권리 보유."
         case .labTitle: return "실험실"
         case .labDescription: return "이 곳은 미래 기능을 위한 실험 영역입니다. 곧 공개될 예정입니다!"
         case .customLivePhoto: return "커스텀 라이브 포토"
@@ -1352,7 +1422,7 @@ enum LocalizableKey {
         case .exportLivePhotoCTA: return "라이브 포토로 저장"
         case .customCoverBadge: return "사용자 지정 커버"
         case .openSettings: return "설정 열기"
-        case .homeHeroHeadline: return "모션 포토에 생동감을"
+        case .homeHeroHeadline: return "모션 포토를 라이브로"
         case .homeHeroSubtitle: return "Live Photo · MP4 · GIF 무손실 변환"
         case .homeBrandFootnote: return "Xiaomi · Pixel · Samsung · Huawei · OPPO · vivo 지원"
         case .inspectorCoverShort: return "커버"
@@ -1396,6 +1466,16 @@ enum LocalizableKey {
         case .customPairTargetMotionPhoto: return "Android 모션 포토 (.jpg)"
         case .customPairTargetLiveDesc: return "기본 iOS Live Photo로 사진 보관함에 직접 저장합니다."
         case .customPairTargetMotionDesc: return "7개 브랜드 호환 단일 Motion Photo(.jpg)로 패키징하여 공유하거나 파일로 내보냅니다."
+        case .shareLoadingPhoto: return "모션 포토 읽는 중..."
+        case .shareExtensionSubtitle: return "빠른 변환 및 저장"
+        case .shareSaveToPhotos: return "사진에 저장"
+        case .shareSavedSuccess: return "사진에 저장되었습니다"
+        case .shareNoSupportedImage: return "공유된 항목에서 지원되는 모션 포토를 찾을 수 없습니다."
+        case .shareMultipleItemsNotice: return "여러 항목이 공유되었습니다. 첫 번째 유효한 모션 포토를 미리 봅니다."
+        case .sharePermissionGuidance: return "설정 > Motion2Live에서 사진 추가 권한을 허용한 후 다시 시도하세요."
+        case .shareTapToPlay: return "탭하여 재생"
+        case .shareTapToPause: return "탭하여 일시정지"
+        case .close: return "닫기"
         }
     }
 }

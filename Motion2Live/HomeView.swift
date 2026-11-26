@@ -114,9 +114,7 @@ struct HomeView: View {
         HStack {
             // Brand Wordmark
             HStack(spacing: 8) {
-                Image(systemName: "livephoto")
-                    .font(.system(size: 19, weight: .medium))
-                    .foregroundColor(AppTheme.accent)
+                Motion2LiveBrandMark()
                 Text(Localizable.string(.appTitle))
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(AppTheme.textPrimary)
@@ -160,7 +158,8 @@ struct HomeView: View {
                         }
 
                         #if DEBUG
-                        if let samplesDir = ProcessInfo.processInfo.environment["MOTION2LIVE_SAMPLES_DIR"],
+                        if ProcessInfo.processInfo.arguments.contains("--debug-previews"),
+                           let samplesDir = ProcessInfo.processInfo.environment["MOTION2LIVE_SAMPLES_DIR"],
                            !samplesDir.isEmpty {
                             Divider()
                             Button {
@@ -501,9 +500,8 @@ private struct AboutSheetView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     private var appVersionText: String {
-        let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "v\(short) (\(build))"
+        let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.3.0"
+        return "v\(short)"
     }
 
     private var privacyPolicyURL: URL? {
@@ -745,6 +743,91 @@ private struct AboutSheetView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(AppTheme.textSecondary)
         }
+    }
+}
+
+// MARK: - Brand Mark (Dual Liquid Glass Cards + Live Photo Concentric Ring)
+
+private struct Motion2LiveBrandMark: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isDark: Bool { colorScheme == .dark }
+
+    var body: some View {
+        ZStack {
+            // Rear glass card (-10°)
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(isDark ? AppTheme.surface2.opacity(0.88) : AppTheme.surface2.opacity(0.95))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(
+                            isDark ? Color.white.opacity(0.16) : AppTheme.borderSubtle,
+                            lineWidth: 0.75
+                        )
+                )
+                .frame(width: 17, height: 17)
+                .offset(x: -2.2, y: -1.4)
+                .rotationEffect(.degrees(-10))
+
+            // Front liquid glass card (+6°)
+            ZStack {
+                RoundedRectangle(cornerRadius: 5.5, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: isDark
+                                ? [AppTheme.surface1.opacity(0.95), AppTheme.surface0.opacity(0.88)]
+                                : [Color.white.opacity(0.98), AppTheme.surface1.opacity(0.92)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5.5, style: .continuous)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: isDark
+                                        ? [Color.white.opacity(0.32), Color.white.opacity(0.10)]
+                                        : [Color.white, AppTheme.borderSubtle],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 0.85
+                            )
+                    )
+                    .shadow(
+                        color: Color.black.opacity(isDark ? 0.35 : 0.12),
+                        radius: 2.5,
+                        x: 0,
+                        y: 1
+                    )
+
+                // Live Photo concentric rings + cyan accent dot
+                ZStack {
+                    Circle()
+                        .stroke(
+                            AppTheme.accent.opacity(isDark ? 0.45 : 0.35),
+                            lineWidth: 1.0
+                        )
+                        .frame(width: 11.5, height: 11.5)
+
+                    Circle()
+                        .stroke(
+                            isDark ? Color.white.opacity(0.85) : AppTheme.textPrimary.opacity(0.75),
+                            style: StrokeStyle(lineWidth: 1.1, lineCap: .round, dash: [1.8, 1.8])
+                        )
+                        .frame(width: 7.5, height: 7.5)
+
+                    Circle()
+                        .fill(AppTheme.accent)
+                        .frame(width: 3.2, height: 3.2)
+                }
+            }
+            .frame(width: 18, height: 18)
+            .offset(x: 1.6, y: 1.2)
+            .rotationEffect(.degrees(6))
+        }
+        .frame(width: 24, height: 24)
+        .accessibilityHidden(true)
     }
 }
 

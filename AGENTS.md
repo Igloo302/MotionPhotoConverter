@@ -1,49 +1,43 @@
-# Multi-Agent 协作维护规范 (Collaboration Guidelines)
+# AGENTS.md — Motion2Live 工程宪章
 
-本项目（Motion2Live）采用多个 Agent 应用与开发者共同协作维护模式。为保证多人/多 Agent 在异步及并发环境下的代码质量与工程一致性，所有参与维护的 Agent **必须严格遵守以下规则**：
+## 1. 优先级与流程路由
+- **优先级**：人类当前指令 > 安全与数据红线（一票否决） > 子目录 `AGENTS.md` > 根目录 `AGENTS.md`。
+- **Fast-Track 直通车**：满足「单文件修改 + 预计改动 < 30 行 + 不涉及公共接口/数据结构变更」时，跳过 Superpowers 规划与 Worktree，原地修改并跑通验证。
+- **Superpowers 标准流程**：其余中大型功能默认遵循 `Brainstorm -> Plan -> Worktree -> Subagent Build & Review -> Finish`；大规模检索与静态分析优先派发只读 Subagent 保护主上下文。
 
----
+## 2. 项目安全红线（一票否决）
+- **媒体与隐私数据安全**：解析多品牌 Motion Photo / EXIF / XMP / ISOBMFF 流及 `samples/local/` 时强制只读解析并校验 `ftyp` 签名与字节边界，严禁回写源资源；清理仅限 `NSTemporaryDirectory`（经 `MediaExportService.removeIfInTemporaryDirectory` 守卫）；`RecentConversionStore` 仅缓存 `Caches/RecentConversions/` 缩略图；纯离线零网络请求，变更 `UserDefaults`、文件时间戳或相册权限时须同步核对 `Motion2Live/PrivacyInfo.xcprivacy` 与 `Info.plist`。
+- **隔离与防撞车**：严禁在 `main` 分支直接开发大功能；并行多任务必须使用独立 Git Worktree，测试必须使用独立 `temporaryDirectory`、`RecentConversionStore(directory:)` 与 Simulator 沙盒。
+- **凭证与路径脱敏**：严禁硬编码本地绝对路径（含用户名 `/Users/...`）、API Key、Token、`.asc/` 签名信息或隐私数据。
 
-### 1. 核心守则：操作前必校最新状态（Read Before Write）
-- **绝不盲信历史记忆或上一轮上下文**：
-  在分析、重构或修改任何文件前，**必须先读取该文件的磁盘最新内容**。因为在当前会话之外，其他 Agent 或用户可能已经对该文件提交了修改。
-- **环境安全检查惯例**：
-  由于工作区可能位于 OneDrive 等云盘同步目录，运行 Git 相关命令时请始终附加参数避免索引死锁：
-  ```bash
-  git -c core.preloadindex=false status -s
-  ```
+## 3. 文档与记忆约定（覆盖 Skill 默认路径）
+- 规划前必读 `docs/architecture.md`、`docs/decisions.md` 与 `docs/design-system.md`。
+- 所有任务计划统一落盘至 `docs/specs/<YYYY-MM-DD>-<task-slug>.md`。
+- 合并 `main` 后必须将 Spec 移入 `docs/specs/archive/`；除人类明确要求考古外，严禁检索或读取 `archive/`。
+- 开发分支（Worktree）内严禁顺手修改 `docs/architecture.md` 与 `docs/design-system.md`，仅在合并收尾时询问是否更新。
 
----
+## 4. 审查纪律与异常熔断
+- **Reviewer Subagent 防包庇**：调用只读 Reviewer Subagent 时，仅允许传入当前 Spec 与 `git diff`（严禁传入主会话对话历史）；Builder 最终汇报时必须原样贴出 Reviewer 的 P0/P1 缺陷清单，P0 未清零严禁宣告完工。
+- **禁止静默偏离**：发现 Spec 局部细节偏差时，先暂停并给出建议，待人类确认后先更新 Spec 再改代码。
+- **硬熔断阈值**：若底层架构/数据流走不通，或同一报错连续尝试修复 3 次无解，立即停手，将现场（已完成进度、已排除的错误路径、阻塞文件与报错）写入当前 Spec 的 `## Handoff Notes`，并输出下一会话的启动提示词。
+- **完工底线**：遵循奥卡姆原则，严禁删改原有测试强行通过；最终回复首行直接给出明确状态结论（适配移动端单行预览）。
 
-### 2. 增量修改原则（Targeted Edits over Full Overwrite）
-- **禁止无条件全量覆盖**：
-  进行代码或文档更新时，优先使用基于精确目标匹配的局部替换工具（Edit / Diff）。
-- **冲突自愈流程**：
-  若编辑时发现 `Target` 片段无法精确匹配，说明内容已被他人调整：
-  1. 立即重新读取该文件最新切片；
-  2. 比对他人引入的最新改动与自身意图；
-  3. 执行类似 Git Rebase 的智能合入，严禁直接全量覆写覆盖他人劳动成果。
+## 5. 流程防呆与下一步引导 (Next-Step Auto-Guide)
+每次阶段交付末尾附带 `### 下一步操作`：
+- **Plan 完成**：给出新 Builder 会话启动词，提供双轨选项——**「建 Worktree」**（Agent 自动执行 `make wt name=<slug>` 并输出路径与启动词，用户开新会话粘贴开干）或 **「自动开干」**。
+- **「自动开干」协议**：主会话转为纯调度器（禁改业务代码），自动 `make wt` -> 派发 Builder（仅传 Spec 与 Worktree 路径）编码与测试 -> 派发只读 Reviewer（仅传 Spec 与 `git diff`）盲审；有 P0 则修复复审（最多 2 轮，超限熔断），清零后提示冒烟测试。
+- **Build & Review 完成**：提示在当前 Worktree 启动应用冒烟测试；涉及底层架构、Schema 或安全红线时，建议换模型开新会话交叉盲审。
+- **Finish 完成**：给出 `make clean-wt name=<slug>`，提醒归档 Spec、通知其他 Worktree `rebase main`，并询问是否更新 `docs/architecture.md`。
 
----
+## 6. 设计门禁路由 (Design Gate)
+- 在 `Plan` 阶段评估 UI/交互复杂度，按需触发设计环节：
+  - **L0 / L1（免设计或纯动效/微交互）**：跳过 Figma，直接在 Spec 中描述交互逻辑，开发阶段通过 Preview/热更新验证。
+  - **L2（新页面/复杂布局/多形态适配）**：先输出线框与交互状态清单，待人类在独立 Figma 会话中确认视觉稿后，**必须将最终 Figma Frame 链接/Node ID 及四态（Loading/Empty/Error/边界）回填至 `docs/specs/<task>.md`**，再触发“手动挡”或“自动开干”。
+- 涉及 UI 设计或编码时，优先对齐 `docs/design-system.md` 中的 Token 与现有组件，严禁随意硬编码新样式。
 
-### 3. 云同步冲突感知与清理（OneDrive Artifacts）
-- **识别冲突副本**：
-  随时留意工作区中是否出现了带有机器名后缀的文件（例如 `*-MBFVFG71WHQ6LW.md`）。
-- **处理方式**：
-  发现此类冲突文件时，应比对冲突文件与主文件的差异，将有价值的修改合并至主文件，随后安全清理冲突副本，防止工程产生认知分叉。
-
----
-
-### 4. 统一工程标准（Single Source of Truth）
-- **主工程收敛**：
-  当前工程核心已正式收敛至 **`Motion2Live`**（对应 Target `Motion2Live` 与 `Motion2Live.xcodeproj`）。
-- **配置文件防损**：
-  修改 `Motion2Live.xcodeproj/project.pbxproj` 时，务必保持 `PBXBuildFile`、`PBXFileReference`、`PBXGroup` 及 `PBXSourcesBuildPhase` 四个段落的映射严格一致，防止 Xcode 工程损坏。
-
----
-
-### 5. 核心功能性能与健壮性准则
-- **内存防爆（OOM Prevention）**：
-  处理高分辨率图片和批量转换（Batch Conversion）时，严禁将全量原图同时解码进内存。缩略图必须使用 `CGImageSourceCreateThumbnailAtIndex` 低内存读取，批量导出任务需严格采用可控的串行处理流程。
-- **临时文件生命周期管理**：
-  所有解压、临时 MOV、MP4 及 GIF 文件必须在写入 `PHPhotoLibrary` 后立即清理，不可长期滞留在 `NSTemporaryDirectory`。
+## 7. 目录与快捷入口导航
+- 架构真相源：[docs/architecture.md](docs/architecture.md)
+- 设计系统规范：[docs/design-system.md](docs/design-system.md)
+- 架构决策记录：[docs/decisions.md](docs/decisions.md)
+- 活跃设计规格：[docs/specs/](docs/specs/)（归档：`docs/specs/archive/`）
+- 流程命令入口：`/plan`（启动规划与 Spec 落盘）、`/handoff`（状态落盘与跨会话交接）

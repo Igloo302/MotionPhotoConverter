@@ -255,7 +255,8 @@ enum MediaExportService {
         fallbackURL: URL? = nil,
         preferredDate: Date? = nil,
         stillImageTime: Int? = nil,
-        processor: MotionPhotoProcessorProtocol? = nil
+        processor: MotionPhotoProcessorProtocol? = nil,
+        recordRecent: Bool = true
     ) async throws {
         try await ensurePhotoLibraryAddAuthorization()
 
@@ -299,12 +300,14 @@ enum MediaExportService {
             }
         }
 
-        let videoDurationSec = (try? await AVAsset(url: tempMP4URL).load(.duration)).map(CMTimeGetSeconds)
-        let validDuration = (videoDurationSec?.isFinite == true && (videoDurationSec ?? 0) > 0) ? videoDurationSec : nil
-        await RecentConversionStore.shared.recordConversion(
-            imageData: motionPhotoData.imageData,
-            durationSeconds: validDuration
-        )
+        if recordRecent {
+            let videoDurationSec = (try? await AVAsset(url: tempMP4URL).load(.duration)).map(CMTimeGetSeconds)
+            let validDuration = (videoDurationSec?.isFinite == true && (videoDurationSec ?? 0) > 0) ? videoDurationSec : nil
+            await RecentConversionStore.shared.recordConversion(
+                imageData: motionPhotoData.imageData,
+                durationSeconds: validDuration
+            )
+        }
     }
 
     // MARK: - Export Custom Live Photo (Lab)
@@ -342,7 +345,8 @@ enum MediaExportService {
         videoData: Data,
         originalData: Data? = nil,
         fallbackURL: URL? = nil,
-        preferredDate: Date? = nil
+        preferredDate: Date? = nil,
+        recordRecent: Bool = true
     ) async throws {
         try await ensurePhotoLibraryAddAuthorization()
 
@@ -359,7 +363,9 @@ enum MediaExportService {
             }
         }
 
-        await RecentConversionStore.shared.recordConversion(videoURL: tempVideoURL)
+        if recordRecent {
+            await RecentConversionStore.shared.recordConversion(videoURL: tempVideoURL)
+        }
     }
 
     // MARK: - Generate GIF File (Testable without PHPhotoLibrary)
@@ -414,7 +420,8 @@ enum MediaExportService {
         fallbackURL: URL? = nil,
         preferredDate: Date? = nil,
         frameCount: Int = 30,
-        maxDimension: CGFloat = 720
+        maxDimension: CGFloat = 720,
+        recordRecent: Bool = true
     ) async throws {
         try await ensurePhotoLibraryAddAuthorization()
 
@@ -439,7 +446,9 @@ enum MediaExportService {
             }
         }
 
-        await RecentConversionStore.shared.recordConversion(videoURL: tempMP4URL)
+        if recordRecent {
+            await RecentConversionStore.shared.recordConversion(videoURL: tempMP4URL)
+        }
     }
 
     // MARK: - Export Motion Photo (.jpg) from Live Photo or Still+Video Pair (Lab)

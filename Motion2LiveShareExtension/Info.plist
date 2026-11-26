@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Motion2Live</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Motion2Live needs permission to save converted Live Photos, videos, and GIFs to your Photo Library.</string>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict>
+			<key>NSExtensionActivationRule</key>
+			<string>SUBQUERY (
+    extensionItems,
+    $extensionItem,
+    SUBQUERY (
+        $extensionItem.attachments,
+        $attachment,
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.jpeg"
+        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.heic"
+        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.avif"
+        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.image"
+        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.file-url"
+    ).@count >= 1
+).@count >= 1 AND extensionItems.@count &lt;= 5</string>
+		</dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.share-services</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>$(PRODUCT_MODULE_NAME).ShareViewController</string>
+	</dict>
+</dict>
+</plist>
