@@ -5,9 +5,9 @@ Motion2Live 是一款纯离线原生 iOS / iPadOS（`iOS 16.0+`）应用，用�
 
 ## 2. 目录与模块划分
 - **`Motion2Live/`**（主 App Target）
-  - **界面与状态（MVVM）**：`Motion2LiveApp.swift`、`HomeView.swift`、`HomeViewModel.swift`、`BatchConvertView.swift`、`LabView.swift`、`Views/MotionPhotoView.swift`、`Views/LiveToMotionView.swift`、`Views/Components/`（`PhotoPicker`、`PlayerView`、`KeyframePickerSheet`、`SupportedBrandsView`、`MotionPhotoExportComponents`）。
+  - **界面与状态（MVVM）**：`Motion2LiveApp.swift`、`HomeView.swift`、`HomeViewModel.swift`、`BatchConvertView.swift`、`LabView.swift`、`Views/MotionPhotoView.swift`、`Views/LiveToMotionView.swift`、`Views/Components/`（`PhotoPicker`、`PlayerView`、`KeyframePickerSheet`、`MetadataInspectorSheet`、`SupportedBrandsView`、`MotionPhotoExportComponents`）。
   - **设计系统**：`DesignSystem/ObsidianTheme.swift`（自适应深浅色 Token、`AppHaptics`、iPhone Duo 铰链抽象 `DuoHingeStatus` / `HingeStateSnapshot` / `observeDeviceHinge(_:)` 与多设备断点 `AdaptiveLayoutMetrics` / `DuoLayoutMode`）。
-  - **解析与编码引擎**：`Utils/XMPParser.swift`（XMP 提取解析与 `AppLogger`）、`Models/ExportFormat.swift`（`BatchExportFormat` 共享导出格式）、`Models/MotionPhotoProcessor.swift`（`ISOBMFFHelper`、`MotionPhotoProbeContext` 与 7 类处理器：Xiaomi / Samsung / Pixel / Huawei / OPPO / vivo / Universal）、`Models/MotionPhotoEncoder.swift`（7 品牌逆向封装、HEIC→JPEG 元数据保留、Passthrough MP4 混流与输出自校验）。
+  - **解析与编码引擎**：`Utils/XMPParser.swift`（XMP 提取解析与 `AppLogger`）、`Models/ExportFormat.swift`（`BatchExportFormat` 共享导出格式）、`Models/MotionPhotoProcessor.swift`（`ISOBMFFHelper`、`MotionPhotoProbeContext` 与 7 类处理器：Xiaomi / Samsung / Pixel / Huawei / OPPO / vivo / Universal）、`Models/MotionPhotoStructureAnalyzer.swift`（只读容器字节分段分析、`AVAsset` 视频流规格提取与 `MotionPhotoInspectionReport`）、`Models/MotionPhotoEncoder.swift`（7 品牌逆向封装、HEIC→JPEG 元数据保留、Passthrough MP4 混流与输出自校验）。
   - **媒体服务与缓存**：`Services/LivePhotoExtractor.swift`（`PHAssetResource` 与无读权限 `PHLivePhoto` 双路径只读抽取）、`Services/MediaExportService.swift`（Live Photo / MOV / GIF / 封面帧 / 逆向 Motion Photo `.jpg` 导出、文件时间戳同步与 `NSTemporaryDirectory` 守卫）、`Services/RecentConversionStore.swift`（最近 1–3 张缩略图本地缓存）。
   - **本地化与隐私**：`Localizable.swift`（7 语言映射）、`*.lproj/InfoPlist.strings`、`Info.plist`、`PrivacyInfo.xcprivacy`。
 - **`Motion2LiveShareExtension/`**（iOS Share Extension Target，`com.igloo.MotionPhotoConverter.ShareExtension`）：

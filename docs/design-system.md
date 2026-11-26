@@ -33,6 +33,7 @@
 | `Motion2LiveBrandMark` | [HomeView.swift](Motion2Live/HomeView.swift) | `24×24` 双层液态玻璃叠卡矢量品牌标志（自适应深浅色） |
 | `SupportedBrandsView` | [SupportedBrandsView.swift](Motion2Live/Views/Components/SupportedBrandsView.swift) | 2 列品牌兼容矩阵卡片 |
 | `KeyframePickerSheet` | [KeyframePickerSheet.swift](Motion2Live/Views/Components/KeyframePickerSheet.swift) | 封面关键帧微调弹窗（胶卷缩略图时间轴 + 毫秒时间码） |
+| `MetadataInspectorSheet` | [MetadataInspectorSheet.swift](Motion2Live/Views/Components/MetadataInspectorSheet.swift) | 半屏文件结构与元数据检查面板（容器比例条、视频流规格、XMP 键值列表与摘要复制） |
 | `PlayerView` | [PlayerView.swift](Motion2Live/Views/Components/PlayerView.swift) | `AVPlayer` 视频播放视图 |
 | `PhotoPicker` | [PhotoPicker.swift](Motion2Live/Views/Components/PhotoPicker.swift) | 系统相册单选/多选选择器 |
 
