@@ -105,6 +105,15 @@ final class HeroLivePlayerController: ObservableObject {
             return
         }
 
+        let currentSeconds = CMTimeGetSeconds(player.currentTime())
+        if currentSeconds.isFinite, abs(currentSeconds) < 0.02 {
+            if isReadyToDisplay {
+                isVideoVisible = true
+            }
+            player.play()
+            return
+        }
+
         player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, self.isPlaying else { return }

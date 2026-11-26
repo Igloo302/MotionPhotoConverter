@@ -590,18 +590,23 @@ private struct HeroPhotoDeckStage: View {
         let shadowRadius: CGFloat = isCenterSlot && isPlayingLive ? 32 : (28 - 12 * t)
         let shadowY: CGFloat = isCenterSlot && isPlayingLive ? 20 : (18 - 8 * t)
 
+        let shouldKenBurns = isCenterSlot && isPlayingLive && !livePlayerController.hasVideoSource
+
         ZStack {
+            Color.black
+
             item.image
                 .resizable()
                 .scaledToFill()
                 .frame(width: 233, height: 326)
-                .scaleEffect(isCenterSlot && isPlayingLive && !livePlayerController.isVideoVisible ? (reduceMotion ? 1.02 : 1.06) : 1.0)
-                .animation(.easeInOut(duration: 1.6), value: isPlayingLive)
+                .scaleEffect(shouldKenBurns ? (reduceMotion ? 1.02 : 1.06) : 1.0)
+                .animation(.easeInOut(duration: 1.6), value: shouldKenBurns)
                 .clipped()
 
             if isCenterSlot, livePlayerController.hasVideoSource {
                 PlayerView(player: livePlayerController.player, videoGravity: .resizeAspectFill)
                     .frame(width: 233, height: 326)
+                    .clipped()
                     .opacity(livePlayerController.isVideoVisible && isPlayingLive ? 1 : 0)
                     .animation(.easeInOut(duration: 0.16), value: livePlayerController.isVideoVisible && isPlayingLive)
                     .allowsHitTesting(false)

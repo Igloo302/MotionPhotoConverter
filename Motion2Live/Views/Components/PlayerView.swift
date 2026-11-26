@@ -26,8 +26,12 @@ final class PlayerUIView: UIView {
 
     init(player: AVPlayer, videoGravity: AVLayerVideoGravity = .resizeAspect) {
         super.init(frame: .zero)
+        backgroundColor = .clear
+        isOpaque = false
+        clipsToBounds = true
         playerLayer.player = player
         playerLayer.videoGravity = videoGravity
+        playerLayer.masksToBounds = true
         layer.addSublayer(playerLayer)
     }
 
@@ -46,6 +50,9 @@ final class PlayerUIView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         playerLayer.frame = bounds
+        CATransaction.commit()
     }
 }
